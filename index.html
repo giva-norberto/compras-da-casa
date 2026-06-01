@@ -72,6 +72,32 @@
 
     .form { display:grid; grid-template-columns:1fr 96px; gap:8px; margin-bottom:10px; }
 
+    .manual-box {
+      background:#f8fafc;
+      border:2px solid #e2e8f0;
+      border-radius:18px;
+      padding:10px;
+      margin-bottom:10px;
+    }
+
+    .manual-title {
+      font-size:15px;
+      font-weight:900;
+      margin-bottom:7px;
+      color:var(--texto);
+    }
+
+    .manual-grid {
+      display:grid;
+      grid-template-columns:1fr 78px;
+      gap:7px;
+      margin-bottom:7px;
+    }
+
+    .search-box {
+      margin-bottom:10px;
+    }
+
     input {
       width:100%; border:2px solid var(--borda); border-radius:15px; padding:14px 12px;
       font-size:16px; outline:none; background:white; font-weight:800;
@@ -208,6 +234,10 @@
           <div class="mini-card"><strong id="totalOk">0</strong><span>OK</span></div>
         </div>
 
+        <div class="search-box">
+          <input id="buscaEstoque" type="text" placeholder="🔎 Buscar no estoque" oninput="renderizar()" />
+        </div>
+
         <div class="form">
           <input id="novoProduto" type="text" placeholder="Novo produto" />
           <button class="btn btn-primary" onclick="adicionarProduto()">Adicionar</button>
@@ -232,6 +262,21 @@
           <div class="mini-card"><strong id="listaPendentes">0</strong><span>Pendentes</span></div>
         </div>
 
+        <div class="manual-box">
+          <div class="manual-title">Adicionar compra manual</div>
+          <div class="manual-grid">
+            <input id="produtoManual" type="text" placeholder="Digite ou busque produto" list="listaProdutosCadastrados" />
+            <input id="qtdManual" type="number" min="1" value="1" />
+          </div>
+          <button class="btn btn-primary btn-full" style="margin-top:0;" onclick="adicionarItemManual()">Incluir na lista</button>
+        </div>
+
+        <div class="search-box">
+          <input id="buscaLista" type="text" placeholder="🔎 Buscar na lista" oninput="renderizar()" />
+        </div>
+
+        <datalist id="listaProdutosCadastrados"></datalist>
+
         <div id="listaCompras" class="list"></div>
 
         <button class="btn btn-green btn-full" onclick="finalizarCompra()">Finalizar compra</button>
@@ -253,6 +298,10 @@
           <div class="mini-card"><strong id="iaCriticos">0</strong><span>Comprar</span></div>
           <div class="mini-card"><strong id="iaExcesso">0</strong><span>Excesso</span></div>
           <div class="mini-card"><strong id="iaSaudavel">0</strong><span>Saudável</span></div>
+        </div>
+
+        <div class="search-box">
+          <input id="buscaIa" type="text" placeholder="🔎 Buscar alerta/produto" oninput="renderizar()" />
         </div>
 
         <div id="listaIa" class="list"></div>
@@ -344,8 +393,26 @@
       return Math.max(0, Number(produto.estoque || 0) - Number(produto.minimo || 0));
     }
 
+    function textoBusca(id) {
+      const campo = document.getElementById(id);
+      return campo ? campo.value.trim().toLowerCase() : '';
+    }
+
+    function passaBusca(produto, termo) {
+      if (!termo) return true;
+      return String(produto.nome || '').toLowerCase().includes(termo);
+    }
+
+    function qtdParaLista(produto) {
+      if (produto.manualLista && comprarQtd(produto) === 0) {
+        return Math.max(1, Number(produto.qtdManual || 1));
+      }
+
+      return comprarQtd(produto);
+    }
+
     function produtosLista() {
-      return produtos.filter(p => comprarQtd(p) > 0);
+      return produtos.filter(p => comprarQtd(p) > 0 || p.manualLista);
     }
 
     window.abrirTela = function(tela) {
@@ -372,6 +439,8 @@
           comprado: false,
           qtdComprada: 0,
           historico: 0,
+          manualLista: false,
+          qtdManual: 0,
           criadoEm: serverTimestamp()
         });
       }
@@ -400,10 +469,53 @@
         comprado: false,
         qtdComprada: 0,
         historico: 0,
+        manualLista: false,
+        qtdManual: 0,
         criadoEm: serverTimestamp()
       });
 
       input.value = '';
+    }
+
+    window.adicionarItemManual = async function() {
+      const inputProduto = document.getElementById('produtoManual');
+      const inputQtd = document.getElementById('qtdManual');
+
+      const nome = inputProduto.value.trim();
+      const quantidade = Math.max(1, Number(inputQtd.value || 1));
+
+      if (!nome) {
+        alert('Digite o produto para incluir na lista.');
+        return;
+      }
+
+      const existente = produtos.find(p => p.nome.toLowerCase() === nome.toLowerCase());
+
+      if (existente) {
+        await setDoc(doc(db, 'produtos', existente.id), {
+          manualLista: true,
+          qtdManual: quantidade,
+          comprado: false,
+          qtdComprada: quantidade,
+          atualizadoEm: serverTimestamp()
+        }, { merge: true });
+      } else {
+        await addDoc(produtosRef, {
+          nome,
+          estoque: 0,
+          minimo: 0,
+          comprado: false,
+          qtdComprada: quantidade,
+          qtdManual: quantidade,
+          manualLista: true,
+          historico: 0,
+          criadoEm: serverTimestamp()
+        });
+      }
+
+      inputProduto.value = '';
+      inputQtd.value = 1;
+      abrirTela('lista');
     }
 
     window.excluirProduto = async function(id) {
@@ -434,7 +546,7 @@
       const produto = produtos.find(p => p.id === id);
       if (!produto) return;
 
-      const sugerido = comprarQtd(produto);
+      const sugerido = qtdParaLista(produto);
       const atual = Number(produto.qtdComprada || sugerido || 1);
       const novo = Math.max(0, atual + delta);
 
@@ -445,11 +557,24 @@
       }, { merge: true });
     }
 
+    window.removerItemManual = async function(id) {
+      const produto = produtos.find(p => p.id === id);
+      if (!produto) return;
+
+      await setDoc(doc(db, 'produtos', id), {
+        manualLista: false,
+        qtdManual: 0,
+        comprado: false,
+        qtdComprada: 0,
+        atualizadoEm: serverTimestamp()
+      }, { merge: true });
+    }
+
     window.alternarComprado = async function(id) {
       const produto = produtos.find(p => p.id === id);
       if (!produto) return;
 
-      const sugerido = comprarQtd(produto);
+      const sugerido = qtdParaLista(produto);
       if (sugerido <= 0) return;
 
       const qtdAtual = Number(produto.qtdComprada || 0);
@@ -479,7 +604,7 @@
       if (!confirm('Finalizar compra e atualizar estoque dos itens marcados?')) return;
 
       for (const p of comprados) {
-        const sugerido = comprarQtd(p);
+        const sugerido = qtdParaLista(p);
         const qtdFinal = Number(p.qtdComprada || sugerido);
         const estoqueAntes = Number(p.estoque || 0);
         const estoqueDepois = estoqueAntes + qtdFinal;
@@ -489,6 +614,7 @@
           nome: p.nome,
           quantidade: qtdFinal,
           quantidadeSugerida: sugerido,
+          origemManual: !!p.manualLista,
           estoqueAntes,
           estoqueDepois,
           minimoNoMomento: Number(p.minimo || 0),
@@ -499,6 +625,8 @@
           estoque: estoqueDepois,
           comprado: false,
           qtdComprada: 0,
+          manualLista: false,
+          qtdManual: 0,
           historico: Number(p.historico || 0) + qtdFinal,
           ultimaCompraEm: serverTimestamp(),
           atualizadoEm: serverTimestamp()
@@ -552,12 +680,27 @@
     function renderEstoque() {
       const area = document.getElementById('listaEstoque');
 
-      if (produtos.length === 0) {
-        area.innerHTML = '<div class="empty">Nenhum produto cadastrado.</div>';
+      const termo = textoBusca('buscaEstoque');
+      const listaEstoque = produtos
+        .filter(p => passaBusca(p, termo))
+        .sort((a, b) => {
+          const listaA = produtosLista().some(p => p.id === a.id) ? 1 : 0;
+          const listaB = produtosLista().some(p => p.id === b.id) ? 1 : 0;
+          if (listaA !== listaB) return listaB - listaA;
+
+          const histA = Number(a.historico || 0);
+          const histB = Number(b.historico || 0);
+          if (histA !== histB) return histB - histA;
+
+          return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR');
+        });
+
+      if (listaEstoque.length === 0) {
+        area.innerHTML = '<div class="empty">Nenhum produto encontrado.</div>';
         return;
       }
 
-      area.innerHTML = produtos.map(p => {
+      area.innerHTML = listaEstoque.map(p => {
         const comprar = comprarQtd(p);
         const excesso = excessoQtd(p);
 
@@ -610,7 +753,10 @@
 
     function renderLista() {
       const area = document.getElementById('listaCompras');
-      const lista = produtosLista();
+      const termo = textoBusca('buscaLista');
+      const lista = produtosLista()
+        .filter(p => passaBusca(p, termo))
+        .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'));
 
       if (lista.length === 0) {
         area.innerHTML = '<div class="empty">Nenhum item para comprar.<br>Seu estoque está em dia.</div>';
@@ -618,7 +764,7 @@
       }
 
       area.innerHTML = lista.map(p => {
-        const comprar = comprarQtd(p);
+        const comprar = qtdParaLista(p);
         const qtdComprada = Number(p.qtdComprada || comprar);
 
         return `
@@ -632,7 +778,7 @@
                     <div class="item-name">${p.comprado ? '✅ ' : ''}${p.nome}</div>
                     <div class="buy-qtd">Sugerido: comprar ${comprar}</div>
                   </div>
-                  <span class="badge ${p.comprado ? 'badge-ok' : 'badge-low'}">${p.comprado ? 'OK' : 'Pendente'}</span>
+                  <span class="badge ${p.comprado ? 'badge-ok' : (p.manualLista ? 'badge-extra' : 'badge-low')}">${p.comprado ? 'OK' : (p.manualLista ? 'Manual' : 'Pendente')}</span>
                 </div>
 
                 <div class="comprado-controle">
@@ -643,6 +789,8 @@
                     <button onclick="alterarQtdComprada('${p.id}', 1)">+</button>
                   </div>
                 </div>
+
+                ${p.manualLista ? `<div class="actions"><button class="small-btn btn-yellow" onclick="removerItemManual('${p.id}')">Remover manual</button></div>` : ''}
               </div>
             </div>
           </div>
@@ -735,10 +883,30 @@
       const mensagensHistorico = gerarMensagensHistorico();
       mensagensHistorico.slice(0, 3).forEach((m) => mensagens.push(m));
 
-      area.innerHTML = mensagens.map(m => `<div class="ia-card">${m}</div>`).join('');
+      const termo = textoBusca('buscaIa');
+      const mensagensFiltradas = termo
+        ? mensagens.filter(m => m.toLowerCase().includes(termo))
+        : mensagens;
+
+      if (mensagensFiltradas.length === 0) {
+        area.innerHTML = '<div class="empty">Nenhum alerta encontrado.</div>';
+        return;
+      }
+
+      area.innerHTML = mensagensFiltradas.map(m => `<div class="ia-card">${m}</div>`).join('');
+    }
+
+    function renderDatalistProdutos() {
+      const area = document.getElementById('listaProdutosCadastrados');
+      if (!area) return;
+
+      area.innerHTML = produtos
+        .map(p => `<option value="${p.nome}"></option>`)
+        .join('');
     }
 
     function renderizar() {
+      renderDatalistProdutos();
       renderResumo();
       renderEstoque();
       renderLista();
