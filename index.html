@@ -98,6 +98,38 @@
       margin-bottom:10px;
     }
 
+    .sugestoes {
+      display:none;
+      background:white;
+      border:1px solid var(--borda);
+      border-radius:15px;
+      overflow:hidden;
+      margin-top:7px;
+    }
+
+    .sugestoes.active {
+      display:block;
+    }
+
+    .sugestao-item {
+      width:100%;
+      border:0;
+      border-bottom:1px solid var(--borda);
+      background:white;
+      color:var(--texto);
+      text-align:left;
+      padding:12px;
+      font-size:15px;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow:none;
+      border-radius:0;
+    }
+
+    .sugestao-item:last-child {
+      border-bottom:0;
+    }
+
     input {
       width:100%; border:2px solid var(--borda); border-radius:15px; padding:14px 12px;
       font-size:16px; outline:none; background:white; font-weight:800;
@@ -265,17 +297,16 @@
         <div class="manual-box">
           <div class="manual-title">Adicionar compra manual</div>
           <div class="manual-grid">
-            <input id="produtoManual" type="text" placeholder="Digite ou busque produto" list="listaProdutosCadastrados" />
+            <input id="produtoManual" type="text" placeholder="Digite ou busque produto" oninput="renderSugestoesManual()" autocomplete="off" />
             <input id="qtdManual" type="number" min="1" value="1" />
           </div>
           <button class="btn btn-primary btn-full" style="margin-top:0;" onclick="adicionarItemManual()">Incluir na lista</button>
+          <div id="sugestoesManual" class="sugestoes"></div>
         </div>
 
         <div class="search-box">
           <input id="buscaLista" type="text" placeholder="🔎 Buscar na lista" oninput="renderizar()" />
         </div>
-
-        <datalist id="listaProdutosCadastrados"></datalist>
 
         <div id="listaCompras" class="list"></div>
 
@@ -477,6 +508,51 @@
       input.value = '';
     }
 
+    window.renderSugestoesManual = function() {
+      const inputProduto = document.getElementById('produtoManual');
+      const area = document.getElementById('sugestoesManual');
+      if (!inputProduto || !area) return;
+
+      const termo = inputProduto.value.trim().toLowerCase();
+
+      if (!termo) {
+        area.classList.remove('active');
+        area.innerHTML = '';
+        return;
+      }
+
+      const encontrados = produtos
+        .filter(p => String(p.nome || '').toLowerCase().startsWith(termo))
+        .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'))
+        .slice(0, 6);
+
+      if (encontrados.length === 0) {
+        area.classList.remove('active');
+        area.innerHTML = '';
+        return;
+      }
+
+      area.innerHTML = encontrados.map(p => `
+        <button type="button" class="sugestao-item" onclick="selecionarSugestaoManual('${p.nome.replace(/'/g, "\\'")}')">
+          ${p.nome}
+        </button>
+      `).join('');
+
+      area.classList.add('active');
+    }
+
+    window.selecionarSugestaoManual = function(nome) {
+      const inputProduto = document.getElementById('produtoManual');
+      const area = document.getElementById('sugestoesManual');
+
+      inputProduto.value = nome;
+      area.classList.remove('active');
+      area.innerHTML = '';
+
+      const qtd = document.getElementById('qtdManual');
+      if (qtd) qtd.focus();
+    }
+
     window.adicionarItemManual = async function() {
       const inputProduto = document.getElementById('produtoManual');
       const inputQtd = document.getElementById('qtdManual');
@@ -515,6 +591,11 @@
 
       inputProduto.value = '';
       inputQtd.value = 1;
+      const areaSugestoes = document.getElementById('sugestoesManual');
+      if (areaSugestoes) {
+        areaSugestoes.classList.remove('active');
+        areaSugestoes.innerHTML = '';
+      }
       abrirTela('lista');
     }
 
@@ -896,17 +977,7 @@
       area.innerHTML = mensagensFiltradas.map(m => `<div class="ia-card">${m}</div>`).join('');
     }
 
-    function renderDatalistProdutos() {
-      const area = document.getElementById('listaProdutosCadastrados');
-      if (!area) return;
-
-      area.innerHTML = produtos
-        .map(p => `<option value="${p.nome}"></option>`)
-        .join('');
-    }
-
     function renderizar() {
-      renderDatalistProdutos();
       renderResumo();
       renderEstoque();
       renderLista();
