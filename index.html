@@ -18,8 +18,7 @@
 
     html, body {
       margin:0; min-height:100%; font-family:Arial, Helvetica, sans-serif;
-      background:linear-gradient(135deg,#2563eb,#06b6d4); color:var(--texto);
-      background-attachment:fixed;
+      background:var(--fundo); color:var(--texto);
     }
 
     body { padding-bottom:88px; }
@@ -190,7 +189,7 @@
 <body>
   <header>
     <h1>Compras da Casa</h1>
-    <p id="statusSistema">Conectando ao Firebase...</p>
+    <p id="statusSistema" style="display:none;"></p>
   </header>
 
   <main class="app">
