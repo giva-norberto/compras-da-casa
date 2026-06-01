@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Compras da Casa</title>
+
+  <style>
+    :root {
+      --azul1:#2563eb; --azul2:#06b6d4; --fundo:#eef5ff; --card:#fff; --texto:#172033;
+      --cinza:#64748b; --borda:#dbeafe; --verde:#16a34a; --verde-bg:#dcfce7;
+      --vermelho:#dc2626; --vermelho-bg:#fee2e2; --amarelo-bg:#fef3c7;
+      --amarelo-txt:#92400e; --roxo-bg:#ede9fe; --roxo-txt:#6d28d9;
+      --sombra:0 8px 18px rgba(15,23,42,.10);
+    }
+
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+    html, body {
+      margin:0; min-height:100%; font-family:Arial, Helvetica, sans-serif;
+      background:var(--fundo); color:var(--texto);
+    }
+
+    body { padding-bottom:88px; }
+
+    header {
+      background:linear-gradient(135deg,var(--azul1),var(--azul2)); color:white;
+      padding:14px 14px 12px; text-align:center; border-bottom-left-radius:22px;
+      border-bottom-right-radius:22px; box-shadow:var(--sombra); position:sticky; top:0; z-index:10;
+    }
+
+    header h1 { margin:0; font-size:21px; font-weight:900; }
+    header p { margin:4px 0 0; font-size:12px; opacity:.95; font-weight:700; }
+
+    .app { width:100%; max-width:520px; margin:0 auto; padding:10px 10px 0; }
+
+    .bottom-nav {
+      position:fixed; left:0; right:0; bottom:0; z-index:50; background:rgba(255,255,255,.96);
+      backdrop-filter:blur(10px); border-top:1px solid #dbeafe;
+      padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+      display:grid; grid-template-columns:repeat(3,1fr); gap:7px; max-width:520px; margin:0 auto;
+      box-shadow:0 -8px 20px rgba(15,23,42,.10); border-top-left-radius:18px; border-top-right-radius:18px;
+    }
+
+    .tab {
+      border:0; border-radius:15px; background:#f8fafc; color:var(--azul1); min-height:56px;
+      font-size:13px; font-weight:900; cursor:pointer; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:2px;
+    }
+
+    .tab .ico { font-size:20px; line-height:1; }
+    .tab.active { color:white; background:linear-gradient(135deg,var(--azul1),var(--azul2)); }
+
+    .screen { display:none; }
+    .screen.active { display:block; }
+
+    .card { background:var(--card); border-radius:20px; padding:12px; box-shadow:var(--sombra); margin-bottom:10px; }
+
+    .title-row { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px; }
+    .title { margin:0; font-size:20px; font-weight:900; }
+    .subtitle { margin:3px 0 0; color:var(--cinza); font-size:12px; font-weight:700; line-height:1.25; }
+
+    .summary { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:10px; }
+
+    .mini-card {
+      background:#f8fafc; border:1px solid var(--borda); border-radius:15px;
+      padding:8px 4px; text-align:center; min-height:58px;
+    }
+
+    .mini-card strong { display:block; font-size:21px; line-height:1; font-weight:900; color:var(--azul1); }
+    .mini-card span { display:block; font-size:10px; font-weight:900; color:var(--cinza); margin-top:5px; }
+
+    .form { display:grid; grid-template-columns:1fr 96px; gap:8px; margin-bottom:10px; }
+
+    input {
+      width:100%; border:2px solid var(--borda); border-radius:15px; padding:14px 12px;
+      font-size:16px; outline:none; background:white; font-weight:800;
+    }
+
+    input:focus { border-color:var(--azul1); }
+
+    button { font-family:inherit; }
+
+    .btn { border:0; border-radius:15px; padding:13px; font-size:15px; font-weight:900; cursor:pointer; }
+    .btn-primary { background:linear-gradient(135deg,var(--azul1),var(--azul2)); color:white; }
+    .btn-green { background:var(--verde); color:white; }
+    .btn-yellow { background:var(--amarelo-bg); color:var(--amarelo-txt); }
+    .btn-red { background:var(--vermelho-bg); color:var(--vermelho); }
+    .btn-full { width:100%; margin-top:9px; padding:16px; font-size:17px; }
+
+    .list { display:flex; flex-direction:column; gap:9px; }
+
+    .stock-item, .buy-item, .ia-card {
+      background:#f8fafc; border:2px solid #e2e8f0; border-radius:18px; padding:10px;
+    }
+
+    .buy-item.checked { background:#ecfdf5; border-color:#86efac; }
+
+    .item-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:9px; }
+    .item-name { font-size:18px; font-weight:900; line-height:1.15; word-break:break-word; }
+    .info { margin-top:3px; color:var(--cinza); font-size:12px; font-weight:800; }
+
+    .badge { padding:6px 9px; border-radius:999px; font-size:10.5px; font-weight:900; white-space:nowrap; }
+    .badge-ok { background:var(--verde-bg); color:#166534; }
+    .badge-low { background:var(--vermelho-bg); color:#991b1b; }
+    .badge-extra { background:var(--amarelo-bg); color:var(--amarelo-txt); }
+    .badge-ia { background:var(--roxo-bg); color:var(--roxo-txt); }
+
+    .stock-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+
+    .field-box {
+      background:white; border:1px solid var(--borda); border-radius:15px;
+      padding:7px 5px; text-align:center; min-height:82px;
+    }
+
+    .field-box label { display:block; color:var(--cinza); font-size:10px; font-weight:900; margin-bottom:7px; }
+
+    .stepper { display:grid; grid-template-columns:32px 1fr 32px; align-items:center; gap:3px; }
+
+    .stepper button {
+      border:0; background:#dbeafe; color:var(--azul1); border-radius:11px;
+      width:32px; height:38px; font-size:22px; line-height:1; font-weight:900; cursor:pointer;
+    }
+
+    .num { font-size:20px; font-weight:900; color:var(--texto); }
+
+    .comprar-num {
+      height:38px; border-radius:11px; background:linear-gradient(135deg,var(--azul1),var(--azul2));
+      color:white; display:flex; align-items:center; justify-content:center; font-size:21px; font-weight:900;
+    }
+
+    .actions { display:flex; gap:7px; margin-top:8px; flex-wrap:wrap; }
+
+    .small-btn {
+      border:0; border-radius:12px; min-height:38px; font-size:13px; font-weight:900;
+      padding:0 12px; cursor:pointer;
+    }
+
+    .buy-row { display:grid; grid-template-columns:52px 1fr; gap:9px; align-items:start; }
+
+    .check {
+      width:48px; height:48px; border-radius:16px; border:3px solid var(--azul1);
+      background:white; color:white; font-size:30px; font-weight:900; display:flex;
+      align-items:center; justify-content:center; cursor:pointer; user-select:none;
+    }
+
+    .buy-item.checked .check { background:var(--verde); border-color:var(--verde); }
+
+    .buy-qtd { font-size:15px; font-weight:900; color:var(--azul1); margin-top:4px; }
+
+    .comprado-controle {
+      margin-top:9px; background:white; border:1px solid var(--borda); border-radius:15px;
+      padding:8px; display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;
+    }
+
+    .comprado-controle span { font-size:12px; font-weight:900; color:var(--cinza); }
+
+    .comprado-stepper { display:grid; grid-template-columns:38px 40px 38px; gap:4px; align-items:center; text-align:center; }
+
+    .comprado-stepper button {
+      border:0; background:#dbeafe; color:var(--azul1); border-radius:11px;
+      height:38px; font-size:22px; font-weight:900; cursor:pointer;
+    }
+
+    .comprado-num { font-size:20px; font-weight:900; }
+
+    .ia-card { font-size:14px; font-weight:800; line-height:1.35; color:#334155; background:white; }
+
+    .empty {
+      border:2px dashed #cbd5e1; background:#f8fafc; border-radius:17px; padding:22px 12px;
+      text-align:center; color:var(--cinza); font-size:16px; font-weight:800; line-height:1.35;
+    }
+
+    .footer { text-align:center; color:var(--cinza); font-size:12px; padding:8px 0 16px; font-weight:800; }
+
+    @media (max-width:380px) {
+      .stock-grid { gap:5px; }
+      .field-box { padding:6px 4px; min-height:78px; }
+      .field-box label { font-size:9px; }
+      .stepper { grid-template-columns:28px 1fr 28px; }
+      .stepper button { width:28px; height:36px; }
+      .num, .comprar-num { font-size:18px; }
+      .comprado-stepper { grid-template-columns:34px 36px 34px; }
+      .comprado-stepper button { height:36px; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Compras da Casa</h1>
+    <p id="statusSistema">Conectando ao Firebase...</p>
+  </header>
+
+  <main class="app">
+    <section id="estoque" class="screen active">
+      <div class="card">
+        <div class="title-row">
+          <div>
+            <h2 class="title">Estoque</h2>
+            <p class="subtitle">Ajuste pelas setinhas. A lista nasce automaticamente.</p>
+          </div>
+        </div>
+
+        <div class="summary">
+          <div class="mini-card"><strong id="totalProdutos">0</strong><span>Produtos</span></div>
+          <div class="mini-card"><strong id="totalLista">0</strong><span>Na lista</span></div>
+          <div class="mini-card"><strong id="totalOk">0</strong><span>OK</span></div>
+        </div>
+
+        <div class="form">
+          <input id="novoProduto" type="text" placeholder="Novo produto" />
+          <button class="btn btn-primary" onclick="adicionarProduto()">Adicionar</button>
+        </div>
+
+        <div id="listaEstoque" class="list"></div>
+      </div>
+    </section>
+
+    <section id="lista" class="screen">
+      <div class="card">
+        <div class="title-row">
+          <div>
+            <h2 class="title">Lista</h2>
+            <p class="subtitle">Confirme a quantidade comprada e marque OK.</p>
+          </div>
+        </div>
+
+        <div class="summary">
+          <div class="mini-card"><strong id="listaItens">0</strong><span>Itens</span></div>
+          <div class="mini-card"><strong id="listaComprados">0</strong><span>OK</span></div>
+          <div class="mini-card"><strong id="listaPendentes">0</strong><span>Pendentes</span></div>
+        </div>
+
+        <div id="listaCompras" class="list"></div>
+
+        <button class="btn btn-green btn-full" onclick="finalizarCompra()">Finalizar compra</button>
+        <button class="btn btn-yellow btn-full" onclick="cancelarCompra()">Cancelar compra</button>
+      </div>
+    </section>
+
+    <section id="ia" class="screen">
+      <div class="card">
+        <div class="title-row">
+          <div>
+            <h2 class="title">IA</h2>
+            <p class="subtitle">Alertas rápidos para ajudar na compra.</p>
+          </div>
+          <span class="badge badge-ia">Inteligente</span>
+        </div>
+
+        <div class="summary">
+          <div class="mini-card"><strong id="iaCriticos">0</strong><span>Comprar</span></div>
+          <div class="mini-card"><strong id="iaExcesso">0</strong><span>Excesso</span></div>
+          <div class="mini-card"><strong id="iaSaudavel">0</strong><span>Saudável</span></div>
+        </div>
+
+        <div id="listaIa" class="list"></div>
+      </div>
+    </section>
+
+    <div class="footer">Dados salvos no Firebase Firestore.</div>
+  </main>
+
+  <nav class="bottom-nav">
+    <button id="tab-estoque" class="tab active" onclick="abrirTela('estoque')">
+      <span class="ico">📦</span><span>Estoque</span>
+    </button>
+    <button id="tab-lista" class="tab" onclick="abrirTela('lista')">
+      <span class="ico">📝</span><span>Lista</span>
+    </button>
+    <button id="tab-ia" class="tab" onclick="abrirTela('ia')">
+      <span class="ico">🤖</span><span>IA</span>
+    </button>
+  </nav>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import {
+      getFirestore,
+      collection,
+      doc,
+      addDoc,
+      setDoc,
+      deleteDoc,
+      onSnapshot,
+      serverTimestamp,
+      query,
+      orderBy,
+      getDocs
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC2U7q5HupxKyI3QiAyan-2Sio55NSir0Y",
+      authDomain: "compras-da-casa.firebaseapp.com",
+      projectId: "compras-da-casa",
+      storageBucket: "compras-da-casa.firebasestorage.app",
+      messagingSenderId: "63765433273",
+      appId: "1:63765433273:web:c478a3dd33ef3cd55a0468"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const produtosRef = collection(db, 'produtos');
+
+    let produtos = [];
+    let carregouProdutos = false;
+
+    const listaInicial = [
+      ["Leite", 1, 5],
+      ["Café", 2, 3],
+      ["Arroz", 1, 3],
+      ["Feijão", 1, 3],
+      ["Açúcar", 1, 2],
+      ["Sal", 1, 1],
+      ["Óleo", 0, 2],
+      ["Ovos", 0, 2],
+      ["Pão", 0, 1],
+      ["Manteiga", 1, 1],
+      ["Queijo", 0, 1],
+      ["Carne", 0, 2],
+      ["Frango", 0, 2],
+      ["Detergente", 1, 3],
+      ["Sabão em pó", 1, 2],
+      ["Amaciante", 0, 2],
+      ["Papel higiênico", 10, 8],
+      ["Creme dental", 1, 2],
+      ["Shampoo", 1, 2],
+      ["Saco de lixo", 0, 2]
+    ];
+
+    function setStatus(texto) {
+      document.getElementById('statusSistema').textContent = texto;
+    }
+
+    function comprarQtd(produto) {
+      return Math.max(0, Number(produto.minimo || 0) - Number(produto.estoque || 0));
+    }
+
+    function excessoQtd(produto) {
+      return Math.max(0, Number(produto.estoque || 0) - Number(produto.minimo || 0));
+    }
+
+    function produtosLista() {
+      return produtos.filter(p => comprarQtd(p) > 0);
+    }
+
+    window.abrirTela = function(tela) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+      document.getElementById(tela).classList.add('active');
+      document.getElementById('tab-' + tela).classList.add('active');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      renderizar();
+    }
+
+    async function criarListaInicialSeVazio() {
+      const snap = await getDocs(produtosRef);
+
+      if (!snap.empty) return;
+
+      for (const item of listaInicial) {
+        await addDoc(produtosRef, {
+          nome: item[0],
+          estoque: item[1],
+          minimo: item[2],
+          comprado: false,
+          qtdComprada: 0,
+          historico: 0,
+          criadoEm: serverTimestamp()
+        });
+      }
+    }
+
+    window.adicionarProduto = async function() {
+      const input = document.getElementById('novoProduto');
+      const nome = input.value.trim();
+
+      if (!nome) {
+        alert('Digite o nome do produto.');
+        return;
+      }
+
+      const existe = produtos.some(p => p.nome.toLowerCase() === nome.toLowerCase());
+
+      if (existe) {
+        alert('Este produto já está cadastrado.');
+        return;
+      }
+
+      await addDoc(produtosRef, {
+        nome,
+        estoque: 0,
+        minimo: 1,
+        comprado: false,
+        qtdComprada: 0,
+        historico: 0,
+        criadoEm: serverTimestamp()
+      });
+
+      input.value = '';
+    }
+
+    window.excluirProduto = async function(id) {
+      const produto = produtos.find(p => p.id === id);
+      if (!produto) return;
+
+      if (!confirm('Excluir ' + produto.nome + '?')) return;
+
+      await deleteDoc(doc(db, 'produtos', id));
+    }
+
+    window.alterarValor = async function(id, campo, delta) {
+      const produto = produtos.find(p => p.id === id);
+      if (!produto) return;
+
+      const valorAtual = Number(produto[campo] || 0);
+      const novoValor = Math.max(0, valorAtual + delta);
+
+      await setDoc(doc(db, 'produtos', id), {
+        [campo]: novoValor,
+        comprado: false,
+        qtdComprada: 0,
+        atualizadoEm: serverTimestamp()
+      }, { merge: true });
+    }
+
+    window.alterarQtdComprada = async function(id, delta) {
+      const produto = produtos.find(p => p.id === id);
+      if (!produto) return;
+
+      const sugerido = comprarQtd(produto);
+      const atual = Number(produto.qtdComprada || sugerido || 1);
+      const novo = Math.max(0, atual + delta);
+
+      await setDoc(doc(db, 'produtos', id), {
+        qtdComprada: novo,
+        comprado: novo > 0 ? produto.comprado : false,
+        atualizadoEm: serverTimestamp()
+      }, { merge: true });
+    }
+
+    window.alternarComprado = async function(id) {
+      const produto = produtos.find(p => p.id === id);
+      if (!produto) return;
+
+      const sugerido = comprarQtd(produto);
+      if (sugerido <= 0) return;
+
+      const qtdAtual = Number(produto.qtdComprada || 0);
+      const qtdFinal = qtdAtual > 0 ? qtdAtual : sugerido;
+
+      await setDoc(doc(db, 'produtos', id), {
+        qtdComprada: qtdFinal,
+        comprado: !produto.comprado,
+        atualizadoEm: serverTimestamp()
+      }, { merge: true });
+    }
+
+    window.finalizarCompra = async function() {
+      const lista = produtosLista();
+      const comprados = lista.filter(p => p.comprado);
+
+      if (lista.length === 0) {
+        alert('Não existe item na lista de compras.');
+        return;
+      }
+
+      if (comprados.length === 0) {
+        alert('Marque pelo menos um item como OK.');
+        return;
+      }
+
+      if (!confirm('Finalizar compra e atualizar estoque dos itens marcados?')) return;
+
+      for (const p of comprados) {
+        const sugerido = comprarQtd(p);
+        const qtdFinal = Number(p.qtdComprada || sugerido);
+
+        await setDoc(doc(db, 'produtos', p.id), {
+          estoque: Number(p.estoque || 0) + qtdFinal,
+          comprado: false,
+          qtdComprada: 0,
+          historico: Number(p.historico || 0) + qtdFinal,
+          ultimaCompraEm: serverTimestamp(),
+          atualizadoEm: serverTimestamp()
+        }, { merge: true });
+      }
+
+      abrirTela('estoque');
+      alert('Compra finalizada com sucesso.');
+    }
+
+    window.cancelarCompra = async function() {
+      const marcado = produtos.some(p => p.comprado || p.qtdComprada > 0);
+
+      if (!marcado) {
+        alert('Não existe compra em andamento.');
+        return;
+      }
+
+      if (!confirm('Cancelar marcações e quantidades compradas? A lista continuará igual.')) return;
+
+      for (const p of produtos) {
+        if (p.comprado || p.qtdComprada > 0) {
+          await setDoc(doc(db, 'produtos', p.id), {
+            comprado: false,
+            qtdComprada: 0,
+            atualizadoEm: serverTimestamp()
+          }, { merge: true });
+        }
+      }
+    }
+
+    function renderResumo() {
+      const lista = produtosLista();
+      const comprados = lista.filter(p => p.comprado);
+      const ok = produtos.filter(p => comprarQtd(p) === 0).length;
+      const excesso = produtos.filter(p => excessoQtd(p) > 0).length;
+
+      document.getElementById('totalProdutos').textContent = produtos.length;
+      document.getElementById('totalLista').textContent = lista.length;
+      document.getElementById('totalOk').textContent = ok;
+
+      document.getElementById('listaItens').textContent = lista.length;
+      document.getElementById('listaComprados').textContent = comprados.length;
+      document.getElementById('listaPendentes').textContent = lista.length - comprados.length;
+
+      document.getElementById('iaCriticos').textContent = lista.length;
+      document.getElementById('iaExcesso').textContent = excesso;
+      document.getElementById('iaSaudavel').textContent = ok;
+    }
+
+    function renderEstoque() {
+      const area = document.getElementById('listaEstoque');
+
+      if (produtos.length === 0) {
+        area.innerHTML = '<div class="empty">Nenhum produto cadastrado.</div>';
+        return;
+      }
+
+      area.innerHTML = produtos.map(p => {
+        const comprar = comprarQtd(p);
+        const excesso = excessoQtd(p);
+
+        let badge = '<span class="badge badge-ok">OK</span>';
+        if (comprar > 0) badge = `<span class="badge badge-low">Comprar ${comprar}</span>`;
+        if (excesso > 0) badge = `<span class="badge badge-extra">Excesso ${excesso}</span>`;
+
+        return `
+          <div class="stock-item">
+            <div class="item-top">
+              <div>
+                <div class="item-name">${p.nome}</div>
+                <div class="info">Estoque atual, mínimo e compra automática</div>
+              </div>
+              ${badge}
+            </div>
+
+            <div class="stock-grid">
+              <div class="field-box">
+                <label>Atual</label>
+                <div class="stepper">
+                  <button onclick="alterarValor('${p.id}', 'estoque', -1)">−</button>
+                  <div class="num">${p.estoque || 0}</div>
+                  <button onclick="alterarValor('${p.id}', 'estoque', 1)">+</button>
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Mínimo</label>
+                <div class="stepper">
+                  <button onclick="alterarValor('${p.id}', 'minimo', -1)">−</button>
+                  <div class="num">${p.minimo || 0}</div>
+                  <button onclick="alterarValor('${p.id}', 'minimo', 1)">+</button>
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Comprar</label>
+                <div class="comprar-num">${comprar}</div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="small-btn btn-red" onclick="excluirProduto('${p.id}')">Excluir</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderLista() {
+      const area = document.getElementById('listaCompras');
+      const lista = produtosLista();
+
+      if (lista.length === 0) {
+        area.innerHTML = '<div class="empty">Nenhum item para comprar.<br>Seu estoque está em dia.</div>';
+        return;
+      }
+
+      area.innerHTML = lista.map(p => {
+        const comprar = comprarQtd(p);
+        const qtdComprada = Number(p.qtdComprada || comprar);
+
+        return `
+          <div class="buy-item ${p.comprado ? 'checked' : ''}">
+            <div class="buy-row">
+              <div class="check" onclick="alternarComprado('${p.id}')">${p.comprado ? '✓' : ''}</div>
+
+              <div>
+                <div class="item-top">
+                  <div>
+                    <div class="item-name">${p.comprado ? '✅ ' : ''}${p.nome}</div>
+                    <div class="buy-qtd">Sugerido: comprar ${comprar}</div>
+                  </div>
+                  <span class="badge ${p.comprado ? 'badge-ok' : 'badge-low'}">${p.comprado ? 'OK' : 'Pendente'}</span>
+                </div>
+
+                <div class="comprado-controle">
+                  <span>Qtd comprada</span>
+                  <div class="comprado-stepper">
+                    <button onclick="alterarQtdComprada('${p.id}', -1)">−</button>
+                    <div class="comprado-num">${qtdComprada}</div>
+                    <button onclick="alterarQtdComprada('${p.id}', 1)">+</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderIa() {
+      const area = document.getElementById('listaIa');
+      const lista = produtosLista();
+      const excessos = produtos.filter(p => excessoQtd(p) > 0);
+      const comprados = lista.filter(p => p.comprado);
+      const mensagens = [];
+
+      if (lista.length === 0) {
+        mensagens.push('✅ Nenhum produto precisa de reposição agora. Sua lista está limpa.');
+      } else {
+        mensagens.push(`🛒 Existem ${lista.length} produto(s) para comprar. ${comprados.length} já foram marcados como OK.`);
+      }
+
+      if (lista.length > 0) {
+        const nomes = lista.slice(0, 4).map(p => `${p.nome} (${comprarQtd(p)})`).join(', ');
+        mensagens.push(`⚠️ Reposição necessária: ${nomes}${lista.length > 4 ? '...' : ''}.`);
+      }
+
+      if (excessos.length > 0) {
+        const nomes = excessos.slice(0, 3).map(p => p.nome).join(', ');
+        mensagens.push(`💡 Você possui excesso em: ${nomes}${excessos.length > 3 ? '...' : ''}. Evite comprar agora.`);
+      }
+
+      const altoConsumo = produtos.filter(p => Number(p.historico || 0) >= Math.max(3, Number(p.minimo || 0) * 2));
+      if (altoConsumo.length > 0) {
+        const nomes = altoConsumo.slice(0, 3).map(p => p.nome).join(', ');
+        mensagens.push(`📊 Consumo alto detectado em ${nomes}. Considere aumentar o estoque mínimo.`);
+      }
+
+      const zerados = lista.filter(p => Number(p.estoque || 0) === 0);
+      if (zerados.length > 0) {
+        const nomes = zerados.slice(0, 3).map(p => p.nome).join(', ');
+        mensagens.push(`🚨 Atenção: ${nomes}${zerados.length > 3 ? '...' : ''} estão zerados.`);
+      }
+
+      area.innerHTML = mensagens.map(m => `<div class="ia-card">${m}</div>`).join('');
+    }
+
+    function renderizar() {
+      renderResumo();
+      renderEstoque();
+      renderLista();
+      renderIa();
+    }
+
+    document.getElementById('novoProduto').addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') adicionarProduto();
+    });
+
+    onSnapshot(query(produtosRef, orderBy('nome')), async (snap) => {
+      produtos = [];
+      snap.forEach((d) => produtos.push({ id: d.id, ...d.data() }));
+
+      if (!carregouProdutos) {
+        carregouProdutos = true;
+
+        if (snap.empty) {
+          setStatus('Criando lista inicial...');
+          await criarListaInicialSeVazio();
+          return;
+        }
+      }
+
+      setStatus('Salvo no Firebase');
+      renderizar();
+    }, (erro) => {
+      console.error(erro);
+      setStatus('Erro ao conectar no Firebase. Verifique as regras.');
+    });
+  </script>
+</body>
+</html>
