@@ -287,7 +287,8 @@
       serverTimestamp,
       query,
       orderBy,
-      getDocs
+      getDocs,
+      limit
     } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     const firebaseConfig = {
@@ -302,8 +303,10 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const produtosRef = collection(db, 'produtos');
+    const historicoRef = collection(db, 'historico_compras');
 
     let produtos = [];
+    let historicoCompras = [];
     let carregouProdutos = false;
 
     const listaInicial = [
@@ -478,9 +481,22 @@
       for (const p of comprados) {
         const sugerido = comprarQtd(p);
         const qtdFinal = Number(p.qtdComprada || sugerido);
+        const estoqueAntes = Number(p.estoque || 0);
+        const estoqueDepois = estoqueAntes + qtdFinal;
+
+        await addDoc(historicoRef, {
+          produtoId: p.id,
+          nome: p.nome,
+          quantidade: qtdFinal,
+          quantidadeSugerida: sugerido,
+          estoqueAntes,
+          estoqueDepois,
+          minimoNoMomento: Number(p.minimo || 0),
+          criadoEm: serverTimestamp()
+        });
 
         await setDoc(doc(db, 'produtos', p.id), {
-          estoque: Number(p.estoque || 0) + qtdFinal,
+          estoque: estoqueDepois,
           comprado: false,
           qtdComprada: 0,
           historico: Number(p.historico || 0) + qtdFinal,
@@ -634,6 +650,53 @@
       }).join('');
     }
 
+    function comprasPorProduto() {
+      const mapa = {};
+
+      historicoCompras.forEach((compra) => {
+        const nome = compra.nome || 'Produto';
+
+        if (!mapa[nome]) {
+          mapa[nome] = {
+            nome,
+            total: 0,
+            compras: 0,
+            ultimaQuantidade: 0,
+            penultimaQuantidade: 0
+          };
+        }
+
+        mapa[nome].penultimaQuantidade = mapa[nome].ultimaQuantidade;
+        mapa[nome].ultimaQuantidade = Number(compra.quantidade || 0);
+        mapa[nome].total += Number(compra.quantidade || 0);
+        mapa[nome].compras += 1;
+      });
+
+      return Object.values(mapa);
+    }
+
+    function gerarMensagensHistorico() {
+      const mensagens = [];
+      const resumo = comprasPorProduto();
+
+      resumo.forEach((item) => {
+        if (item.compras >= 2 && item.ultimaQuantidade > item.penultimaQuantidade) {
+          mensagens.push(`📈 Você comprou mais ${item.nome} na última compra. Pode estar usando mais que o normal.`);
+        }
+
+        if (item.compras >= 2 && item.ultimaQuantidade < item.penultimaQuantidade) {
+          mensagens.push(`📉 Você reduziu a compra de ${item.nome} em relação à compra anterior.`);
+        }
+
+        const produtoAtual = produtos.find(p => p.nome === item.nome);
+        if (produtoAtual && item.total >= Math.max(4, Number(produtoAtual.minimo || 0) * 2)) {
+          mensagens.push(`🧠 ${item.nome} tem consumo acumulado alto. Avalie se o estoque mínimo está adequado.`);
+        }
+      });
+
+      return mensagens;
+    }
+
     function renderIa() {
       const area = document.getElementById('listaIa');
       const lista = produtosLista();
@@ -669,6 +732,9 @@
         mensagens.push(`🚨 Atenção: ${nomes}${zerados.length > 3 ? '...' : ''} estão zerados.`);
       }
 
+      const mensagensHistorico = gerarMensagensHistorico();
+      mensagensHistorico.slice(0, 3).forEach((m) => mensagens.push(m));
+
       area.innerHTML = mensagens.map(m => `<div class="ia-card">${m}</div>`).join('');
     }
 
@@ -681,6 +747,14 @@
 
     document.getElementById('novoProduto').addEventListener('keydown', function(event) {
       if (event.key === 'Enter') adicionarProduto();
+    });
+
+    onSnapshot(query(historicoRef, orderBy('criadoEm', 'desc'), limit(80)), (snap) => {
+      historicoCompras = [];
+      snap.forEach((d) => historicoCompras.push({ id: d.id, ...d.data() }));
+      renderizar();
+    }, (erro) => {
+      console.error(erro);
     });
 
     onSnapshot(query(produtosRef, orderBy('nome')), async (snap) => {
