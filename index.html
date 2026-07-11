@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Compras da Casa</title>
+  <title>Compras Fácil</title>
 
   <style>
     :root {
@@ -241,17 +241,102 @@
       .comprado-stepper { grid-template-columns:34px 36px 34px; }
       .comprado-stepper button { height:36px; }
     }
+
+    .login-screen {
+      position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center;
+      padding:20px; background:linear-gradient(135deg,var(--azul1),var(--azul2));
+    }
+
+    .login-screen.hidden { display:none; }
+
+    .login-card {
+      width:100%; max-width:390px; background:white; border-radius:28px; padding:26px 20px;
+      box-shadow:0 22px 55px rgba(15,23,42,.25); text-align:center;
+    }
+
+    .login-logo {
+      width:92px; height:92px; margin:0 auto 16px; border-radius:24px;
+      background:linear-gradient(135deg,var(--azul1),var(--azul2)); display:flex;
+      align-items:center; justify-content:center; font-size:48px; box-shadow:var(--sombra);
+    }
+
+    .login-card h2 { margin:0; font-size:27px; font-weight:900; color:var(--texto); }
+    .login-card p { margin:9px 0 20px; color:var(--cinza); font-size:14px; font-weight:700; line-height:1.4; }
+
+    .google-btn {
+      width:100%; min-height:54px; border:2px solid #dbeafe; border-radius:16px;
+      background:white; color:var(--texto); font-size:16px; font-weight:900;
+      display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer;
+      box-shadow:0 6px 16px rgba(15,23,42,.08);
+    }
+
+    .google-g {
+      width:30px; height:30px; border-radius:50%; display:flex; align-items:center;
+      justify-content:center; font-size:19px; font-weight:900; color:#2563eb; background:#eff6ff;
+    }
+
+    .login-status { min-height:20px; margin-top:13px; color:var(--cinza); font-size:13px; font-weight:800; }
+
+    #conteudoApp.hidden { display:none; }
+
+    .header-row {
+      display:flex; align-items:center; justify-content:space-between; gap:10px; text-align:left;
+    }
+
+    .header-brand { min-width:0; }
+    .header-brand h1 { text-align:left; }
+    .header-brand span {
+      display:block; margin-top:3px; font-size:11px; font-weight:800; opacity:.92;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px;
+    }
+
+    .header-user { display:flex; align-items:center; gap:7px; }
+
+    .header-user img {
+      width:36px; height:36px; border-radius:50%; object-fit:cover; background:rgba(255,255,255,.25);
+      border:2px solid rgba(255,255,255,.8); display:none;
+    }
+
+    .logout-btn {
+      border:1px solid rgba(255,255,255,.65); background:rgba(255,255,255,.16); color:white;
+      border-radius:12px; min-height:36px; padding:0 10px; font-size:12px; font-weight:900; cursor:pointer;
+    }
+
   </style>
 </head>
 
 <body>
+  <section id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="login-logo">🛒</div>
+      <h2>Compras Fácil</h2>
+      <p>Entre com sua conta Google para acessar a lista e manter os dados da sua família sincronizados.</p>
+      <button id="btnLoginGoogle" class="google-btn" onclick="entrarComGoogle()">
+        <span class="google-g">G</span>
+        Entrar com Google
+      </button>
+      <div id="loginStatus" class="login-status"></div>
+    </div>
+  </section>
+
+  <div id="conteudoApp" class="hidden">
   <header>
-    <h1>Compras da Casa</h1>
+    
+    <div class="header-row">
+      <div class="header-brand">
+        <h1>Compras Fácil</h1>
+        <span id="nomeFamiliaHeader">Minha família</span>
+      </div>
+      <div class="header-user">
+        <img id="fotoUsuario" alt="Usuário" />
+        <button class="logout-btn" onclick="sairDoApp()" title="Sair">Sair</button>
+      </div>
+    </div>
     <p id="statusSistema" style="display:none;"></p>
   </header>
 
   <main class="app">
-    <section id="estoque" class="screen active">
+    <section id="estoque" class="screen">
       <div class="card">
         <div class="title-row">
           <div>
@@ -279,7 +364,7 @@
       </div>
     </section>
 
-    <section id="lista" class="screen">
+    <section id="lista" class="screen active">
       <div class="card">
         <div class="title-row">
           <div>
@@ -343,11 +428,11 @@
   </main>
 
   <nav class="bottom-nav">
-    <button id="tab-estoque" class="tab active" onclick="abrirTela('estoque')">
-      <span class="ico">📦</span><span>Estoque</span>
-    </button>
-    <button id="tab-lista" class="tab" onclick="abrirTela('lista')">
+    <button id="tab-lista" class="tab active" onclick="abrirTela('lista')">
       <span class="ico">📝</span><span>Lista</span>
+    </button>
+    <button id="tab-estoque" class="tab" onclick="abrirTela('estoque')">
+      <span class="ico">📦</span><span>Estoque</span>
     </button>
     <button id="tab-ia" class="tab" onclick="abrirTela('ia')">
       <span class="ico">🤖</span><span>IA</span>
@@ -356,6 +441,15 @@
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      onAuthStateChanged,
+      signOut,
+      setPersistence,
+      browserLocalPersistence
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
     import {
       getFirestore,
       collection,
@@ -368,6 +462,7 @@
       query,
       orderBy,
       getDocs,
+      getDoc,
       limit
     } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
@@ -382,8 +477,15 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const produtosRef = collection(db, 'produtos');
-    const historicoRef = collection(db, 'historico_compras');
+    const auth = getAuth(app);
+    const providerGoogle = new GoogleAuthProvider();
+
+    let usuarioAtual = null;
+    let familiaIdAtual = null;
+    let produtosRef = null;
+    let historicoRef = null;
+    let unsubscribeProdutos = null;
+    let unsubscribeHistorico = null;
 
     let produtos = [];
     let historicoCompras = [];
@@ -411,6 +513,143 @@
       ["Shampoo", 1, 2],
       ["Saco de lixo", 0, 2]
     ];
+
+
+    async function prepararFamiliaDoUsuario(user) {
+      const usuarioRef = doc(db, 'usuarios', user.uid);
+      const usuarioSnap = await getDoc(usuarioRef);
+
+      if (usuarioSnap.exists() && usuarioSnap.data().familiaId) {
+        familiaIdAtual = usuarioSnap.data().familiaId;
+      } else {
+        const primeiroNome = (user.displayName || 'Minha').split(' ')[0];
+        const nomePadrao = `Família ${primeiroNome}`;
+        const nomeInformado = prompt('Digite o nome da sua família:', nomePadrao);
+        const nomeFamilia = (nomeInformado || nomePadrao).trim();
+
+        familiaIdAtual = user.uid;
+
+        await setDoc(doc(db, 'familias', familiaIdAtual), {
+          nome: nomeFamilia,
+          donoId: user.uid,
+          criadoPorNome: user.displayName || '',
+          criadoPorEmail: user.email || '',
+          criadaEm: serverTimestamp(),
+          atualizadaEm: serverTimestamp()
+        }, { merge: true });
+
+        await setDoc(usuarioRef, {
+          nome: user.displayName || '',
+          email: user.email || '',
+          fotoUrl: user.photoURL || '',
+          familiaId: familiaIdAtual,
+          papel: 'admin',
+          atualizadoEm: serverTimestamp()
+        }, { merge: true });
+
+        await setDoc(doc(db, 'familias', familiaIdAtual, 'membros', user.uid), {
+          uid: user.uid,
+          nome: user.displayName || '',
+          email: user.email || '',
+          fotoUrl: user.photoURL || '',
+          papel: 'admin',
+          ativo: true,
+          entrouEm: serverTimestamp()
+        }, { merge: true });
+      }
+
+      const familiaSnap = await getDoc(doc(db, 'familias', familiaIdAtual));
+      const nomeFamilia = familiaSnap.exists() ? (familiaSnap.data().nome || 'Minha família') : 'Minha família';
+
+      document.getElementById('nomeFamiliaHeader').textContent = nomeFamilia;
+      produtosRef = collection(db, 'familias', familiaIdAtual, 'produtos');
+      historicoRef = collection(db, 'familias', familiaIdAtual, 'historico_compras');
+    }
+
+    function atualizarUsuarioNoCabecalho(user) {
+      const foto = document.getElementById('fotoUsuario');
+      if (user.photoURL) {
+        foto.src = user.photoURL;
+        foto.style.display = 'block';
+      } else {
+        foto.style.display = 'none';
+      }
+    }
+
+    window.entrarComGoogle = async function() {
+      const status = document.getElementById('loginStatus');
+      const botao = document.getElementById('btnLoginGoogle');
+
+      try {
+        status.textContent = 'Abrindo login do Google...';
+        botao.disabled = true;
+        await setPersistence(auth, browserLocalPersistence);
+        await signInWithPopup(auth, providerGoogle);
+      } catch (erro) {
+        console.error(erro);
+        if (erro.code === 'auth/popup-closed-by-user') {
+          status.textContent = 'Login cancelado.';
+        } else {
+          status.textContent = 'Não foi possível entrar. Verifique o Firebase Authentication.';
+        }
+      } finally {
+        botao.disabled = false;
+      }
+    }
+
+    window.sairDoApp = async function() {
+      if (!confirm('Deseja sair do aplicativo?')) return;
+      await signOut(auth);
+    }
+
+    function limparListeners() {
+      if (unsubscribeProdutos) unsubscribeProdutos();
+      if (unsubscribeHistorico) unsubscribeHistorico();
+      unsubscribeProdutos = null;
+      unsubscribeHistorico = null;
+    }
+
+    async function iniciarDadosDaFamilia() {
+      limparListeners();
+      carregouProdutos = false;
+      produtos = [];
+      historicoCompras = [];
+
+      unsubscribeHistorico = onSnapshot(
+        query(historicoRef, orderBy('criadoEm', 'desc'), limit(80)),
+        (snap) => {
+          historicoCompras = [];
+          snap.forEach((d) => historicoCompras.push({ id: d.id, ...d.data() }));
+          renderizar();
+        },
+        (erro) => console.error(erro)
+      );
+
+      unsubscribeProdutos = onSnapshot(
+        query(produtosRef, orderBy('nome')),
+        async (snap) => {
+          produtos = [];
+          snap.forEach((d) => produtos.push({ id: d.id, ...d.data() }));
+
+          if (!carregouProdutos) {
+            carregouProdutos = true;
+
+            if (snap.empty) {
+              setStatus('Criando lista inicial...');
+              await criarListaInicialSeVazio();
+              return;
+            }
+          }
+
+          setStatus('Salvo no Firebase');
+          renderizar();
+        },
+        (erro) => {
+          console.error(erro);
+          setStatus('Erro ao conectar no Firebase. Verifique as regras.');
+        }
+      );
+    }
 
     function setStatus(texto) {
       document.getElementById('statusSistema').textContent = texto;
@@ -714,7 +953,7 @@
         }, { merge: true });
       }
 
-      abrirTela('estoque');
+      abrirTela('lista');
       alert('Compra finalizada com sucesso.');
     }
 
@@ -988,34 +1227,41 @@
       if (event.key === 'Enter') adicionarProduto();
     });
 
-    onSnapshot(query(historicoRef, orderBy('criadoEm', 'desc'), limit(80)), (snap) => {
-      historicoCompras = [];
-      snap.forEach((d) => historicoCompras.push({ id: d.id, ...d.data() }));
-      renderizar();
-    }, (erro) => {
-      console.error(erro);
-    });
 
-    onSnapshot(query(produtosRef, orderBy('nome')), async (snap) => {
-      produtos = [];
-      snap.forEach((d) => produtos.push({ id: d.id, ...d.data() }));
+    onAuthStateChanged(auth, async (user) => {
+      const loginScreen = document.getElementById('loginScreen');
+      const conteudoApp = document.getElementById('conteudoApp');
+      const loginStatus = document.getElementById('loginStatus');
 
-      if (!carregouProdutos) {
-        carregouProdutos = true;
-
-        if (snap.empty) {
-          setStatus('Criando lista inicial...');
-          await criarListaInicialSeVazio();
-          return;
-        }
+      if (!user) {
+        limparListeners();
+        usuarioAtual = null;
+        familiaIdAtual = null;
+        produtos = [];
+        historicoCompras = [];
+        loginScreen.classList.remove('hidden');
+        conteudoApp.classList.add('hidden');
+        loginStatus.textContent = '';
+        return;
       }
 
-      setStatus('Salvo no Firebase');
-      renderizar();
-    }, (erro) => {
-      console.error(erro);
-      setStatus('Erro ao conectar no Firebase. Verifique as regras.');
+      try {
+        loginStatus.textContent = 'Preparando sua família...';
+        usuarioAtual = user;
+        atualizarUsuarioNoCabecalho(user);
+        await prepararFamiliaDoUsuario(user);
+        await iniciarDadosDaFamilia();
+
+        loginScreen.classList.add('hidden');
+        conteudoApp.classList.remove('hidden');
+        abrirTela('lista');
+      } catch (erro) {
+        console.error(erro);
+        loginStatus.textContent = 'Erro ao preparar o aplicativo. Verifique as regras do Firestore.';
+      }
     });
+
   </script>
+  </div>
 </body>
 </html>
