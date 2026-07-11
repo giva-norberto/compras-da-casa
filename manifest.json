@@ -1,6 +1,6 @@
 {
-  "name": "Compras Fácil",
-  "short_name": "Compras Fácil",
+  "name": "ListaLar",
+  "short_name": "ListaLar",
   "description": "Lista de compras e controle de estoque da família.",
   "start_url": "/",
   "scope": "/",
