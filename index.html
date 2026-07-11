@@ -336,13 +336,31 @@
       border-radius:12px; min-height:36px; padding:0 10px; font-size:12px; font-weight:900; cursor:pointer;
     }
 
+  
+    .login-logo img {
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      border-radius:24px;
+      display:block;
+    }
+
   </style>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Compras Fácil">
+
 </head>
 
 <body>
   <section id="loginScreen" class="login-screen">
     <div class="login-card">
-      <div class="login-logo">🛒</div>
+      <div class="login-logo"><img src="icon-192.png" alt="Logo Compras Fácil"></div>
       <h2>Compras Fácil</h2>
       <p>Entre com sua conta Google para acessar a lista e manter os dados da sua família sincronizados.</p>
       <button id="btnLoginGoogle" class="google-btn" onclick="entrarComGoogle()">
@@ -1842,5 +1860,15 @@
 
   </script>
   </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .catch((erro) => console.warn('Service Worker não registrado:', erro));
+      });
+    }
+  </script>
+
 </body>
 </html>
