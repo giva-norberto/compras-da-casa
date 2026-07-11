@@ -1,4 +1,5 @@
-const CACHE_NAME = 'compras-facil-v1';
+const CACHE_NAME = 'listalar-v2';
+
 const ARQUIVOS = [
   './',
   './index.html',
@@ -11,8 +12,11 @@ const ARQUIVOS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ARQUIVOS))
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(ARQUIVOS))
   );
+
   self.skipWaiting();
 });
 
@@ -26,17 +30,24 @@ self.addEventListener('activate', (event) => {
       )
     )
   );
+
   self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  if (event.request.method !== 'GET') {
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)
       .then((resposta) => {
         const copia = resposta.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copia));
+
+        caches
+          .open(CACHE_NAME)
+          .then((cache) => cache.put(event.request, copia));
+
         return resposta;
       })
       .catch(() => caches.match(event.request))
