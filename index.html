@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Compras Fácil</title>
+  <title>ListaLar</title>
 
   <style>
     :root {
@@ -343,7 +343,7 @@
   <section id="loginScreen" class="login-screen">
     <div class="login-card">
       <div class="login-logo">🛒</div>
-      <h2>Compras Fácil</h2>
+      <h2>ListaLar</h2>
       <p>Entre com sua conta Google para acessar a lista e manter os dados da sua família sincronizados.</p>
       <button id="btnLoginGoogle" class="google-btn" onclick="entrarComGoogle()">
         <span class="google-g">G</span>
@@ -358,7 +358,7 @@
     
     <div class="header-row">
       <div class="header-brand">
-        <h1>Compras Fácil</h1>
+        <h1>ListaLar</h1>
         <span id="nomeFamiliaHeader">Minha família</span>
       </div>
       <div class="header-user">
@@ -760,7 +760,7 @@
       try {
         if (navigator.share) {
           await navigator.share({
-            title: 'Compras Fácil',
+            title: 'ListaLar',
             text: conviteCompartilhamento.texto,
             url: conviteCompartilhamento.link
           });
@@ -853,7 +853,7 @@
         conviteCompartilhamento = {
           link,
           texto:
-            `Olá! Entre na nossa lista de compras da ${nomeFamilia} no Compras Fácil.`
+            `Olá! Entre na nossa lista de compras da ${nomeFamilia} no ListaLar.`
         };
 
         // Abre o compartilhamento nativo. Assim o usuário escolhe
