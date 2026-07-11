@@ -292,26 +292,39 @@
 
     .header-user { display:flex; align-items:center; gap:7px; }
 
-   .family-btn {
-  width: 40px;
-  height: 40px;
-  border: 1px solid rgba(255,255,255,.65);
-  background: rgba(255,255,255,.16);
-  color: white;
-  border-radius: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-  font-size: 25px;
-  cursor: pointer;
-  padding: 0;
-}
+    .family-btn {
+      width:42px; height:42px; border:1px solid rgba(255,255,255,.72);
+      background:rgba(255,255,255,.18); border-radius:14px;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; padding:5px; flex:0 0 42px;
+    }
 
-.family-btn:disabled {
-  opacity: .55;
-  cursor: wait;
-}
+    .family-btn svg {
+      width:31px; height:31px; display:block;
+      filter:drop-shadow(0 2px 2px rgba(15,23,42,.22));
+    }
+
+    .family-btn:disabled {
+      opacity:.55; cursor:wait;
+    }
+
+    .share-modal-bg {
+      position:fixed; inset:0; z-index:300; display:none;
+      align-items:center; justify-content:center; padding:18px;
+      background:rgba(15,23,42,.58);
+    }
+
+    .share-modal-bg.active { display:flex; }
+
+    .share-modal {
+      width:100%; max-width:390px; background:white; border-radius:24px;
+      padding:20px; box-shadow:0 22px 55px rgba(15,23,42,.25);
+      text-align:center;
+    }
+
+    .share-modal h3 { margin:0 0 8px; font-size:22px; font-weight:900; }
+    .share-modal p { margin:0 0 16px; color:var(--cinza); font-size:14px; font-weight:700; line-height:1.4; }
+    .share-modal-actions { display:grid; grid-template-columns:1fr; gap:9px; }
 
     .header-user img {
       width:36px; height:36px; border-radius:50%; object-fit:cover; background:rgba(255,255,255,.25);
@@ -353,10 +366,19 @@
           id="btnConvidarFamilia"
           class="family-btn"
           onclick="compartilharFamilia()"
-          title="Convidar familiares pelo WhatsApp"
-          aria-label="Convidar familiares"
-        >👪</button>
-        <img id="fotoUsuario" alt="Usuário" />
+          title="Compartilhar com a família"
+          aria-label="Compartilhar com a família"
+        >
+          <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <circle cx="19" cy="21" r="8" fill="#FACC15"/>
+            <circle cx="45" cy="21" r="8" fill="#FB7185"/>
+            <circle cx="32" cy="31" r="7" fill="#38BDF8"/>
+            <path d="M5 52c0-11 6-18 14-18s14 7 14 18v4H5z" fill="#FFFFFF"/>
+            <path d="M31 52c0-11 6-18 14-18s14 7 14 18v4H31z" fill="#FFFFFF"/>
+            <path d="M19 55c0-11 5-18 13-18s13 7 13 18v3H19z" fill="#DBEAFE"/>
+          </svg>
+        </button>
+        <img id="fotoUsuario" alt="Usuário" loading="lazy" referrerpolicy="no-referrer" />
         <button class="logout-btn" onclick="sairDoApp()" title="Sair">Sair</button>
       </div>
     </div>
@@ -467,12 +489,25 @@
     </button>
   </nav>
 
+  <div id="shareModal" class="share-modal-bg" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
+    <div class="share-modal">
+      <h3 id="shareModalTitle">Compartilhar com a família</h3>
+      <p>Escolha onde deseja enviar o convite ou copie o link.</p>
+      <div class="share-modal-actions">
+        <button class="btn btn-primary" onclick="compartilharConviteAgora()">Compartilhar</button>
+        <button class="btn btn-yellow" onclick="copiarLinkConvite()">Copiar link</button>
+        <button class="btn btn-red" onclick="fecharModalCompartilhar()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
     import {
       getAuth,
       GoogleAuthProvider,
       signInWithPopup,
+      signInWithRedirect,
       onAuthStateChanged,
       signOut,
       setPersistence,
@@ -508,12 +543,20 @@
     const auth = getAuth(app);
     const providerGoogle = new GoogleAuthProvider();
 
+    // Mantém a sessão do Google salva neste navegador/dispositivo.
+    setPersistence(auth, browserLocalPersistence).catch((erro) => {
+      console.error('Não foi possível ativar a persistência local:', erro);
+    });
+
     let usuarioAtual = null;
     let familiaIdAtual = null;
     let produtosRef = null;
     let historicoRef = null;
     let unsubscribeProdutos = null;
-    let unsubscribeHistorico = null;
+    let telaAtiva = 'lista';
+    let historicoCarregado = false;
+    let carregandoHistorico = false;
+    let conviteCompartilhamento = null;
 
     let produtos = [];
     let historicoCompras = [];
@@ -613,6 +656,12 @@
         { merge: true }
       );
 
+      salvarCacheFamilia(
+        user.uid,
+        convite.familiaId,
+        convite.nomeFamilia || 'Minha família'
+      );
+
       window.history.replaceState(
         {},
         document.title,
@@ -626,6 +675,70 @@
       }
 
       return true;
+    }
+
+    async function copiarTextoSeguro(texto) {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(texto);
+        return;
+      }
+
+      const area = document.createElement('textarea');
+      area.value = texto;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand('copy');
+      document.body.removeChild(area);
+    }
+
+    function abrirModalCompartilhar() {
+      document.getElementById('shareModal').classList.add('active');
+    }
+
+    window.fecharModalCompartilhar = function() {
+      document.getElementById('shareModal').classList.remove('active');
+    }
+
+    window.compartilharConviteAgora = async function() {
+      if (!conviteCompartilhamento) return;
+
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: 'Compras Fácil',
+            text: conviteCompartilhamento.texto,
+            url: conviteCompartilhamento.link
+          });
+          fecharModalCompartilhar();
+          return;
+        }
+
+        await copiarTextoSeguro(
+          `${conviteCompartilhamento.texto}\n\n${conviteCompartilhamento.link}`
+        );
+        fecharModalCompartilhar();
+        alert('Convite copiado. Agora é só colar no aplicativo que preferir.');
+      } catch (erro) {
+        if (erro && erro.name === 'AbortError') return;
+        console.error('Erro no compartilhamento:', erro);
+        alert('Não foi possível abrir o compartilhamento. Use Copiar link.');
+      }
+    }
+
+    window.copiarLinkConvite = async function() {
+      if (!conviteCompartilhamento) return;
+
+      try {
+        await copiarTextoSeguro(conviteCompartilhamento.link);
+        fecharModalCompartilhar();
+        alert('Link da família copiado.');
+      } catch (erro) {
+        console.error('Erro ao copiar convite:', erro);
+        alert('Não foi possível copiar o link.');
+      }
     }
 
     window.compartilharFamilia = async function() {
@@ -682,23 +795,18 @@
         }
 
         const baseUrl = `${window.location.origin}${window.location.pathname}`;
-        const linkConvite = `${baseUrl}?convite=${encodeURIComponent(token)}`;
+        const link = `${baseUrl}?convite=${encodeURIComponent(token)}`;
+        const nomeFamilia = familia.nome || 'minha família';
 
-        const mensagem = encodeURIComponent(
-          `Olá! 👨‍👩‍👧‍👦\n\n` +
-          `Entre na nossa lista de compras da ${familia.nome || 'família'}.\n\n` +
-          `${linkConvite}`
-        );
+        conviteCompartilhamento = {
+          link,
+          texto:
+            `Olá! Entre na nossa lista de compras da ${nomeFamilia} no Compras Fácil.`
+        };
 
-        const urlWhatsapp = `https://wa.me/?text=${mensagem}`;
-        const janela = window.open(urlWhatsapp, '_blank');
-
-        if (!janela) {
-          await navigator.clipboard.writeText(linkConvite);
-          alert(
-            'O WhatsApp não abriu. O link da família foi copiado para você enviar.'
-          );
-        }
+        // Abre o compartilhamento nativo. Assim o usuário escolhe
+        // WhatsApp comum, WhatsApp Business, Mensagens, e-mail etc.
+        abrirModalCompartilhar();
       } catch (erro) {
         console.error('Erro ao compartilhar família:', erro);
         alert('Não foi possível gerar o convite da família.');
@@ -707,7 +815,61 @@
       }
     }
 
+    function chaveCacheFamilia(uid) {
+      return `comprasFacilFamilia_${uid}`;
+    }
+
+    function salvarCacheFamilia(uid, familiaId, nomeFamilia) {
+      localStorage.setItem(
+        chaveCacheFamilia(uid),
+        JSON.stringify({
+          familiaId,
+          nomeFamilia,
+          salvoEm: Date.now()
+        })
+      );
+    }
+
+    function lerCacheFamilia(uid) {
+      try {
+        const valor = localStorage.getItem(chaveCacheFamilia(uid));
+        return valor ? JSON.parse(valor) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function configurarReferenciasFamilia(familiaId, nomeFamilia) {
+      familiaIdAtual = familiaId;
+      document.getElementById('nomeFamiliaHeader').textContent =
+        nomeFamilia || 'Minha família';
+
+      produtosRef = collection(
+        db,
+        'familias',
+        familiaIdAtual,
+        'produtos'
+      );
+
+      historicoRef = collection(
+        db,
+        'familias',
+        familiaIdAtual,
+        'historico_compras'
+      );
+    }
+
     async function prepararFamiliaDoUsuario(user) {
+      const cache = lerCacheFamilia(user.uid);
+
+      if (cache?.familiaId) {
+        configurarReferenciasFamilia(
+          cache.familiaId,
+          cache.nomeFamilia
+        );
+        return;
+      }
+
       const usuarioRef = doc(db, 'usuarios', user.uid);
       const usuarioSnap = await getDoc(usuarioRef);
 
@@ -716,7 +878,10 @@
       } else {
         const primeiroNome = (user.displayName || 'Minha').split(' ')[0];
         const nomePadrao = `Família ${primeiroNome}`;
-        const nomeInformado = prompt('Digite o nome da sua família:', nomePadrao);
+        const nomeInformado = prompt(
+          'Digite o nome da sua família:',
+          nomePadrao
+        );
 
         if (nomeInformado === null) {
           await signOut(auth);
@@ -724,7 +889,6 @@
         }
 
         const nomeFamilia = nomeInformado.trim() || nomePadrao;
-
         familiaIdAtual = user.uid;
 
         await setDoc(doc(db, 'familias', familiaIdAtual), {
@@ -745,139 +909,52 @@
           atualizadoEm: serverTimestamp()
         }, { merge: true });
 
-        await setDoc(doc(db, 'familias', familiaIdAtual, 'membros', user.uid), {
-          uid: user.uid,
-          nome: user.displayName || '',
-          email: user.email || '',
-          fotoUrl: user.photoURL || '',
-          papel: 'admin',
-          ativo: true,
-          entrouEm: serverTimestamp()
-        }, { merge: true });
-      }
-
-      const familiaSnap = await getDoc(doc(db, 'familias', familiaIdAtual));
-      const nomeFamilia = familiaSnap.exists() ? (familiaSnap.data().nome || 'Minha família') : 'Minha família';
-
-      document.getElementById('nomeFamiliaHeader').textContent = nomeFamilia;
-      produtosRef = collection(db, 'familias', familiaIdAtual, 'produtos');
-      historicoRef = collection(db, 'familias', familiaIdAtual, 'historico_compras');
-    }
-
-
-    const EMAIL_DONO_DADOS_ANTIGOS = 'giva.norberto@gmail.com';
-
-    function normalizarNomeProduto(nome) {
-      return String(nome || '')
-        .trim()
-        .toLocaleLowerCase('pt-BR')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
-    }
-
-    async function migrarDadosAntigosSeNecessario(user) {
-      // Os dados antigos eram globais e pertencem somente ao usuário original.
-      if (
-        !user ||
-        !user.email ||
-        user.email.toLowerCase() !== EMAIL_DONO_DADOS_ANTIGOS
-      ) {
-        return;
-      }
-
-      const familiaDocRef = doc(db, 'familias', familiaIdAtual);
-      const familiaSnap = await getDoc(familiaDocRef);
-
-      if (
-        familiaSnap.exists() &&
-        familiaSnap.data().migracaoDadosAntigosConcluida === true
-      ) {
-        return;
-      }
-
-      try {
-        setStatus('Recuperando seus dados anteriores...');
-
-        const produtosAntigosSnap = await getDocs(collection(db, 'produtos'));
-        const historicoAntigoSnap = await getDocs(collection(db, 'historico_compras'));
-
-        const produtosFamiliaSnap = await getDocs(produtosRef);
-        const produtosPorNome = new Map();
-
-        produtosFamiliaSnap.forEach((produtoDoc) => {
-          const dados = produtoDoc.data();
-          produtosPorNome.set(normalizarNomeProduto(dados.nome), produtoDoc.id);
-        });
-
-        let produtosMigrados = 0;
-        let historicosMigrados = 0;
-
-        for (const produtoAntigoDoc of produtosAntigosSnap.docs) {
-          const dadosAntigos = produtoAntigoDoc.data();
-          const nomeNormalizado = normalizarNomeProduto(dadosAntigos.nome);
-
-          if (!nomeNormalizado) continue;
-
-          const idExistente = produtosPorNome.get(nomeNormalizado);
-          const destinoRef = idExistente
-            ? doc(db, 'familias', familiaIdAtual, 'produtos', idExistente)
-            : doc(db, 'familias', familiaIdAtual, 'produtos', produtoAntigoDoc.id);
-
-          await setDoc(destinoRef, {
-            ...dadosAntigos,
-            migradoDosDadosAntigos: true,
-            idDocumentoAntigo: produtoAntigoDoc.id,
-            migradoEm: serverTimestamp(),
-            atualizadoEm: serverTimestamp()
-          }, { merge: true });
-
-          produtosPorNome.set(nomeNormalizado, destinoRef.id);
-          produtosMigrados += 1;
-        }
-
-        for (const historicoAntigoDoc of historicoAntigoSnap.docs) {
-          await setDoc(
-            doc(
-              db,
-              'familias',
-              familiaIdAtual,
-              'historico_compras',
-              historicoAntigoDoc.id
-            ),
-            {
-              ...historicoAntigoDoc.data(),
-              migradoDosDadosAntigos: true,
-              idDocumentoAntigo: historicoAntigoDoc.id,
-              migradoEm: serverTimestamp()
-            },
-            { merge: true }
-          );
-
-          historicosMigrados += 1;
-        }
-
-        await setDoc(familiaDocRef, {
-          migracaoDadosAntigosConcluida: true,
-          migracaoDadosAntigosEm: serverTimestamp(),
-          quantidadeProdutosMigrados: produtosMigrados,
-          quantidadeHistoricosMigrados: historicosMigrados,
-          atualizadaEm: serverTimestamp()
-        }, { merge: true });
-
-        if (produtosMigrados > 0 || historicosMigrados > 0) {
-          alert(
-            `Dados anteriores recuperados com sucesso!\n\n` +
-            `Produtos: ${produtosMigrados}\n` +
-            `Registros do histórico: ${historicosMigrados}`
-          );
-        }
-      } catch (erro) {
-        console.error('Erro ao migrar dados antigos:', erro);
-        alert(
-          'Sua família foi criada, mas os dados antigos ainda não puderam ser recuperados. ' +
-          'Publique as novas regras do Firestore e atualize o aplicativo.'
+        await setDoc(
+          doc(db, 'familias', familiaIdAtual, 'membros', user.uid),
+          {
+            uid: user.uid,
+            nome: user.displayName || '',
+            email: user.email || '',
+            fotoUrl: user.photoURL || '',
+            papel: 'admin',
+            ativo: true,
+            entrouEm: serverTimestamp()
+          },
+          { merge: true }
         );
+
+        salvarCacheFamilia(
+          user.uid,
+          familiaIdAtual,
+          nomeFamilia
+        );
+
+        configurarReferenciasFamilia(
+          familiaIdAtual,
+          nomeFamilia
+        );
+
+        return;
       }
+
+      const familiaSnap = await getDoc(
+        doc(db, 'familias', familiaIdAtual)
+      );
+
+      const nomeFamilia = familiaSnap.exists()
+        ? (familiaSnap.data().nome || 'Minha família')
+        : 'Minha família';
+
+      salvarCacheFamilia(
+        user.uid,
+        familiaIdAtual,
+        nomeFamilia
+      );
+
+      configurarReferenciasFamilia(
+        familiaIdAtual,
+        nomeFamilia
+      );
     }
 
     function atualizarUsuarioNoCabecalho(user) {
@@ -890,23 +967,41 @@
       }
     }
 
+    function acessoPorCelular() {
+      return (
+        window.matchMedia('(max-width: 768px)').matches ||
+        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+      );
+    }
+
     window.entrarComGoogle = async function() {
       const status = document.getElementById('loginStatus');
       const botao = document.getElementById('btnLoginGoogle');
 
       try {
-        status.textContent = 'Abrindo login do Google...';
+        status.textContent = acessoPorCelular()
+          ? 'Abrindo o Google...'
+          : 'Abrindo login do Google...';
+
         botao.disabled = true;
         await setPersistence(auth, browserLocalPersistence);
+
+        if (acessoPorCelular()) {
+          await signInWithRedirect(auth, providerGoogle);
+          return;
+        }
+
         await signInWithPopup(auth, providerGoogle);
       } catch (erro) {
         console.error(erro);
+
         if (erro.code === 'auth/popup-closed-by-user') {
           status.textContent = 'Login cancelado.';
         } else {
-          status.textContent = 'Não foi possível entrar. Verifique o Firebase Authentication.';
+          status.textContent =
+            'Não foi possível entrar. Tente novamente.';
         }
-      } finally {
+
         botao.disabled = false;
       }
     }
@@ -918,32 +1013,61 @@
 
     function limparListeners() {
       if (unsubscribeProdutos) unsubscribeProdutos();
-      if (unsubscribeHistorico) unsubscribeHistorico();
       unsubscribeProdutos = null;
-      unsubscribeHistorico = null;
+    }
+
+    async function carregarHistoricoSeNecessario() {
+      if (
+        historicoCarregado ||
+        carregandoHistorico ||
+        !historicoRef
+      ) {
+        return;
+      }
+
+      carregandoHistorico = true;
+
+      try {
+        const snap = await getDocs(
+          query(
+            historicoRef,
+            orderBy('criadoEm', 'desc'),
+            limit(80)
+          )
+        );
+
+        historicoCompras = [];
+        snap.forEach((d) => {
+          historicoCompras.push({ id: d.id, ...d.data() });
+        });
+
+        historicoCarregado = true;
+
+        if (telaAtiva === 'ia') {
+          renderIa();
+        }
+      } catch (erro) {
+        console.error('Erro ao carregar histórico:', erro);
+      } finally {
+        carregandoHistorico = false;
+      }
     }
 
     async function iniciarDadosDaFamilia() {
       limparListeners();
       carregouProdutos = false;
+      historicoCarregado = false;
+      carregandoHistorico = false;
       produtos = [];
       historicoCompras = [];
-
-      unsubscribeHistorico = onSnapshot(
-        query(historicoRef, orderBy('criadoEm', 'desc'), limit(80)),
-        (snap) => {
-          historicoCompras = [];
-          snap.forEach((d) => historicoCompras.push({ id: d.id, ...d.data() }));
-          renderizar();
-        },
-        (erro) => console.error(erro)
-      );
 
       unsubscribeProdutos = onSnapshot(
         query(produtosRef, orderBy('nome')),
         async (snap) => {
           produtos = [];
-          snap.forEach((d) => produtos.push({ id: d.id, ...d.data() }));
+          snap.forEach((d) => {
+            produtos.push({ id: d.id, ...d.data() });
+          });
 
           if (!carregouProdutos) {
             carregouProdutos = true;
@@ -960,7 +1084,9 @@
         },
         (erro) => {
           console.error(erro);
-          setStatus('Erro ao conectar no Firebase. Verifique as regras.');
+          setStatus(
+            'Erro ao conectar no Firebase. Verifique as regras.'
+          );
         }
       );
     }
@@ -999,14 +1125,29 @@
       return produtos.filter(p => comprarQtd(p) > 0 || p.manualLista);
     }
 
-    window.abrirTela = function(tela) {
-      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    window.abrirTela = async function(tela) {
+      telaAtiva = tela;
+
+      document.querySelectorAll('.screen').forEach((s) => {
+        s.classList.remove('active');
+      });
+
+      document.querySelectorAll('.tab').forEach((t) => {
+        t.classList.remove('active');
+      });
 
       document.getElementById(tela).classList.add('active');
       document.getElementById('tab-' + tela).classList.add('active');
 
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'auto' });
+
+      if (tela === 'ia') {
+        renderResumo();
+        renderIa();
+        await carregarHistoricoSeNecessario();
+        return;
+      }
+
       renderizar();
     }
 
@@ -1266,6 +1407,9 @@
           atualizadoEm: serverTimestamp()
         }, { merge: true });
       }
+
+      historicoCarregado = false;
+      historicoCompras = [];
 
       abrirTela('lista');
       alert('Compra finalizada com sucesso.');
@@ -1532,13 +1676,30 @@
 
     function renderizar() {
       renderResumo();
-      renderEstoque();
+
+      if (telaAtiva === 'estoque') {
+        renderEstoque();
+        return;
+      }
+
+      if (telaAtiva === 'ia') {
+        renderIa();
+        return;
+      }
+
       renderLista();
-      renderIa();
     }
 
     document.getElementById('novoProduto').addEventListener('keydown', function(event) {
       if (event.key === 'Enter') adicionarProduto();
+    });
+
+    document.getElementById('shareModal').addEventListener('click', function(event) {
+      if (event.target.id === 'shareModal') fecharModalCompartilhar();
+    });
+
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') fecharModalCompartilhar();
     });
 
 
@@ -1553,6 +1714,9 @@
         familiaIdAtual = null;
         produtos = [];
         historicoCompras = [];
+        historicoCarregado = false;
+        carregandoHistorico = false;
+        telaAtiva = 'lista';
         loginScreen.classList.remove('hidden');
         conteudoApp.classList.add('hidden');
 
@@ -1576,7 +1740,6 @@
         }
 
         await prepararFamiliaDoUsuario(user);
-        await migrarDadosAntigosSeNecessario(user);
         await iniciarDadosDaFamilia();
 
         loginScreen.classList.add('hidden');
