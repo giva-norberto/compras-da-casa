@@ -561,6 +561,11 @@
     let produtos = [];
     let historicoCompras = [];
     let carregouProdutos = false;
+    let inicializacaoEmAndamento = false;
+    let ultimoUidInicializado = null;
+    let conviteEmProcessamento = false;
+
+    const CHAVE_CONVITE_PENDENTE = 'comprasFacilConvitePendente';
 
     const listaInicial = [
       ["Leite", 1, 5],
@@ -587,9 +592,46 @@
 
 
 
+    function guardarConvitePendente(token) {
+      if (!token) return;
+      sessionStorage.setItem(CHAVE_CONVITE_PENDENTE, token);
+    }
+
+    function limparConvitePendente() {
+      sessionStorage.removeItem(CHAVE_CONVITE_PENDENTE);
+    }
+
     function obterTokenConviteDaUrl() {
       const parametros = new URLSearchParams(window.location.search);
-      return parametros.get('convite');
+      const tokenUrl = parametros.get('convite');
+
+      if (tokenUrl) {
+        guardarConvitePendente(tokenUrl);
+        return tokenUrl;
+      }
+
+      return sessionStorage.getItem(CHAVE_CONVITE_PENDENTE);
+    }
+
+    function conviteJaProcessado(user, token) {
+      if (!user || !token) return false;
+      return localStorage.getItem(
+        `comprasFacilConviteProcessado_${user.uid}_${token}`
+      ) === 'true';
+    }
+
+    function marcarConviteComoProcessado(user, token) {
+      if (!user || !token) return;
+      localStorage.setItem(
+        `comprasFacilConviteProcessado_${user.uid}_${token}`,
+        'true'
+      );
+    }
+
+    function removerConviteDaUrl() {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('convite');
+      window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
     }
 
     function gerarTokenConvite() {
@@ -599,82 +641,92 @@
     }
 
     async function entrarNaFamiliaPorConvite(user, token) {
-      if (!token) return false;
+      if (!token || conviteEmProcessamento) return false;
 
-      const conviteRef = doc(db, 'convites', token);
-      const conviteSnap = await getDoc(conviteRef);
-
-      if (!conviteSnap.exists()) {
-        throw new Error('CONVITE_NAO_ENCONTRADO');
+      if (conviteJaProcessado(user, token)) {
+        limparConvitePendente();
+        removerConviteDaUrl();
+        return false;
       }
 
-      const convite = conviteSnap.data();
+      conviteEmProcessamento = true;
 
-      if (convite.ativo !== true || !convite.familiaId) {
-        throw new Error('CONVITE_INVALIDO');
-      }
+      try {
+        const conviteRef = doc(db, 'convites', token);
+        const conviteSnap = await getDoc(conviteRef);
 
-      const usuarioRef = doc(db, 'usuarios', user.uid);
-      const usuarioSnap = await getDoc(usuarioRef);
-      const familiaAtual = usuarioSnap.exists()
-        ? usuarioSnap.data().familiaId
-        : null;
-
-      if (familiaAtual && familiaAtual !== convite.familiaId) {
-        const confirmarTroca = confirm(
-          `Você já pertence a outra família.\n\n` +
-          `Deseja entrar em "${convite.nomeFamilia || 'Família compartilhada'}"?`
-        );
-
-        if (!confirmarTroca) {
-          throw new Error('ENTRADA_FAMILIA_CANCELADA');
+        if (!conviteSnap.exists()) {
+          throw new Error('CONVITE_NAO_ENCONTRADO');
         }
-      }
 
-      await setDoc(usuarioRef, {
-        nome: user.displayName || '',
-        email: user.email || '',
-        fotoUrl: user.photoURL || '',
-        familiaId: convite.familiaId,
-        papel: 'membro',
-        conviteToken: token,
-        atualizadoEm: serverTimestamp()
-      }, { merge: true });
+        const convite = conviteSnap.data();
 
-      await setDoc(
-        doc(db, 'familias', convite.familiaId, 'membros', user.uid),
-        {
-          uid: user.uid,
+        if (convite.ativo !== true || !convite.familiaId) {
+          throw new Error('CONVITE_INVALIDO');
+        }
+
+        const usuarioRef = doc(db, 'usuarios', user.uid);
+        const usuarioSnap = await getDoc(usuarioRef);
+        const familiaAtual = usuarioSnap.exists()
+          ? usuarioSnap.data().familiaId
+          : null;
+
+        if (familiaAtual && familiaAtual !== convite.familiaId) {
+          const confirmarTroca = confirm(
+            `Você já pertence a outra família.\n\n` +
+            `Deseja entrar em "${convite.nomeFamilia || 'Família compartilhada'}"?`
+          );
+
+          if (!confirmarTroca) {
+            throw new Error('ENTRADA_FAMILIA_CANCELADA');
+          }
+        }
+
+        await setDoc(usuarioRef, {
           nome: user.displayName || '',
           email: user.email || '',
           fotoUrl: user.photoURL || '',
+          familiaId: convite.familiaId,
           papel: 'membro',
-          ativo: true,
           conviteToken: token,
-          entrouEm: serverTimestamp()
-        },
-        { merge: true }
-      );
+          atualizadoEm: serverTimestamp()
+        }, { merge: true });
 
-      salvarCacheFamilia(
-        user.uid,
-        convite.familiaId,
-        convite.nomeFamilia || 'Minha família'
-      );
-
-      window.history.replaceState(
-        {},
-        document.title,
-        window.location.pathname
-      );
-
-      if (familiaAtual !== convite.familiaId) {
-        alert(
-          `Você entrou na ${convite.nomeFamilia || 'família compartilhada'} com sucesso!`
+        await setDoc(
+          doc(db, 'familias', convite.familiaId, 'membros', user.uid),
+          {
+            uid: user.uid,
+            nome: user.displayName || '',
+            email: user.email || '',
+            fotoUrl: user.photoURL || '',
+            papel: 'membro',
+            ativo: true,
+            conviteToken: token,
+            entrouEm: serverTimestamp()
+          },
+          { merge: true }
         );
-      }
 
-      return true;
+        salvarCacheFamilia(
+          user.uid,
+          convite.familiaId,
+          convite.nomeFamilia || 'Minha família'
+        );
+
+        marcarConviteComoProcessado(user, token);
+        limparConvitePendente();
+        removerConviteDaUrl();
+
+        if (familiaAtual !== convite.familiaId) {
+          alert(
+            `Você entrou na ${convite.nomeFamilia || 'família compartilhada'} com sucesso!`
+          );
+        }
+
+        return true;
+      } finally {
+        conviteEmProcessamento = false;
+      }
     }
 
     async function copiarTextoSeguro(texto) {
@@ -979,29 +1031,37 @@
       const botao = document.getElementById('btnLoginGoogle');
 
       try {
-        status.textContent = acessoPorCelular()
-          ? 'Abrindo o Google...'
-          : 'Abrindo login do Google...';
+        const tokenConvite = obterTokenConviteDaUrl();
+        if (tokenConvite) guardarConvitePendente(tokenConvite);
 
+        status.textContent = 'Abrindo login do Google...';
         botao.disabled = true;
         await setPersistence(auth, browserLocalPersistence);
 
-        if (acessoPorCelular()) {
-          await signInWithRedirect(auth, providerGoogle);
-          return;
-        }
-
+        // Popup mantém o usuário na mesma página e evita o ciclo de
+        // redirecionamento observado no Safari/iPhone.
         await signInWithPopup(auth, providerGoogle);
       } catch (erro) {
         console.error(erro);
 
         if (erro.code === 'auth/popup-closed-by-user') {
           status.textContent = 'Login cancelado.';
+        } else if (
+          erro.code === 'auth/popup-blocked' ||
+          erro.code === 'auth/cancelled-popup-request'
+        ) {
+          try {
+            status.textContent = 'Continuando pelo Google...';
+            await signInWithRedirect(auth, providerGoogle);
+            return;
+          } catch (erroRedirect) {
+            console.error(erroRedirect);
+            status.textContent = 'Não foi possível abrir o Google. Tente novamente no Safari ou Chrome.';
+          }
         } else {
-          status.textContent =
-            'Não foi possível entrar. Tente novamente.';
+          status.textContent = 'Não foi possível entrar. Tente novamente.';
         }
-
+      } finally {
         botao.disabled = false;
       }
     }
@@ -1717,6 +1777,8 @@
         historicoCarregado = false;
         carregandoHistorico = false;
         telaAtiva = 'lista';
+        ultimoUidInicializado = null;
+        inicializacaoEmAndamento = false;
         loginScreen.classList.remove('hidden');
         conteudoApp.classList.add('hidden');
 
@@ -1728,12 +1790,20 @@
         return;
       }
 
+      if (inicializacaoEmAndamento) return;
+
+      const tokenConvite = obterTokenConviteDaUrl();
+      if (ultimoUidInicializado === user.uid && !tokenConvite) return;
+
+      inicializacaoEmAndamento = true;
+
       try {
-        loginStatus.textContent = 'Preparando sua família...';
+        loginStatus.textContent = tokenConvite
+          ? 'Entrando na família...'
+          : 'Preparando sua família...';
+
         usuarioAtual = user;
         atualizarUsuarioNoCabecalho(user);
-
-        const tokenConvite = obterTokenConviteDaUrl();
 
         if (tokenConvite) {
           await entrarNaFamiliaPorConvite(user, tokenConvite);
@@ -1742,24 +1812,31 @@
         await prepararFamiliaDoUsuario(user);
         await iniciarDadosDaFamilia();
 
+        ultimoUidInicializado = user.uid;
         loginScreen.classList.add('hidden');
         conteudoApp.classList.remove('hidden');
-        abrirTela('lista');
+        await abrirTela('lista');
       } catch (erro) {
         console.error(erro);
 
         if (erro.message === 'CRIACAO_FAMILIA_CANCELADA') {
           loginStatus.textContent = 'Criação da família cancelada.';
         } else if (erro.message === 'ENTRADA_FAMILIA_CANCELADA') {
+          limparConvitePendente();
+          removerConviteDaUrl();
           loginStatus.textContent = 'Entrada na família cancelada.';
         } else if (
           erro.message === 'CONVITE_NAO_ENCONTRADO' ||
           erro.message === 'CONVITE_INVALIDO'
         ) {
+          limparConvitePendente();
+          removerConviteDaUrl();
           loginStatus.textContent = 'Este convite não existe ou não está mais ativo.';
         } else {
-          loginStatus.textContent = 'Erro ao preparar o aplicativo. Verifique as regras do Firestore.';
+          loginStatus.textContent = 'Erro ao preparar o aplicativo. Verifique sua conexão e tente novamente.';
         }
+      } finally {
+        inicializacaoEmAndamento = false;
       }
     });
 
