@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>ListaLar</title>
+  <title>Compras Fácil</title>
 
   <style>
     :root {
@@ -336,32 +336,14 @@
       border-radius:12px; min-height:36px; padding:0 10px; font-size:12px; font-weight:900; cursor:pointer;
     }
 
-  
-    .login-logo img {
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      border-radius:24px;
-      display:block;
-    }
-
   </style>
-
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-  <meta name="theme-color" content="#2563eb">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Compras Fácil">
-
 </head>
 
 <body>
   <section id="loginScreen" class="login-screen">
     <div class="login-card">
-      <div class="login-logo"><img src="icon-192.png" alt="Logo Compras Fácil"></div>
-      <h2>ListaLar</h2>
+      <div class="login-logo">🛒</div>
+      <h2>Compras Fácil</h2>
       <p>Entre com sua conta Google para acessar a lista e manter os dados da sua família sincronizados.</p>
       <button id="btnLoginGoogle" class="google-btn" onclick="entrarComGoogle()">
         <span class="google-g">G</span>
@@ -376,7 +358,7 @@
     
     <div class="header-row">
       <div class="header-brand">
-        <h1>ListaLar</h1>
+        <h1>Compras Fácil</h1>
         <span id="nomeFamiliaHeader">Minha família</span>
       </div>
       <div class="header-user">
@@ -1340,7 +1322,7 @@
       const existente = produtos.find(p => p.nome.toLowerCase() === nome.toLowerCase());
 
       if (existente) {
-        await setDoc(doc(db, 'produtos', existente.id), {
+        await setDoc(doc(produtosRef, existente.id), {
           manualLista: true,
           qtdManual: quantidade,
           comprado: false,
@@ -1377,7 +1359,7 @@
 
       if (!confirm('Excluir ' + produto.nome + '?')) return;
 
-      await deleteDoc(doc(db, 'produtos', id));
+      await deleteDoc(doc(produtosRef, id));
     }
 
     window.alterarValor = async function(id, campo, delta) {
@@ -1387,7 +1369,7 @@
       const valorAtual = Number(produto[campo] || 0);
       const novoValor = Math.max(0, valorAtual + delta);
 
-      await setDoc(doc(db, 'produtos', id), {
+      await setDoc(doc(produtosRef, id), {
         [campo]: novoValor,
         comprado: false,
         qtdComprada: 0,
@@ -1403,7 +1385,7 @@
       const atual = Number(produto.qtdComprada || sugerido || 1);
       const novo = Math.max(0, atual + delta);
 
-      await setDoc(doc(db, 'produtos', id), {
+      await setDoc(doc(produtosRef, id), {
         qtdComprada: novo,
         comprado: novo > 0 ? produto.comprado : false,
         atualizadoEm: serverTimestamp()
@@ -1414,7 +1396,7 @@
       const produto = produtos.find(p => p.id === id);
       if (!produto) return;
 
-      await setDoc(doc(db, 'produtos', id), {
+      await setDoc(doc(produtosRef, id), {
         manualLista: false,
         qtdManual: 0,
         comprado: false,
@@ -1433,7 +1415,7 @@
       const qtdAtual = Number(produto.qtdComprada || 0);
       const qtdFinal = qtdAtual > 0 ? qtdAtual : sugerido;
 
-      await setDoc(doc(db, 'produtos', id), {
+      await setDoc(doc(produtosRef, id), {
         qtdComprada: qtdFinal,
         comprado: !produto.comprado,
         atualizadoEm: serverTimestamp()
@@ -1474,7 +1456,7 @@
           criadoEm: serverTimestamp()
         });
 
-        await setDoc(doc(db, 'produtos', p.id), {
+        await setDoc(doc(produtosRef, p.id), {
           estoque: estoqueDepois,
           comprado: false,
           qtdComprada: 0,
@@ -1505,7 +1487,7 @@
 
       for (const p of produtos) {
         if (p.comprado || p.qtdComprada > 0) {
-          await setDoc(doc(db, 'produtos', p.id), {
+          await setDoc(doc(produtosRef, p.id), {
             comprado: false,
             qtdComprada: 0,
             atualizadoEm: serverTimestamp()
@@ -1860,15 +1842,5 @@
 
   </script>
   </div>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js')
-          .catch((erro) => console.warn('Service Worker não registrado:', erro));
-      });
-    }
-  </script>
-
 </body>
 </html>
