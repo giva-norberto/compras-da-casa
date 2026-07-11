@@ -525,7 +525,13 @@
         const primeiroNome = (user.displayName || 'Minha').split(' ')[0];
         const nomePadrao = `Família ${primeiroNome}`;
         const nomeInformado = prompt('Digite o nome da sua família:', nomePadrao);
-        const nomeFamilia = (nomeInformado || nomePadrao).trim();
+
+        if (nomeInformado === null) {
+          await signOut(auth);
+          throw new Error('CRIACAO_FAMILIA_CANCELADA');
+        }
+
+        const nomeFamilia = nomeInformado.trim() || nomePadrao;
 
         familiaIdAtual = user.uid;
 
@@ -564,6 +570,122 @@
       document.getElementById('nomeFamiliaHeader').textContent = nomeFamilia;
       produtosRef = collection(db, 'familias', familiaIdAtual, 'produtos');
       historicoRef = collection(db, 'familias', familiaIdAtual, 'historico_compras');
+    }
+
+
+    const EMAIL_DONO_DADOS_ANTIGOS = 'giva.norberto@gmail.com';
+
+    function normalizarNomeProduto(nome) {
+      return String(nome || '')
+        .trim()
+        .toLocaleLowerCase('pt-BR')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    async function migrarDadosAntigosSeNecessario(user) {
+      // Os dados antigos eram globais e pertencem somente ao usuário original.
+      if (
+        !user ||
+        !user.email ||
+        user.email.toLowerCase() !== EMAIL_DONO_DADOS_ANTIGOS
+      ) {
+        return;
+      }
+
+      const familiaDocRef = doc(db, 'familias', familiaIdAtual);
+      const familiaSnap = await getDoc(familiaDocRef);
+
+      if (
+        familiaSnap.exists() &&
+        familiaSnap.data().migracaoDadosAntigosConcluida === true
+      ) {
+        return;
+      }
+
+      try {
+        setStatus('Recuperando seus dados anteriores...');
+
+        const produtosAntigosSnap = await getDocs(collection(db, 'produtos'));
+        const historicoAntigoSnap = await getDocs(collection(db, 'historico_compras'));
+
+        const produtosFamiliaSnap = await getDocs(produtosRef);
+        const produtosPorNome = new Map();
+
+        produtosFamiliaSnap.forEach((produtoDoc) => {
+          const dados = produtoDoc.data();
+          produtosPorNome.set(normalizarNomeProduto(dados.nome), produtoDoc.id);
+        });
+
+        let produtosMigrados = 0;
+        let historicosMigrados = 0;
+
+        for (const produtoAntigoDoc of produtosAntigosSnap.docs) {
+          const dadosAntigos = produtoAntigoDoc.data();
+          const nomeNormalizado = normalizarNomeProduto(dadosAntigos.nome);
+
+          if (!nomeNormalizado) continue;
+
+          const idExistente = produtosPorNome.get(nomeNormalizado);
+          const destinoRef = idExistente
+            ? doc(db, 'familias', familiaIdAtual, 'produtos', idExistente)
+            : doc(db, 'familias', familiaIdAtual, 'produtos', produtoAntigoDoc.id);
+
+          await setDoc(destinoRef, {
+            ...dadosAntigos,
+            migradoDosDadosAntigos: true,
+            idDocumentoAntigo: produtoAntigoDoc.id,
+            migradoEm: serverTimestamp(),
+            atualizadoEm: serverTimestamp()
+          }, { merge: true });
+
+          produtosPorNome.set(nomeNormalizado, destinoRef.id);
+          produtosMigrados += 1;
+        }
+
+        for (const historicoAntigoDoc of historicoAntigoSnap.docs) {
+          await setDoc(
+            doc(
+              db,
+              'familias',
+              familiaIdAtual,
+              'historico_compras',
+              historicoAntigoDoc.id
+            ),
+            {
+              ...historicoAntigoDoc.data(),
+              migradoDosDadosAntigos: true,
+              idDocumentoAntigo: historicoAntigoDoc.id,
+              migradoEm: serverTimestamp()
+            },
+            { merge: true }
+          );
+
+          historicosMigrados += 1;
+        }
+
+        await setDoc(familiaDocRef, {
+          migracaoDadosAntigosConcluida: true,
+          migracaoDadosAntigosEm: serverTimestamp(),
+          quantidadeProdutosMigrados: produtosMigrados,
+          quantidadeHistoricosMigrados: historicosMigrados,
+          atualizadaEm: serverTimestamp()
+        }, { merge: true });
+
+        if (produtosMigrados > 0 || historicosMigrados > 0) {
+          alert(
+            `Dados anteriores recuperados com sucesso!\n\n` +
+            `Produtos: ${produtosMigrados}\n` +
+            `Registros do histórico: ${historicosMigrados}`
+          );
+        }
+      } catch (erro) {
+        console.error('Erro ao migrar dados antigos:', erro);
+        alert(
+          'Sua família foi criada, mas os dados antigos ainda não puderam ser recuperados. ' +
+          'Publique as novas regras do Firestore e atualize o aplicativo.'
+        );
+      }
     }
 
     function atualizarUsuarioNoCabecalho(user) {
@@ -1250,6 +1372,7 @@
         usuarioAtual = user;
         atualizarUsuarioNoCabecalho(user);
         await prepararFamiliaDoUsuario(user);
+        await migrarDadosAntigosSeNecessario(user);
         await iniciarDadosDaFamilia();
 
         loginScreen.classList.add('hidden');
@@ -1257,7 +1380,12 @@
         abrirTela('lista');
       } catch (erro) {
         console.error(erro);
-        loginStatus.textContent = 'Erro ao preparar o aplicativo. Verifique as regras do Firestore.';
+
+        if (erro.message === 'CRIACAO_FAMILIA_CANCELADA') {
+          loginStatus.textContent = 'Criação da família cancelada.';
+        } else {
+          loginStatus.textContent = 'Erro ao preparar o aplicativo. Verifique as regras do Firestore.';
+        }
       }
     });
 
