@@ -292,16 +292,26 @@
 
     .header-user { display:flex; align-items:center; gap:7px; }
 
-    .family-btn {
-      width:40px; height:40px; border:1px solid rgba(255,255,255,.65);
-      background:rgba(255,255,255,.16); color:white; border-radius:13px;
-      display:flex; align-items:center; justify-content:center; font-size:22px;
-      cursor:pointer; padding:0;
-    }
+   .family-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255,255,255,.65);
+  background: rgba(255,255,255,.16);
+  color: white;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 25px;
+  cursor: pointer;
+  padding: 0;
+}
 
-    .family-btn:disabled {
-      opacity:.55; cursor:wait;
-    }
+.family-btn:disabled {
+  opacity: .55;
+  cursor: wait;
+}
 
     .header-user img {
       width:36px; height:36px; border-radius:50%; object-fit:cover; background:rgba(255,255,255,.25);
@@ -345,7 +355,7 @@
           onclick="compartilharFamilia()"
           title="Convidar familiares pelo WhatsApp"
           aria-label="Convidar familiares"
-        >👨‍👩‍👧‍👦</button>
+        >👪</button>
         <img id="fotoUsuario" alt="Usuário" />
         <button class="logout-btn" onclick="sairDoApp()" title="Sair">Sair</button>
       </div>
