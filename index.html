@@ -364,6 +364,139 @@
       opacity:.55; cursor:wait;
     }
 
+
+    .app-modal-bg {
+      position:fixed;
+      inset:0;
+      z-index:500;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      background:rgba(15,23,42,.58);
+      backdrop-filter:blur(4px);
+    }
+
+    .app-modal-bg.active {
+      display:flex;
+    }
+
+    .app-modal {
+      width:100%;
+      max-width:390px;
+      background:white;
+      border-radius:24px;
+      padding:22px 20px 18px;
+      box-shadow:0 24px 60px rgba(15,23,42,.28);
+      text-align:center;
+      animation:modalEntrada .18s ease-out;
+    }
+
+    @keyframes modalEntrada {
+      from {
+        opacity:0;
+        transform:translateY(10px) scale(.98);
+      }
+      to {
+        opacity:1;
+        transform:translateY(0) scale(1);
+      }
+    }
+
+    .app-modal-icon {
+      width:58px;
+      height:58px;
+      margin:0 auto 12px;
+      border-radius:18px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:30px;
+      font-weight:900;
+    }
+
+    .app-modal-icon.info {
+      background:#dbeafe;
+      color:#1d4ed8;
+    }
+
+    .app-modal-icon.success {
+      background:#dcfce7;
+      color:#166534;
+    }
+
+    .app-modal-icon.warning {
+      background:#fef3c7;
+      color:#92400e;
+    }
+
+    .app-modal-icon.danger {
+      background:#fee2e2;
+      color:#991b1b;
+    }
+
+    .app-modal h3 {
+      margin:0 0 8px;
+      font-size:22px;
+      font-weight:900;
+      color:var(--texto);
+    }
+
+    .app-modal p {
+      margin:0;
+      color:var(--cinza);
+      font-size:14px;
+      font-weight:700;
+      line-height:1.45;
+      white-space:pre-line;
+    }
+
+    .app-modal-actions {
+      display:grid;
+      grid-template-columns:1fr;
+      gap:9px;
+      margin-top:18px;
+    }
+
+    .app-modal-actions.dual {
+      grid-template-columns:1fr 1fr;
+    }
+
+    .app-modal-btn {
+      border:0;
+      border-radius:15px;
+      min-height:48px;
+      padding:12px 14px;
+      font-size:15px;
+      font-weight:900;
+      cursor:pointer;
+    }
+
+    .app-modal-btn.primary {
+      color:white;
+      background:linear-gradient(135deg,var(--azul1),var(--azul2));
+    }
+
+    .app-modal-btn.success {
+      color:white;
+      background:var(--verde);
+    }
+
+    .app-modal-btn.warning {
+      color:var(--amarelo-txt);
+      background:var(--amarelo-bg);
+    }
+
+    .app-modal-btn.danger {
+      color:white;
+      background:var(--vermelho);
+    }
+
+    .app-modal-btn.secondary {
+      color:var(--texto);
+      background:#eef2f7;
+    }
+
     .share-modal-bg {
       position:fixed; inset:0; z-index:300; display:none;
       align-items:center; justify-content:center; padding:18px;
@@ -558,6 +691,18 @@
     </button>
   </nav>
 
+
+  <div id="appModal" class="app-modal-bg" role="dialog" aria-modal="true" aria-labelledby="appModalTitulo">
+    <div class="app-modal">
+      <div id="appModalIcone" class="app-modal-icon info">ℹ️</div>
+      <h3 id="appModalTitulo">Aviso</h3>
+      <p id="appModalTexto"></p>
+      <div id="appModalAcoes" class="app-modal-actions">
+        <button id="appModalConfirmar" class="app-modal-btn primary">OK</button>
+      </div>
+    </div>
+  </div>
+
   <div id="shareModal" class="share-modal-bg" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
     <div class="share-modal">
       <h3 id="shareModalTitle">Compartilhar com a família</h3>
@@ -662,6 +807,111 @@
 
 
 
+
+    let resolverModalAtual = null;
+
+    function iconePorTipo(tipo) {
+      const mapa = {
+        info: 'ℹ️',
+        success: '✅',
+        warning: '⚠️',
+        danger: '🗑️'
+      };
+
+      return mapa[tipo] || mapa.info;
+    }
+
+    function fecharAppModal(resultado) {
+      const modal = document.getElementById('appModal');
+      modal.classList.remove('active');
+
+      const resolver = resolverModalAtual;
+      resolverModalAtual = null;
+
+      if (resolver) {
+        resolver(resultado);
+      }
+    }
+
+    window.mostrarMensagem = function({
+      titulo = 'Aviso',
+      texto = '',
+      tipo = 'info',
+      botaoTexto = 'OK'
+    } = {}) {
+      return new Promise((resolve) => {
+        resolverModalAtual = resolve;
+
+        const modal = document.getElementById('appModal');
+        const icone = document.getElementById('appModalIcone');
+        const tituloEl = document.getElementById('appModalTitulo');
+        const textoEl = document.getElementById('appModalTexto');
+        const acoes = document.getElementById('appModalAcoes');
+
+        icone.className = `app-modal-icon ${tipo}`;
+        icone.textContent = iconePorTipo(tipo);
+        tituloEl.textContent = titulo;
+        textoEl.textContent = texto;
+
+        acoes.className = 'app-modal-actions';
+        acoes.innerHTML = `
+          <button id="appModalConfirmar" class="app-modal-btn primary">
+            ${botaoTexto}
+          </button>
+        `;
+
+        document
+          .getElementById('appModalConfirmar')
+          .addEventListener('click', () => fecharAppModal(true), { once: true });
+
+        modal.classList.add('active');
+      });
+    }
+
+    window.confirmarAcao = function({
+      titulo = 'Confirmar ação',
+      texto = '',
+      tipo = 'warning',
+      confirmarTexto = 'Confirmar',
+      cancelarTexto = 'Cancelar',
+      confirmarClasse = 'primary'
+    } = {}) {
+      return new Promise((resolve) => {
+        resolverModalAtual = resolve;
+
+        const modal = document.getElementById('appModal');
+        const icone = document.getElementById('appModalIcone');
+        const tituloEl = document.getElementById('appModalTitulo');
+        const textoEl = document.getElementById('appModalTexto');
+        const acoes = document.getElementById('appModalAcoes');
+
+        icone.className = `app-modal-icon ${tipo}`;
+        icone.textContent = iconePorTipo(tipo);
+        tituloEl.textContent = titulo;
+        textoEl.textContent = texto;
+
+        acoes.className = 'app-modal-actions dual';
+        acoes.innerHTML = `
+          <button id="appModalCancelar" class="app-modal-btn secondary">
+            ${cancelarTexto}
+          </button>
+          <button id="appModalConfirmar" class="app-modal-btn ${confirmarClasse}">
+            ${confirmarTexto}
+          </button>
+        `;
+
+        document
+          .getElementById('appModalCancelar')
+          .addEventListener('click', () => fecharAppModal(false), { once: true });
+
+        document
+          .getElementById('appModalConfirmar')
+          .addEventListener('click', () => fecharAppModal(true), { once: true });
+
+        modal.classList.add('active');
+      });
+    }
+
     function guardarConvitePendente(token) {
       if (!token) return;
       sessionStorage.setItem(CHAVE_CONVITE_PENDENTE, token);
@@ -742,10 +992,16 @@
           : null;
 
         if (familiaAtual && familiaAtual !== convite.familiaId) {
-          const confirmarTroca = confirm(
-            `Você já pertence a outra família.\n\n` +
-            `Deseja entrar em "${convite.nomeFamilia || 'Família compartilhada'}"?`
-          );
+          const confirmarTroca = await confirmarAcao({
+            titulo: 'Trocar de família',
+            texto:
+              `Você já pertence a outra família.\n\n` +
+              `Deseja entrar em "${convite.nomeFamilia || 'Família compartilhada'}"?`,
+            tipo: 'warning',
+            confirmarTexto: 'Entrar',
+            cancelarTexto: 'Cancelar',
+            confirmarClasse: 'primary'
+          });
 
           if (!confirmarTroca) {
             throw new Error('ENTRADA_FAMILIA_CANCELADA');
@@ -788,9 +1044,11 @@
         removerConviteDaUrl();
 
         if (familiaAtual !== convite.familiaId) {
-          alert(
-            `Você entrou na ${convite.nomeFamilia || 'família compartilhada'} com sucesso!`
-          );
+          await mostrarMensagem({
+            titulo: 'Bem-vindo à família',
+            texto: `Você entrou na ${convite.nomeFamilia || 'família compartilhada'} com sucesso!`,
+            tipo: 'success'
+          });
         }
 
         return true;
@@ -842,11 +1100,19 @@
           `${conviteCompartilhamento.texto}\n\n${conviteCompartilhamento.link}`
         );
         fecharModalCompartilhar();
-        alert('Convite copiado. Agora é só colar no aplicativo que preferir.');
+        await mostrarMensagem({
+          titulo: 'Convite copiado',
+          texto: 'Agora é só colar no aplicativo que preferir.',
+          tipo: 'success'
+        });
       } catch (erro) {
         if (erro && erro.name === 'AbortError') return;
         console.error('Erro no compartilhamento:', erro);
-        alert('Não foi possível abrir o compartilhamento. Use Copiar link.');
+        await mostrarMensagem({
+          titulo: 'Compartilhamento indisponível',
+          texto: 'Não foi possível abrir o compartilhamento. Use a opção Copiar link.',
+          tipo: 'warning'
+        });
       }
     }
 
@@ -856,10 +1122,18 @@
       try {
         await copiarTextoSeguro(conviteCompartilhamento.link);
         fecharModalCompartilhar();
-        alert('Link da família copiado.');
+        await mostrarMensagem({
+          titulo: 'Link copiado',
+          texto: 'O link da família foi copiado com sucesso.',
+          tipo: 'success'
+        });
       } catch (erro) {
         console.error('Erro ao copiar convite:', erro);
-        alert('Não foi possível copiar o link.');
+        await mostrarMensagem({
+          titulo: 'Erro ao copiar',
+          texto: 'Não foi possível copiar o link.',
+          tipo: 'danger'
+        });
       }
     }
 
@@ -867,7 +1141,11 @@
       const botao = document.getElementById('btnConvidarFamilia');
 
       if (!usuarioAtual || !familiaIdAtual) {
-        alert('Entre no aplicativo antes de convidar familiares.');
+        await mostrarMensagem({
+          titulo: 'Acesso necessário',
+          texto: 'Entre no aplicativo antes de convidar familiares.',
+          tipo: 'warning'
+        });
         return;
       }
 
@@ -878,7 +1156,11 @@
         const familiaSnap = await getDoc(familiaRef);
 
         if (!familiaSnap.exists()) {
-          alert('Não foi possível localizar sua família.');
+          await mostrarMensagem({
+          titulo: 'Família não encontrada',
+          texto: 'Não foi possível localizar sua família.',
+          tipo: 'warning'
+        });
           return;
         }
 
@@ -931,7 +1213,11 @@
         abrirModalCompartilhar();
       } catch (erro) {
         console.error('Erro ao compartilhar família:', erro);
-        alert('Não foi possível gerar o convite da família.');
+        await mostrarMensagem({
+          titulo: 'Convite não criado',
+          texto: 'Não foi possível gerar o convite da família.',
+          tipo: 'danger'
+        });
       } finally {
         botao.disabled = false;
       }
@@ -1137,7 +1423,16 @@
     }
 
     window.sairDoApp = async function() {
-      if (!confirm('Deseja sair do aplicativo?')) return;
+      const confirmado = await confirmarAcao({
+        titulo: 'Sair do ListaLar',
+        texto: 'Deseja sair do aplicativo?',
+        tipo: 'warning',
+        confirmarTexto: 'Sair',
+        cancelarTexto: 'Continuar',
+        confirmarClasse: 'danger'
+      });
+
+      if (!confirmado) return;
       await signOut(auth);
     }
 
@@ -1333,14 +1628,22 @@
       const nome = input.value.trim();
 
       if (!nome) {
-        alert('Digite o nome do produto.');
+        await mostrarMensagem({
+          titulo: 'Produto não informado',
+          texto: 'Digite o nome do produto.',
+          tipo: 'warning'
+        });
         return;
       }
 
       const existente = encontrarProdutoPorNome(nome);
 
       if (existente) {
-        alert(`O produto "${existente.nome}" já está cadastrado no estoque.`);
+        await mostrarMensagem({
+          titulo: 'Produto já cadastrado',
+          texto: `O produto "${existente.nome}" já está cadastrado no estoque.`,
+          tipo: 'warning'
+        });
         input.value = '';
         return;
       }
@@ -1414,7 +1717,11 @@
       const quantidade = Math.max(1, Number(inputQtd.value || 1));
 
       if (!nome) {
-        alert('Digite o produto para incluir na lista.');
+        await mostrarMensagem({
+          titulo: 'Produto não informado',
+          texto: 'Digite o produto para incluir na lista.',
+          tipo: 'warning'
+        });
         return;
       }
 
@@ -1466,9 +1773,14 @@
     window.concluirAtualizacaoEstoque = async function() {
       if (!atualizandoEstoque) return;
 
-      const confirmar = confirm(
-        'Concluir a atualização do estoque e recalcular a lista de compras?'
-      );
+      const confirmar = await confirmarAcao({
+        titulo: 'Concluir atualização',
+        texto: 'Deseja concluir a atualização do estoque e recalcular a lista de compras?',
+        tipo: 'warning',
+        confirmarTexto: 'Concluir',
+        cancelarTexto: 'Continuar editando',
+        confirmarClasse: 'success'
+      });
 
       if (!confirmar) return;
 
@@ -1496,12 +1808,18 @@
 
         abrirTela('lista');
 
-        alert(
-          'Estoque atualizado! A lista de compras foi recalculada automaticamente.'
-        );
+        await mostrarMensagem({
+          titulo: 'Estoque atualizado',
+          texto: 'A lista de compras foi recalculada automaticamente.',
+          tipo: 'success'
+        });
       } catch (erro) {
         console.error('Erro ao concluir atualização do estoque:', erro);
-        alert('Não foi possível concluir a atualização do estoque.');
+        await mostrarMensagem({
+          titulo: 'Erro ao atualizar estoque',
+          texto: 'Não foi possível concluir a atualização do estoque.',
+          tipo: 'danger'
+        });
       }
     }
 
@@ -1509,14 +1827,33 @@
       const produto = produtos.find(p => p.id === id);
       if (!produto) return;
 
-      if (!confirm('Excluir ' + produto.nome + '?')) return;
+      const confirmado = await confirmarAcao({
+        titulo: 'Excluir produto',
+        texto: `Deseja excluir "${produto.nome}" do estoque?`,
+        tipo: 'danger',
+        confirmarTexto: 'Excluir',
+        cancelarTexto: 'Cancelar',
+        confirmarClasse: 'danger'
+      });
+
+      if (!confirmado) return;
 
       await deleteDoc(doc(produtosRef, id));
+
+      await mostrarMensagem({
+        titulo: 'Produto excluído',
+        texto: `"${produto.nome}" foi removido do estoque.`,
+        tipo: 'success'
+      });
     }
 
     window.alterarValor = async function(id, campo, delta) {
       if (!atualizandoEstoque) {
-        alert('Toque em "Atualizar estoque" para alterar as quantidades.');
+        await mostrarMensagem({
+          titulo: 'Atualização bloqueada',
+          texto: 'Toque em "Atualizar estoque" para alterar as quantidades.',
+          tipo: 'info'
+        });
         return;
       }
 
@@ -1582,16 +1919,33 @@
       const comprados = lista.filter(p => p.comprado);
 
       if (lista.length === 0) {
-        alert('Não existe item na lista de compras.');
+        await mostrarMensagem({
+          titulo: 'Lista vazia',
+          texto: 'Não existe item na lista de compras.',
+          tipo: 'info'
+        });
         return;
       }
 
       if (comprados.length === 0) {
-        alert('Marque pelo menos um item como OK.');
+        await mostrarMensagem({
+          titulo: 'Nenhum item confirmado',
+          texto: 'Marque pelo menos um item como OK antes de finalizar.',
+          tipo: 'warning'
+        });
         return;
       }
 
-      if (!confirm('Finalizar compra e atualizar estoque dos itens marcados?')) return;
+      const confirmarFinalizacao = await confirmarAcao({
+        titulo: 'Finalizar compra',
+        texto: 'Deseja finalizar a compra e atualizar o estoque dos itens marcados?',
+        tipo: 'warning',
+        confirmarTexto: 'Finalizar',
+        cancelarTexto: 'Voltar',
+        confirmarClasse: 'success'
+      });
+
+      if (!confirmarFinalizacao) return;
 
       for (const p of comprados) {
         const sugerido = qtdParaLista(p);
@@ -1628,20 +1982,35 @@
       historicoCompras = [];
 
       abrirTela('lista');
-      alert(
-        'Compra finalizada e estoque atualizado. Uma nova lista automática será gerada quando você atualizar o estoque novamente.'
-      );
+      await mostrarMensagem({
+        titulo: 'Compra finalizada',
+        texto: 'O estoque foi atualizado. Uma nova lista automática será gerada quando você atualizar o estoque novamente.',
+        tipo: 'success'
+      });
     }
 
     window.cancelarCompra = async function() {
       const marcado = produtos.some(p => p.comprado || p.qtdComprada > 0);
 
       if (!marcado) {
-        alert('Não existe compra em andamento.');
+        await mostrarMensagem({
+          titulo: 'Nenhuma compra em andamento',
+          texto: 'Não existe compra em andamento.',
+          tipo: 'info'
+        });
         return;
       }
 
-      if (!confirm('Cancelar marcações e quantidades compradas? A lista continuará igual.')) return;
+      const confirmarCancelamento = await confirmarAcao({
+        titulo: 'Cancelar compra',
+        texto: 'Deseja cancelar as marcações e quantidades compradas? A lista continuará igual.',
+        tipo: 'warning',
+        confirmarTexto: 'Cancelar compra',
+        cancelarTexto: 'Continuar',
+        confirmarClasse: 'danger'
+      });
+
+      if (!confirmarCancelamento) return;
 
       for (const p of produtos) {
         if (p.comprado || p.qtdComprada > 0) {
@@ -1930,6 +2299,15 @@
     document.getElementById('buscaIa').addEventListener('input', function() {
       if (telaAtiva === 'ia') {
         renderIa();
+      }
+    });
+
+    document.getElementById('appModal').addEventListener('click', function(event) {
+      if (
+        event.target.id === 'appModal' &&
+        document.querySelectorAll('#appModalAcoes .app-modal-btn').length === 1
+      ) {
+        fecharAppModal(true);
       }
     });
 
