@@ -5,14 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>ListaLar</title>
 
-  <link rel="manifest" href="manifest.json?v=4">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=4">
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=4">
-  <meta name="theme-color" content="#2563eb">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="ListaLar">
-
   <style>
     :root {
       --azul1:#2563eb; --azul2:#06b6d4; --fundo:#eef5ff; --card:#fff; --texto:#172033;
@@ -196,6 +188,46 @@
     }
 
     .actions { display:flex; gap:7px; margin-top:8px; flex-wrap:wrap; }
+    .inventory-bar {
+      display:grid;
+      grid-template-columns:1fr;
+      gap:8px;
+      margin-bottom:10px;
+    }
+
+    .inventory-note {
+      display:none;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      color:#1d4ed8;
+      border-radius:15px;
+      padding:10px 12px;
+      font-size:12px;
+      font-weight:900;
+      line-height:1.35;
+      margin-bottom:10px;
+    }
+
+    .inventory-note.active { display:block; }
+
+    .stock-item.inventory-locked .stepper button {
+      opacity:.45;
+      cursor:not-allowed;
+      pointer-events:none;
+    }
+
+    .stock-item.inventory-active {
+      border-color:#93c5fd;
+      background:#f8fbff;
+    }
+
+    .inventory-status {
+      margin-top:6px;
+      color:var(--cinza);
+      font-size:11px;
+      font-weight:800;
+    }
+
 
     .small-btn {
       border:0; border-radius:12px; min-height:38px; font-size:13px; font-weight:900;
@@ -266,14 +298,6 @@
       width:92px; height:92px; margin:0 auto 16px; border-radius:24px;
       background:linear-gradient(135deg,var(--azul1),var(--azul2)); display:flex;
       align-items:center; justify-content:center; font-size:48px; box-shadow:var(--sombra);
-    }
-
-    .login-logo img {
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      border-radius:24px;
-      display:block;
     }
 
     .login-card h2 { margin:0; font-size:27px; font-weight:900; color:var(--texto); }
@@ -358,7 +382,7 @@
 <body>
   <section id="loginScreen" class="login-screen">
     <div class="login-card">
-      <div class="login-logo"><img src="icon-192.png?v=4" alt="Logo ListaLar"></div>
+      <div class="login-logo">🛒</div>
       <h2>ListaLar</h2>
       <p>Entre com sua conta Google para acessar a lista e manter os dados da sua família sincronizados.</p>
       <button id="btnLoginGoogle" class="google-btn" onclick="entrarComGoogle()">
@@ -418,12 +442,25 @@
         </div>
 
         <div class="search-box">
-          <input id="buscaEstoque" type="text" placeholder="🔎 Buscar no estoque" />
+          <input id="buscaEstoque" type="text" placeholder="🔎 Buscar no estoque" oninput="renderizar()" />
         </div>
 
         <div class="form">
           <input id="novoProduto" type="text" placeholder="Novo produto" />
           <button class="btn btn-primary" onclick="adicionarProduto()">Adicionar</button>
+        </div>
+
+        <div class="inventory-bar">
+          <button id="btnAtualizarEstoque" class="btn btn-primary btn-full" style="margin-top:0;" onclick="iniciarAtualizacaoEstoque()">
+            📦 Atualizar estoque
+          </button>
+          <button id="btnConcluirEstoque" class="btn btn-green btn-full" style="display:none; margin-top:0;" onclick="concluirAtualizacaoEstoque()">
+            Concluir atualização
+          </button>
+        </div>
+
+        <div id="avisoInventario" class="inventory-note">
+          Ajuste a quantidade atual dos produtos. Ao concluir, o ListaLar recalculará automaticamente a lista de compras.
         </div>
 
         <div id="listaEstoque" class="list"></div>
@@ -456,7 +493,7 @@
         </div>
 
         <div class="search-box">
-          <input id="buscaLista" type="text" placeholder="🔎 Buscar na lista" />
+          <input id="buscaLista" type="text" placeholder="🔎 Buscar na lista" oninput="renderizar()" />
         </div>
 
         <div id="listaCompras" class="list"></div>
@@ -483,7 +520,7 @@
         </div>
 
         <div class="search-box">
-          <input id="buscaIa" type="text" placeholder="🔎 Buscar alerta/produto" />
+          <input id="buscaIa" type="text" placeholder="🔎 Buscar alerta/produto" oninput="renderizar()" />
         </div>
 
         <div id="listaIa" class="list"></div>
@@ -573,6 +610,7 @@
     let historicoCarregado = false;
     let carregandoHistorico = false;
     let conviteCompartilhamento = null;
+    let atualizandoEstoque = false;
 
     let produtos = [];
     let historicoCompras = [];
@@ -1189,17 +1227,23 @@
         .trim()
         .toLocaleLowerCase('pt-BR')
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ');
     }
 
     function passaBusca(produto, termo) {
       const busca = normalizarTexto(termo);
-
-      if (!busca) {
-        return true;
-      }
-
+      if (!busca) return true;
       return normalizarTexto(produto.nome).includes(busca);
+    }
+
+    function encontrarProdutoPorNome(nome) {
+      const nomeNormalizado = normalizarTexto(nome);
+      if (!nomeNormalizado) return null;
+
+      return produtos.find(
+        (produto) => normalizarTexto(produto.nome) === nomeNormalizado
+      ) || null;
     }
 
     function qtdParaLista(produto) {
@@ -1211,7 +1255,14 @@
     }
 
     function produtosLista() {
-      return produtos.filter(p => comprarQtd(p) > 0 || p.manualLista);
+      return produtos.filter(
+        (p) =>
+          p.manualLista === true ||
+          (
+            p.listaAutomatica === true &&
+            comprarQtd(p) > 0
+          )
+      );
     }
 
     window.abrirTela = async function(tela) {
@@ -1255,6 +1306,7 @@
           historico: 0,
           manualLista: false,
           qtdManual: 0,
+          listaAutomatica: false,
           criadoEm: serverTimestamp()
         });
       }
@@ -1269,10 +1321,11 @@
         return;
       }
 
-      const existe = produtos.some(p => p.nome.toLowerCase() === nome.toLowerCase());
+      const existente = encontrarProdutoPorNome(nome);
 
-      if (existe) {
-        alert('Este produto já está cadastrado.');
+      if (existente) {
+        alert(`O produto "${existente.nome}" já está cadastrado no estoque.`);
+        input.value = '';
         return;
       }
 
@@ -1285,6 +1338,7 @@
         historico: 0,
         manualLista: false,
         qtdManual: 0,
+        listaAutomatica: false,
         criadoEm: serverTimestamp()
       });
 
@@ -1348,7 +1402,7 @@
         return;
       }
 
-      const existente = produtos.find(p => p.nome.toLowerCase() === nome.toLowerCase());
+      const existente = encontrarProdutoPorNome(nome);
 
       if (existente) {
         await setDoc(doc(produtosRef, existente.id), {
@@ -1367,6 +1421,7 @@
           qtdComprada: quantidade,
           qtdManual: quantidade,
           manualLista: true,
+          listaAutomatica: false,
           historico: 0,
           criadoEm: serverTimestamp()
         });
@@ -1382,6 +1437,58 @@
       abrirTela('lista');
     }
 
+    window.iniciarAtualizacaoEstoque = function() {
+      atualizandoEstoque = true;
+
+      document.getElementById('btnAtualizarEstoque').style.display = 'none';
+      document.getElementById('btnConcluirEstoque').style.display = 'block';
+      document.getElementById('avisoInventario').classList.add('active');
+
+      renderEstoque();
+    }
+
+    window.concluirAtualizacaoEstoque = async function() {
+      if (!atualizandoEstoque) return;
+
+      const confirmar = confirm(
+        'Concluir a atualização do estoque e recalcular a lista de compras?'
+      );
+
+      if (!confirmar) return;
+
+      try {
+        const operacoes = produtos.map((produto) =>
+          setDoc(
+            doc(produtosRef, produto.id),
+            {
+              listaAutomatica: comprarQtd(produto) > 0,
+              comprado: false,
+              qtdComprada: 0,
+              atualizadoEm: serverTimestamp()
+            },
+            { merge: true }
+          )
+        );
+
+        await Promise.all(operacoes);
+
+        atualizandoEstoque = false;
+
+        document.getElementById('btnAtualizarEstoque').style.display = 'block';
+        document.getElementById('btnConcluirEstoque').style.display = 'none';
+        document.getElementById('avisoInventario').classList.remove('active');
+
+        abrirTela('lista');
+
+        alert(
+          'Estoque atualizado! A lista de compras foi recalculada automaticamente.'
+        );
+      } catch (erro) {
+        console.error('Erro ao concluir atualização do estoque:', erro);
+        alert('Não foi possível concluir a atualização do estoque.');
+      }
+    }
+
     window.excluirProduto = async function(id) {
       const produto = produtos.find(p => p.id === id);
       if (!produto) return;
@@ -1392,6 +1499,11 @@
     }
 
     window.alterarValor = async function(id, campo, delta) {
+      if (!atualizandoEstoque) {
+        alert('Toque em "Atualizar estoque" para alterar as quantidades.');
+        return;
+      }
+
       const produto = produtos.find(p => p.id === id);
       if (!produto) return;
 
@@ -1400,8 +1512,6 @@
 
       await setDoc(doc(produtosRef, id), {
         [campo]: novoValor,
-        comprado: false,
-        qtdComprada: 0,
         atualizadoEm: serverTimestamp()
       }, { merge: true });
     }
@@ -1491,6 +1601,7 @@
           qtdComprada: 0,
           manualLista: false,
           qtdManual: 0,
+          listaAutomatica: false,
           historico: Number(p.historico || 0) + qtdFinal,
           ultimaCompraEm: serverTimestamp(),
           atualizadoEm: serverTimestamp()
@@ -1501,7 +1612,9 @@
       historicoCompras = [];
 
       abrirTela('lista');
-      alert('Compra finalizada com sucesso.');
+      alert(
+        'Compra finalizada e estoque atualizado. Uma nova lista automática será gerada quando você atualizar o estoque novamente.'
+      );
     }
 
     window.cancelarCompra = async function() {
@@ -1576,11 +1689,14 @@
         if (excesso > 0) badge = `<span class="badge badge-extra">Excesso ${excesso}</span>`;
 
         return `
-          <div class="stock-item">
+          <div class="stock-item ${atualizandoEstoque ? 'inventory-active' : 'inventory-locked'}">
             <div class="item-top">
               <div>
                 <div class="item-name">${p.nome}</div>
                 <div class="info">Estoque atual, mínimo e compra automática</div>
+                <div class="inventory-status">
+                  ${atualizandoEstoque ? 'Modo atualização ativo' : 'Toque em Atualizar estoque para editar'}
+                </div>
               </div>
               ${badge}
             </div>
@@ -1783,24 +1899,6 @@
       if (event.key === 'Enter') adicionarProduto();
     });
 
-    document.getElementById('buscaEstoque').addEventListener('input', function() {
-      if (telaAtiva === 'estoque') {
-        renderEstoque();
-      }
-    });
-
-    document.getElementById('buscaLista').addEventListener('input', function() {
-      if (telaAtiva === 'lista') {
-        renderLista();
-      }
-    });
-
-    document.getElementById('buscaIa').addEventListener('input', function() {
-      if (telaAtiva === 'ia') {
-        renderIa();
-      }
-    });
-
     document.getElementById('shareModal').addEventListener('click', function(event) {
       if (event.target.id === 'shareModal') fecharModalCompartilhar();
     });
@@ -1889,19 +1987,5 @@
 
   </script>
   </div>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker
-          .register('./service-worker.js?v=4', { updateViaCache: 'none' })
-          .then((registro) => registro.update())
-          .catch((erro) => {
-            console.warn('Service Worker não registrado:', erro);
-          });
-      });
-    }
-  </script>
-
 </body>
 </html>
