@@ -191,8 +191,9 @@
     .num { font-size:20px; font-weight:900; color:var(--texto); }
 
     .comprar-num {
-      height:38px; border-radius:11px; background:linear-gradient(135deg,var(--azul1),var(--azul2));
-      color:white; display:flex; align-items:center; justify-content:center; font-size:21px; font-weight:900;
+      min-height:38px; border-radius:11px; background:linear-gradient(135deg,var(--azul1),var(--azul2));
+      color:white; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:900;
+      padding:5px 3px; line-height:1.05; text-align:center;
     }
 
     .actions { display:flex; gap:7px; margin-top:8px; flex-wrap:wrap; }
@@ -716,6 +717,10 @@
   </div>
 
   <script type="module">
+    import {
+      obterUnidadePadrao
+    } from './unidades-produtos.js';
+
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
     import {
       getAuth,
@@ -772,6 +777,7 @@
     let carregandoHistorico = false;
     let conviteCompartilhamento = null;
     let atualizandoEstoque = false;
+    let unidadesAntigasVerificadas = false;
 
     let produtos = [];
     let historicoCompras = [];
@@ -1483,6 +1489,7 @@
       carregouProdutos = false;
       historicoCarregado = false;
       carregandoHistorico = false;
+      unidadesAntigasVerificadas = false;
       produtos = [];
       historicoCompras = [];
 
@@ -1506,6 +1513,7 @@
 
           setStatus('Salvo no Firebase');
           renderizar();
+          await garantirUnidadesProdutos();
         },
         (erro) => {
           console.error(erro);
@@ -1518,6 +1526,56 @@
 
     function setStatus(texto) {
       document.getElementById('statusSistema').textContent = texto;
+    }
+
+    function unidadeProduto(produto) {
+      return String(
+        produto?.unidade ||
+        obterUnidadePadrao(produto?.nome) ||
+        'un'
+      ).trim();
+    }
+
+    function quantidadeComUnidade(quantidade, produto) {
+      return `${Number(quantidade || 0)} ${unidadeProduto(produto)}`;
+    }
+
+    async function garantirUnidadesProdutos() {
+      if (
+        unidadesAntigasVerificadas ||
+        !produtosRef ||
+        produtos.length === 0
+      ) {
+        return;
+      }
+
+      unidadesAntigasVerificadas = true;
+
+      const semUnidade = produtos.filter(
+        (produto) => !String(produto.unidade || '').trim()
+      );
+
+      if (semUnidade.length === 0) {
+        return;
+      }
+
+      try {
+        await Promise.all(
+          semUnidade.map((produto) =>
+            setDoc(
+              doc(produtosRef, produto.id),
+              {
+                unidade: obterUnidadePadrao(produto.nome),
+                atualizadoEm: serverTimestamp()
+              },
+              { merge: true }
+            )
+          )
+        );
+      } catch (erro) {
+        unidadesAntigasVerificadas = false;
+        console.error('Erro ao preencher unidades antigas:', erro);
+      }
     }
 
     function comprarQtd(produto) {
@@ -1610,6 +1668,7 @@
       for (const item of listaInicial) {
         await addDoc(produtosRef, {
           nome: item[0],
+          unidade: obterUnidadePadrao(item[0]),
           estoque: item[1],
           minimo: item[2],
           comprado: false,
@@ -1641,7 +1700,7 @@
       if (existente) {
         await mostrarMensagem({
           titulo: 'Produto já cadastrado',
-          texto: `O produto "${existente.nome}" já está cadastrado no estoque.`,
+          texto: `O produto "${existente.nome}" já está cadastrado no estoque com a unidade "${unidadeProduto(existente)}".`,
           tipo: 'warning'
         });
         input.value = '';
@@ -1650,6 +1709,7 @@
 
       await addDoc(produtosRef, {
         nome,
+        unidade: obterUnidadePadrao(nome),
         estoque: 0,
         minimo: 1,
         comprado: false,
@@ -1729,6 +1789,7 @@
 
       if (existente) {
         await setDoc(doc(produtosRef, existente.id), {
+          unidade: unidadeProduto(existente),
           manualLista: true,
           qtdManual: quantidade,
           comprado: false,
@@ -1738,6 +1799,7 @@
       } else {
         await addDoc(produtosRef, {
           nome,
+          unidade: obterUnidadePadrao(nome),
           estoque: 0,
           minimo: 0,
           comprado: false,
@@ -1956,6 +2018,7 @@
         await addDoc(historicoRef, {
           produtoId: p.id,
           nome: p.nome,
+          unidade: unidadeProduto(p),
           quantidade: qtdFinal,
           quantidadeSugerida: sugerido,
           origemManual: !!p.manualLista,
@@ -2088,7 +2151,7 @@
 
             <div class="stock-grid">
               <div class="field-box">
-                <label>Atual</label>
+                <label>Atual (${unidadeProduto(p)})</label>
                 <div class="stepper">
                   <button onclick="alterarValor('${p.id}', 'estoque', -1)">−</button>
                   <div class="num">${p.estoque || 0}</div>
@@ -2097,7 +2160,7 @@
               </div>
 
               <div class="field-box">
-                <label>Mínimo</label>
+                <label>Mínimo (${unidadeProduto(p)})</label>
                 <div class="stepper">
                   <button onclick="alterarValor('${p.id}', 'minimo', -1)">−</button>
                   <div class="num">${p.minimo || 0}</div>
@@ -2107,7 +2170,7 @@
 
               <div class="field-box">
                 <label>Comprar</label>
-                <div class="comprar-num">${comprar}</div>
+                <div class="comprar-num">${quantidadeComUnidade(comprar, p)}</div>
               </div>
             </div>
 
@@ -2144,13 +2207,13 @@
                 <div class="item-top">
                   <div>
                     <div class="item-name">${p.comprado ? '✅ ' : ''}${p.nome}</div>
-                    <div class="buy-qtd">Sugerido: comprar ${comprar}</div>
+                    <div class="buy-qtd">Sugerido: comprar ${quantidadeComUnidade(comprar, p)}</div>
                   </div>
                   <span class="badge ${p.comprado ? 'badge-ok' : (p.manualLista ? 'badge-extra' : 'badge-low')}">${p.comprado ? 'OK' : (p.manualLista ? 'Manual' : 'Pendente')}</span>
                 </div>
 
                 <div class="comprado-controle">
-                  <span>Qtd comprada</span>
+                  <span>Qtd comprada (${unidadeProduto(p)})</span>
                   <div class="comprado-stepper">
                     <button onclick="alterarQtdComprada('${p.id}', -1)">−</button>
                     <div class="comprado-num">${qtdComprada}</div>
@@ -2227,7 +2290,10 @@
       }
 
       if (lista.length > 0) {
-        const nomes = lista.slice(0, 4).map(p => `${p.nome} (${comprarQtd(p)})`).join(', ');
+        const nomes = lista
+          .slice(0, 4)
+          .map((p) => `${p.nome} (${quantidadeComUnidade(comprarQtd(p), p)})`)
+          .join(', ');
         mensagens.push(`⚠️ Reposição necessária: ${nomes}${lista.length > 4 ? '...' : ''}.`);
       }
 
@@ -2333,6 +2399,7 @@
         historicoCompras = [];
         historicoCarregado = false;
         carregandoHistorico = false;
+        unidadesAntigasVerificadas = false;
         telaAtiva = 'lista';
         ultimoUidInicializado = null;
         inicializacaoEmAndamento = false;
