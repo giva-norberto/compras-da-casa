@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>ListaLar</title>
 
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ListaLar">
+
   <style>
     :root {
       --azul1:#2563eb; --azul2:#06b6d4; --fundo:#eef5ff; --card:#fff; --texto:#172033;
@@ -300,6 +308,14 @@
       align-items:center; justify-content:center; font-size:48px; box-shadow:var(--sombra);
     }
 
+    .login-logo img {
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      border-radius:24px;
+      display:block;
+    }
+
     .login-card h2 { margin:0; font-size:27px; font-weight:900; color:var(--texto); }
     .login-card p { margin:9px 0 20px; color:var(--cinza); font-size:14px; font-weight:700; line-height:1.4; }
 
@@ -382,7 +398,7 @@
 <body>
   <section id="loginScreen" class="login-screen">
     <div class="login-card">
-      <div class="login-logo">🛒</div>
+      <div class="login-logo"><img src="icon-192.png" alt="Logo ListaLar"></div>
       <h2>ListaLar</h2>
       <p>Entre com sua conta Google para acessar a lista e manter os dados da sua família sincronizados.</p>
       <button id="btnLoginGoogle" class="google-btn" onclick="entrarComGoogle()">
@@ -442,7 +458,7 @@
         </div>
 
         <div class="search-box">
-          <input id="buscaEstoque" type="text" placeholder="🔎 Buscar no estoque" oninput="renderizar()" />
+          <input id="buscaEstoque" type="text" placeholder="🔎 Buscar no estoque" />
         </div>
 
         <div class="form">
@@ -493,7 +509,7 @@
         </div>
 
         <div class="search-box">
-          <input id="buscaLista" type="text" placeholder="🔎 Buscar na lista" oninput="renderizar()" />
+          <input id="buscaLista" type="text" placeholder="🔎 Buscar na lista" />
         </div>
 
         <div id="listaCompras" class="list"></div>
@@ -520,7 +536,7 @@
         </div>
 
         <div class="search-box">
-          <input id="buscaIa" type="text" placeholder="🔎 Buscar alerta/produto" oninput="renderizar()" />
+          <input id="buscaIa" type="text" placeholder="🔎 Buscar alerta/produto" />
         </div>
 
         <div id="listaIa" class="list"></div>
@@ -1897,6 +1913,24 @@
 
     document.getElementById('novoProduto').addEventListener('keydown', function(event) {
       if (event.key === 'Enter') adicionarProduto();
+    });
+
+    document.getElementById('buscaEstoque').addEventListener('input', function() {
+      if (telaAtiva === 'estoque') {
+        renderEstoque();
+      }
+    });
+
+    document.getElementById('buscaLista').addEventListener('input', function() {
+      if (telaAtiva === 'lista') {
+        renderLista();
+      }
+    });
+
+    document.getElementById('buscaIa').addEventListener('input', function() {
+      if (telaAtiva === 'ia') {
+        renderIa();
+      }
     });
 
     document.getElementById('shareModal').addEventListener('click', function(event) {
