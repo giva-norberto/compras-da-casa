@@ -452,6 +452,31 @@
       white-space:pre-line;
     }
 
+
+    .unit-options {
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:8px;
+      margin-top:18px;
+    }
+
+    .unit-option-btn {
+      min-height:46px;
+      border:2px solid #dbeafe;
+      border-radius:14px;
+      background:white;
+      color:var(--texto);
+      font-size:14px;
+      font-weight:900;
+      cursor:pointer;
+    }
+
+    .unit-option-btn.active {
+      color:white;
+      border-color:var(--azul1);
+      background:linear-gradient(135deg,var(--azul1),var(--azul2));
+    }
+
     .app-modal-actions {
       display:grid;
       grid-template-columns:1fr;
@@ -693,6 +718,23 @@
   </nav>
 
 
+
+  <div id="unitModal" class="app-modal-bg" role="dialog" aria-modal="true" aria-labelledby="unitModalTitulo">
+    <div class="app-modal">
+      <div class="app-modal-icon info">📏</div>
+      <h3 id="unitModalTitulo">Alterar unidade</h3>
+      <p id="unitModalTexto">Escolha a unidade usada para este produto.</p>
+
+      <div id="unitOptions" class="unit-options"></div>
+
+      <div class="app-modal-actions">
+        <button class="app-modal-btn secondary" onclick="fecharModalUnidade()">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="appModal" class="app-modal-bg" role="dialog" aria-modal="true" aria-labelledby="appModalTitulo">
     <div class="app-modal">
       <div id="appModalIcone" class="app-modal-icon info">ℹ️</div>
@@ -778,6 +820,21 @@
     let conviteCompartilhamento = null;
     let atualizandoEstoque = false;
     let unidadesAntigasVerificadas = false;
+    let produtoUnidadeEmEdicao = null;
+
+    const unidadesDisponiveis = [
+      'un',
+      'kg',
+      'g',
+      'L',
+      'ml',
+      'pct',
+      'cx',
+      'bdj',
+      'mç',
+      'lata',
+      'vd'
+    ];
 
     let produtos = [];
     let historicoCompras = [];
@@ -1578,6 +1635,81 @@
       }
     }
 
+
+    window.abrirModalUnidade = function(id) {
+      if (!atualizandoEstoque) {
+        mostrarMensagem({
+          titulo: 'Atualização bloqueada',
+          texto: 'Toque em "Atualizar estoque" antes de alterar a unidade.',
+          tipo: 'info'
+        });
+        return;
+      }
+
+      const produto = produtos.find((item) => item.id === id);
+      if (!produto) return;
+
+      produtoUnidadeEmEdicao = produto;
+
+      document.getElementById('unitModalTitulo').textContent =
+        `Alterar unidade de ${produto.nome}`;
+
+      document.getElementById('unitModalTexto').textContent =
+        'A unidade será alterada sem converter automaticamente as quantidades.';
+
+      const unidadeAtual = unidadeProduto(produto);
+      const area = document.getElementById('unitOptions');
+
+      area.innerHTML = unidadesDisponiveis.map((unidade) => `
+        <button
+          type="button"
+          class="unit-option-btn ${unidade === unidadeAtual ? 'active' : ''}"
+          onclick="salvarUnidadeProduto('${unidade}')"
+        >
+          ${unidade}
+        </button>
+      `).join('');
+
+      document.getElementById('unitModal').classList.add('active');
+    }
+
+    window.fecharModalUnidade = function() {
+      document.getElementById('unitModal').classList.remove('active');
+      produtoUnidadeEmEdicao = null;
+    }
+
+    window.salvarUnidadeProduto = async function(unidade) {
+      const produto = produtoUnidadeEmEdicao;
+      if (!produto) return;
+
+      try {
+        await setDoc(
+          doc(produtosRef, produto.id),
+          {
+            unidade,
+            atualizadoEm: serverTimestamp()
+          },
+          { merge: true }
+        );
+
+        fecharModalUnidade();
+
+        await mostrarMensagem({
+          titulo: 'Unidade atualizada',
+          texto: `A unidade de "${produto.nome}" foi alterada para "${unidade}".`,
+          tipo: 'success'
+        });
+      } catch (erro) {
+        console.error('Erro ao alterar unidade:', erro);
+
+        await mostrarMensagem({
+          titulo: 'Erro ao alterar unidade',
+          texto: 'Não foi possível salvar a nova unidade.',
+          tipo: 'danger'
+        });
+      }
+    }
+
     function comprarQtd(produto) {
       return Math.max(0, Number(produto.minimo || 0) - Number(produto.estoque || 0));
     }
@@ -2175,7 +2307,18 @@
             </div>
 
             <div class="actions">
-              <button class="small-btn btn-red" onclick="excluirProduto('${p.id}')">Excluir</button>
+              <button
+                class="small-btn btn-primary"
+                onclick="abrirModalUnidade('${p.id}')"
+                ${atualizandoEstoque ? '' : 'disabled'}
+                style="${atualizandoEstoque ? '' : 'opacity:.45; cursor:not-allowed;'}"
+              >
+                Unidade: ${unidadeProduto(p)}
+              </button>
+
+              <button class="small-btn btn-red" onclick="excluirProduto('${p.id}')">
+                Excluir
+              </button>
             </div>
           </div>
         `;
@@ -2368,6 +2511,12 @@
       }
     });
 
+    document.getElementById('unitModal').addEventListener('click', function(event) {
+      if (event.target.id === 'unitModal') {
+        fecharModalUnidade();
+      }
+    });
+
     document.getElementById('appModal').addEventListener('click', function(event) {
       if (
         event.target.id === 'appModal' &&
@@ -2382,7 +2531,10 @@
     });
 
     document.addEventListener('keydown', function(event) {
-      if (event.key === 'Escape') fecharModalCompartilhar();
+      if (event.key === 'Escape') {
+        fecharModalCompartilhar();
+        fecharModalUnidade();
+      }
     });
 
 
