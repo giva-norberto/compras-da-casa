@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  >
+
+  <meta name="theme-color" content="#2563eb">
+
+  <title>Administração - ListaLar</title>
+
+  <link
+    rel="icon"
+    type="image/png"
+    href="./favicon-32.png"
+  >
+
+  <link
+    rel="stylesheet"
+    href="./admin.css"
+  >
+</head>
+
+<body>
+
+  <div id="adminLoader" class="admin-loader">
+    <div class="loader-logo">
+      <img
+        src="./icon-192.png"
+        alt="Logo ListaLar"
+      >
+    </div>
+
+    <div class="loader-spinner"></div>
+
+    <p>Validando acesso administrativo...</p>
+  </div>
+
+  <div id="adminApp" class="admin-app hidden">
+
+    <header class="admin-header">
+      <div class="admin-header-left">
+        <button
+          type="button"
+          class="header-back"
+          onclick="voltarListaLar()"
+          aria-label="Voltar para o ListaLar"
+        >
+          ←
+        </button>
+
+        <div class="header-logo">
+          <img
+            src="./icon-192.png"
+            alt="Logo ListaLar"
+          >
+        </div>
+
+        <div>
+          <h1>Administração</h1>
+          <p>Painel geral do ListaLar</p>
+        </div>
+      </div>
+
+      <div class="admin-profile">
+        <img
+          id="adminFoto"
+          src="./icon-192.png"
+          alt="Administrador"
+        >
+
+        <div>
+          <strong id="adminNome">Administrador</strong>
+          <span id="adminEmail"></span>
+        </div>
+      </div>
+    </header>
+
+    <main class="admin-main">
+
+      <section
+        id="secao-dashboard"
+        class="admin-section active"
+      >
+        <div class="section-title">
+          <div>
+            <h2>📊 Visão geral</h2>
+            <p>
+              Informações gerais da plataforma ListaLar.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="carregarDashboard()"
+          >
+            ↻ Atualizar
+          </button>
+        </div>
+
+        <div class="stats-grid">
+          <article class="stat-card">
+            <div class="stat-icon blue">👨‍👩‍👧‍👦</div>
+
+            <div>
+              <span>Famílias</span>
+              <strong id="totalFamilias">0</strong>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-icon cyan">👤</div>
+
+            <div>
+              <span>Usuários</span>
+              <strong id="totalUsuarios">0</strong>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-icon green">📢</div>
+
+            <div>
+              <span>Comunicado</span>
+              <strong id="statusComunicado">Inativo</strong>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-icon orange">🛠️</div>
+
+            <div>
+              <span>Manutenção</span>
+              <strong id="statusManutencao">Desativada</strong>
+            </div>
+          </article>
+        </div>
+
+        <div class="admin-card">
+          <div class="card-title">
+            <div>
+              <h3>Famílias recentes</h3>
+              <p>Últimas famílias cadastradas.</p>
+            </div>
+
+            <button
+              type="button"
+              class="link-button"
+              onclick="abrirSecao('familias')"
+            >
+              Ver todas
+            </button>
+          </div>
+
+          <div
+            id="familiasRecentes"
+            class="simple-list"
+          >
+            <div class="empty-state">
+              Carregando famílias...
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="secao-familias"
+        class="admin-section"
+      >
+        <div class="section-title">
+          <div>
+            <h2>👨‍👩‍👧‍👦 Famílias</h2>
+            <p>
+              Consulte todas as famílias cadastradas.
+            </p>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="search-row">
+            <input
+              id="buscaFamilias"
+              type="search"
+              placeholder="🔎 Buscar família"
+              autocomplete="off"
+            >
+
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="carregarFamilias()"
+            >
+              Atualizar
+            </button>
+          </div>
+
+          <div
+            id="listaFamiliasAdmin"
+            class="data-list"
+          >
+            <div class="empty-state">
+              Carregando famílias...
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="secao-usuarios"
+        class="admin-section"
+      >
+        <div class="section-title">
+          <div>
+            <h2>👤 Usuários</h2>
+            <p>
+              Consulte os usuários cadastrados no ListaLar.
+            </p>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="search-row">
+            <input
+              id="buscaUsuarios"
+              type="search"
+              placeholder="🔎 Buscar nome ou e-mail"
+              autocomplete="off"
+            >
+
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="carregarUsuarios()"
+            >
+              Atualizar
+            </button>
+          </div>
+
+          <div
+            id="listaUsuariosAdmin"
+            class="data-list"
+          >
+            <div class="empty-state">
+              Carregando usuários...
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="secao-comunicados"
+        class="admin-section"
+      >
+        <div class="section-title">
+          <div>
+            <h2>📢 Comunicado geral</h2>
+            <p>
+              Prepare mensagens para todos os usuários.
+            </p>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="comunicadoTitulo">
+                Título
+              </label>
+
+              <input
+                id="comunicadoTitulo"
+                type="text"
+                maxlength="80"
+                placeholder="Ex.: Nova melhoria disponível"
+              >
+            </div>
+
+            <div class="form-group full">
+              <label for="comunicadoMensagem">
+                Mensagem
+              </label>
+
+              <textarea
+                id="comunicadoMensagem"
+                rows="5"
+                maxlength="500"
+                placeholder="Digite o comunicado que será mostrado aos usuários."
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="comunicadoTipo">
+                Tipo
+              </label>
+
+              <select id="comunicadoTipo">
+                <option value="info">
+                  Informação
+                </option>
+
+                <option value="success">
+                  Novidade
+                </option>
+
+                <option value="warning">
+                  Atenção
+                </option>
+
+                <option value="maintenance">
+                  Manutenção
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="switch-row">
+                <span>Comunicado ativo</span>
+
+                <input
+                  id="comunicadoAtivo"
+                  type="checkbox"
+                >
+
+                <span class="switch"></span>
+              </label>
+            </div>
+
+            <div class="form-group full">
+              <label class="switch-row">
+                <span>Exigir confirmação de leitura</span>
+
+                <input
+                  id="comunicadoObrigatorio"
+                  type="checkbox"
+                >
+
+                <span class="switch"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="limparFormularioComunicado()"
+            >
+              Limpar
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="salvarComunicado()"
+            >
+              Salvar comunicado
+            </button>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="card-title">
+            <div>
+              <h3>Pré-visualização</h3>
+              <p>
+                Exemplo de como a mensagem poderá aparecer.
+              </p>
+            </div>
+          </div>
+
+          <div
+            id="previewComunicado"
+            class="announcement-preview"
+          >
+            <div class="announcement-icon">📢</div>
+
+            <div>
+              <strong>Comunicado ListaLar</strong>
+              <p>
+                Preencha os campos acima para visualizar.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="secao-configuracoes"
+        class="admin-section"
+      >
+        <div class="section-title">
+          <div>
+            <h2>⚙️ Configurações gerais</h2>
+            <p>
+              Controle recursos globais do aplicativo.
+            </p>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="setting-list">
+
+            <label class="setting-item">
+              <div>
+                <strong>Modo manutenção</strong>
+
+                <p>
+                  Informa aos usuários que o aplicativo está
+                  temporariamente em manutenção.
+                </p>
+              </div>
+
+              <div class="switch-control">
+                <input
+                  id="modoManutencao"
+                  type="checkbox"
+                >
+
+                <span class="switch"></span>
+              </div>
+            </label>
+
+            <div class="form-group full">
+              <label for="mensagemManutencao">
+                Mensagem de manutenção
+              </label>
+
+              <textarea
+                id="mensagemManutencao"
+                rows="3"
+                maxlength="300"
+                placeholder="Estamos realizando melhorias. Retornaremos em breve."
+              ></textarea>
+            </div>
+
+            <label class="setting-item">
+              <div>
+                <strong>Permitir novas famílias</strong>
+
+                <p>
+                  Autoriza novos usuários a criarem famílias.
+                </p>
+              </div>
+
+              <div class="switch-control">
+                <input
+                  id="permitirNovasFamilias"
+                  type="checkbox"
+                  checked
+                >
+
+                <span class="switch"></span>
+              </div>
+            </label>
+
+            <label class="setting-item">
+              <div>
+                <strong>Atualização obrigatória</strong>
+
+                <p>
+                  Obriga o usuário a instalar a versão mais recente.
+                </p>
+              </div>
+
+              <div class="switch-control">
+                <input
+                  id="atualizacaoObrigatoria"
+                  type="checkbox"
+                >
+
+                <span class="switch"></span>
+              </div>
+            </label>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="versaoMinima">
+                  Versão mínima
+                </label>
+
+                <input
+                  id="versaoMinima"
+                  type="text"
+                  placeholder="Ex.: 1.0.0"
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="versaoAtual">
+                  Versão atual
+                </label>
+
+                <input
+                  id="versaoAtual"
+                  type="text"
+                  placeholder="Ex.: 1.0.1"
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="salvarConfiguracoesGerais()"
+            >
+              Salvar configurações
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <nav class="admin-bottom-nav">
+      <button
+        type="button"
+        class="admin-tab active"
+        data-section="dashboard"
+        onclick="abrirSecao('dashboard')"
+      >
+        <span>📊</span>
+        <small>Resumo</small>
+      </button>
+
+      <button
+        type="button"
+        class="admin-tab"
+        data-section="familias"
+        onclick="abrirSecao('familias')"
+      >
+        <span>👨‍👩‍👧</span>
+        <small>Famílias</small>
+      </button>
+
+      <button
+        type="button"
+        class="admin-tab"
+        data-section="usuarios"
+        onclick="abrirSecao('usuarios')"
+      >
+        <span>👤</span>
+        <small>Usuários</small>
+      </button>
+
+      <button
+        type="button"
+        class="admin-tab"
+        data-section="comunicados"
+        onclick="abrirSecao('comunicados')"
+      >
+        <span>📢</span>
+        <small>Avisos</small>
+      </button>
+
+      <button
+        type="button"
+        class="admin-tab"
+        data-section="configuracoes"
+        onclick="abrirSecao('configuracoes')"
+      >
+        <span>⚙️</span>
+        <small>Ajustes</small>
+      </button>
+    </nav>
+  </div>
+
+  <div
+    id="adminModal"
+    class="admin-modal-bg"
+  >
+    <div class="admin-modal">
+      <div
+        id="adminModalIcon"
+        class="admin-modal-icon"
+      >
+        ℹ️
+      </div>
+
+      <h3 id="adminModalTitle">
+        Aviso
+      </h3>
+
+      <p id="adminModalText"></p>
+
+      <button
+        id="adminModalButton"
+        type="button"
+        class="btn btn-primary btn-full"
+        onclick="fecharAdminModal()"
+      >
+        OK
+      </button>
+    </div>
+  </div>
+
+  <script
+    type="module"
+    src="./admin.js"
+  ></script>
+
+</body>
+</html>
