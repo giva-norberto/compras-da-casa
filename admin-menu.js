@@ -168,7 +168,7 @@ async function usuarioEhAdmin(usuario) {
     const dadosUsuario =
       snapshotUsuario.data();
 
-    return dadosUsuario.admin === true;
+    return dadosUsuario.adminSistema === true;
   } catch (erro) {
     console.error(
       "Erro ao verificar permissão administrativa:",
