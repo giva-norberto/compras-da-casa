@@ -1,84 +1,244 @@
 // ==========================================
 // ListaLar - Menu Administrativo
-// Mostra o botão "Administração"
-// apenas para o administrador.
+// Mostra o botão Admin somente para usuários
+// que possuem admin: true no Firestore.
 // ==========================================
+
+import {
+  getApps,
+  getApp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
 import {
   getAuth,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-const EMAIL_ADMIN = "giva.norberto@gmail.com";
+import {
+  getFirestore,
+  doc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+const ID_BOTAO_ADMIN = "tab-admin";
+const PAGINA_ADMIN = "./admin.html";
+
+let observadorIniciado = false;
+
+/**
+ * Aguarda o Firebase principal do ListaLar ser inicializado.
+ */
+async function aguardarFirebase(
+  tentativas = 100,
+  intervalo = 100
+) {
+  for (
+    let tentativa = 0;
+    tentativa < tentativas;
+    tentativa++
+  ) {
+    if (getApps().length > 0) {
+      return getApp();
+    }
+
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, intervalo);
+    });
+  }
+
+  throw new Error(
+    "O Firebase do ListaLar não foi inicializado."
+  );
+}
+
+/**
+ * Localiza o menu inferior do aplicativo.
+ */
+function obterMenuInferior() {
+  return document.querySelector(".bottom-nav");
+}
+
+/**
+ * Ajusta automaticamente a quantidade de colunas do menu.
+ */
+function ajustarColunasMenu() {
+  const menu = obterMenuInferior();
+
+  if (!menu) {
+    return;
+  }
+
+  const quantidadeBotoes =
+    menu.querySelectorAll(".tab").length;
+
+  menu.style.gridTemplateColumns =
+    `repeat(${Math.max(quantidadeBotoes, 1)}, minmax(0, 1fr))`;
+}
+
+/**
+ * Remove o botão Admin quando o usuário não possui acesso.
+ */
+function removerBotaoAdmin() {
+  const botao =
+    document.getElementById(ID_BOTAO_ADMIN);
+
+  if (botao) {
+    botao.remove();
+  }
+
+  ajustarColunasMenu();
+}
+
+/**
+ * Abre a página administrativa.
+ */
+function abrirPainelAdmin() {
+  window.location.href = PAGINA_ADMIN;
+}
+
+/**
+ * Cria o botão Admin no menu inferior.
+ */
 function criarBotaoAdmin() {
+  if (document.getElementById(ID_BOTAO_ADMIN)) {
+    return;
+  }
 
-    if (document.getElementById("tab-admin")) return;
+  const menu = obterMenuInferior();
 
-    const menu = document.querySelector(".bottom-nav");
+  if (!menu) {
+    console.warn(
+      "Menu inferior não encontrado. " +
+      "O botão Admin não foi criado."
+    );
 
-    if (!menu) return;
+    return;
+  }
 
-    // Ajusta para 4 colunas
-    menu.style.gridTemplateColumns = "repeat(4,1fr)";
+  const botao = document.createElement("button");
 
-    const botao = document.createElement("button");
+  botao.id = ID_BOTAO_ADMIN;
+  botao.type = "button";
+  botao.className = "tab";
 
-    botao.id = "tab-admin";
-    botao.className = "tab";
-    botao.type = "button";
+  botao.setAttribute(
+    "aria-label",
+    "Abrir painel administrativo"
+  );
 
-    botao.innerHTML = `
-        <span class="ico">⚙️</span>
-        <span>Admin</span>
-    `;
+  botao.innerHTML = `
+    <span class="ico">⚙️</span>
+    <span>Admin</span>
+  `;
 
-    botao.onclick = () => {
+  botao.addEventListener(
+    "click",
+    abrirPainelAdmin
+  );
 
-        window.location.href = "admin.html";
+  menu.appendChild(botao);
 
-    };
-
-    menu.appendChild(botao);
-
+  ajustarColunasMenu();
 }
 
-function removerBotaoAdmin(){
+/**
+ * Consulta no Firestore se o usuário possui admin: true.
+ */
+async function usuarioEhAdmin(usuario) {
+  if (!usuario?.uid) {
+    return false;
+  }
 
-    const botao = document.getElementById("tab-admin");
+  try {
+    const db = getFirestore();
 
-    if(botao){
+    const referenciaUsuario = doc(
+      db,
+      "usuarios",
+      usuario.uid
+    );
 
-        botao.remove();
+    const snapshotUsuario =
+      await getDoc(referenciaUsuario);
 
+    if (!snapshotUsuario.exists()) {
+      return false;
     }
 
-    const menu = document.querySelector(".bottom-nav");
+    const dadosUsuario =
+      snapshotUsuario.data();
 
-    if(menu){
+    return dadosUsuario.admin === true;
+  } catch (erro) {
+    console.error(
+      "Erro ao verificar permissão administrativa:",
+      erro
+    );
 
-        menu.style.gridTemplateColumns = "repeat(3,1fr)";
-
-    }
-
+    return false;
+  }
 }
 
-const auth = getAuth();
+/**
+ * Verifica o usuário conectado e controla o botão Admin.
+ */
+async function verificarAcessoAdmin(usuario) {
+  removerBotaoAdmin();
 
-onAuthStateChanged(auth,(user)=>{
+  if (!usuario) {
+    return;
+  }
 
-    if(
-        user &&
-        user.email &&
-        user.email.toLowerCase()===EMAIL_ADMIN
-    ){
+  const possuiAcesso =
+    await usuarioEhAdmin(usuario);
 
-        criarBotaoAdmin();
+  if (possuiAcesso) {
+    criarBotaoAdmin();
+  }
+}
 
-    }else{
+/**
+ * Inicializa o módulo administrativo.
+ */
+async function inicializarMenuAdmin() {
+  if (observadorIniciado) {
+    return;
+  }
 
-        removerBotaoAdmin();
+  try {
+    await aguardarFirebase();
 
+    const auth = getAuth();
+
+    observadorIniciado = true;
+
+    onAuthStateChanged(
+      auth,
+      async (usuario) => {
+        await verificarAcessoAdmin(usuario);
+      }
+    );
+  } catch (erro) {
+    console.error(
+      "Não foi possível iniciar o menu administrativo:",
+      erro
+    );
+
+    removerBotaoAdmin();
+  }
+}
+
+/**
+ * Aguarda o HTML carregar.
+ */
+if (document.readyState === "loading") {
+  document.addEventListener(
+    "DOMContentLoaded",
+    inicializarMenuAdmin,
+    {
+      once: true
     }
-
-});
+  );
+} else {
+  inicializarMenuAdmin();
+}
