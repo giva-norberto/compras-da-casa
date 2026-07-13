@@ -758,7 +758,7 @@ button {
   }
 
   .admin-main {
-    width: min(100% - 20px, 1180px);
+    width: min(calc(100% - 20px), 1180px);
     margin-top: 16px;
   }
 
