@@ -1,23 +1,48 @@
-const CACHE_NAME = 'listalar-v2';
+const parametros =
+  new URL(self.location.href).searchParams;
 
-const ARQUIVOS = [
-  './',
-  './index.html',
+const VERSAO =
+  parametros.get('v') || '1.0.0';
+
+const CACHE_NAME =
+  `listalar-${VERSAO}`;
+
+const ARQUIVOS_ESTATICOS = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
-  './favicon-32.png'
+  './favicon-32.png',
+  './unidades-produtos.js',
+  './pwa-update.js'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(ARQUIVOS))
+      .then(async (cache) => {
+        await Promise.allSettled(
+          ARQUIVOS_ESTATICOS.map((arquivo) =>
+            cache.add(
+              `${arquivo}?v=${encodeURIComponent(VERSAO)}`
+            )
+          )
+        );
+      })
   );
 
-  self.skipWaiting();
+  /*
+   * Não ativa automaticamente.
+   * Só assume o controle quando o usuário
+   * clicar em "Atualizar agora".
+   */
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', (event) => {
@@ -25,8 +50,15 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((chaves) =>
       Promise.all(
         chaves
-          .filter((chave) => chave !== CACHE_NAME)
-          .map((chave) => caches.delete(chave))
+          .filter((chave) =>
+            chave.startsWith('listalar-')
+          )
+          .filter((chave) =>
+            chave !== CACHE_NAME
+          )
+          .map((chave) =>
+            caches.delete(chave)
+          )
       )
     )
   );
@@ -34,22 +66,73 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+async function buscarNaRedeEAtualizarCache(
+  request
+) {
+  const resposta = await fetch(request);
+
+  if (
+    resposta &&
+    resposta.ok &&
+    request.method === 'GET' &&
+    new URL(request.url).origin ===
+      self.location.origin
+  ) {
+    const cache =
+      await caches.open(CACHE_NAME);
+
+    await cache.put(
+      request,
+      resposta.clone()
+    );
+  }
+
+  return resposta;
+}
+
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') {
+  const request = event.request;
+
+  if (request.method !== 'GET') {
     return;
   }
 
+  const url = new URL(request.url);
+
+  /*
+   * Firebase, Google Login e serviços externos
+   * não são interceptados.
+   */
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  /*
+   * Navegação:
+   * tenta buscar a versão mais recente.
+   */
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      buscarNaRedeEAtualizarCache(request)
+        .catch(async () => {
+          return (
+            await caches.match(request) ||
+            await caches.match('./index.html')
+          );
+        })
+    );
+
+    return;
+  }
+
+  /*
+   * Arquivos locais:
+   * rede primeiro, cache como contingência.
+   */
   event.respondWith(
-    fetch(event.request)
-      .then((resposta) => {
-        const copia = resposta.clone();
-
-        caches
-          .open(CACHE_NAME)
-          .then((cache) => cache.put(event.request, copia));
-
-        return resposta;
-      })
-      .catch(() => caches.match(event.request))
+    buscarNaRedeEAtualizarCache(request)
+      .catch(() =>
+        caches.match(request)
+      )
   );
 });
