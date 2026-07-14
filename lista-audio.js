@@ -2330,9 +2330,7 @@ function instalarMicrofoneAoLado(
 
 function instalarMicrofoneLista() {
   if (
-    elemento(
-      "listalarAudioMicrofoneLista"
-    )
+    elemento("listalarAudioMicrofoneLista")
   ) {
     return true;
   }
@@ -2341,14 +2339,17 @@ function instalarMicrofoneLista() {
     elemento("lista") ||
     document.querySelector(
       '[data-tela="lista"]'
-    );
+    ) ||
+    document;
 
   const botaoPrincipal =
     encontrarBotaoPorTexto(
-      telaLista || document,
+      telaLista,
       [
+        /^incluir na lista$/,
+        /^adicionar à lista$/,
+        /^adicionar a lista$/,
         /^atualizar lista$/,
-        /^atualizar$/,
         /^salvar lista$/,
         /^adicionar item$/,
         /^adicionar produto$/
