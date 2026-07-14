@@ -822,3 +822,132 @@ button {
     font-size: 10px;
   }
 }
+/* =========================================================
+   CORREÇÃO MOBILE - EVITAR TELA SOBRANDO NA LATERAL
+========================================================= */
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.admin-app,
+.admin-main,
+.admin-section,
+.admin-card,
+.form-grid,
+.search-row,
+.stats-grid,
+.data-list,
+.simple-list,
+.setting-list {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.admin-header {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.admin-header-left,
+.admin-profile,
+.section-title,
+.card-title,
+.setting-item {
+  min-width: 0;
+}
+
+.admin-header-left > div,
+.admin-profile > div,
+.section-title > div,
+.card-title > div,
+.setting-item > div {
+  min-width: 0;
+}
+
+.admin-header h1,
+.admin-header p,
+.admin-profile strong,
+.admin-profile span,
+.section-title h2,
+.section-title p,
+.card-title h3,
+.card-title p,
+.setting-item strong,
+.setting-item p {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+input,
+textarea,
+select,
+button {
+  max-width: 100%;
+  min-width: 0;
+}
+
+img {
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .admin-header {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .admin-main {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .section-title,
+  .card-title,
+  .search-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search-row input,
+  .search-row button,
+  .section-title button,
+  .card-title button {
+    width: 100%;
+  }
+
+  .stats-grid,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-profile {
+    max-width: 45%;
+  }
+
+  .admin-profile strong,
+  .admin-profile span {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .admin-bottom-nav {
+    width: 100%;
+    max-width: 100vw;
+    left: 0;
+    right: 0;
+  }
+}
