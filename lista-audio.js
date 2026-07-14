@@ -1,11 +1,15 @@
 // ============================================================
 // ListaLar - lista-audio.js
-// Versão com:
+//
+// Melhorias desta versão:
 // - microfone pequeno ao lado dos botões principais;
-// - reconhecimento antes da abertura do modal;
-// - vários produtos por comando;
-// - frases naturais;
-// - apoio dos produtos já cadastrados da família.
+// - reconhecimento antes de abrir o modal;
+// - vários produtos na mesma fala;
+// - separação usando os produtos cadastrados da família;
+// - transcrição escondida da tela;
+// - unidade cadastrada respeitada;
+// - produtos repetidos agrupados;
+// - funcionamento na Lista e no Estoque.
 // ============================================================
 
 import { obterUnidadePadrao } from "./unidades-produtos.js";
@@ -43,9 +47,10 @@ const ESTADO = {
   reconhecimento: null,
   ouvindo: false,
   itens: [],
+  transcricao: "",
   produtosCadastrados: [],
   contextoFirebase: null,
-  carregandoContexto: false
+  carregandoProdutos: false
 };
 
 
@@ -241,18 +246,24 @@ function formatarNomeProduto(nome) {
 }
 
 
+function escaparRegex(texto) {
+  return String(texto).replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&"
+  );
+}
+
+
 function removerTrecho(texto, trecho) {
   if (!trecho) {
     return texto;
   }
 
-  const seguro = String(trecho).replace(
-    /[.*+?^${}()|[\]\\]/g,
-    "\\$&"
-  );
-
   return String(texto).replace(
-    new RegExp(seguro, "i"),
+    new RegExp(
+      escaparRegex(trecho),
+      "i"
+    ),
     " "
   );
 }
@@ -263,33 +274,49 @@ function singularizarProduto(nome) {
     .replace(/\s+\be\b\s*$/i, "")
     .trim();
 
-  const normalizado = normalizarTexto(produto);
+  const normalizado =
+    normalizarTexto(produto);
 
   const EXCECOES = {
     feijoes: "Feijão",
     feijao: "Feijão",
+
     paes: "Pão",
     pao: "Pão",
+
     acucares: "Açúcar",
     acucar: "Açúcar",
+
     cafes: "Café",
     cafe: "Café",
+
     arrozes: "Arroz",
     arroz: "Arroz",
+
     macarroes: "Macarrão",
     macarrao: "Macarrão",
+
     leites: "Leite",
     leite: "Leite",
+
     manteigas: "Manteiga",
     manteiga: "Manteiga",
+
     farinhas: "Farinha",
     farinha: "Farinha",
+
     detergentes: "Detergente",
     detergente: "Detergente",
+
     sabonetes: "Sabonete",
     sabonete: "Sabonete",
+
     oleos: "Óleo",
     oleo: "Óleo",
+
+    tomates: "Tomate",
+    tomate: "Tomate",
+
     ovos: "Ovos"
   };
 
@@ -310,7 +337,8 @@ function singularizarProduto(nome) {
 
 function localizarNumero(texto) {
   const original = String(texto || "");
-  const normalizado = normalizarTexto(original);
+  const normalizado =
+    normalizarTexto(original);
 
   const meiaDuzia = normalizado.match(
     /\bmeia duzia\b/
@@ -348,7 +376,8 @@ function localizarNumero(texto) {
     };
   }
 
-  const palavras = normalizado.split(/\s+/);
+  const palavras =
+    normalizado.split(/\s+/);
 
   for (
     let indice = 0;
@@ -361,18 +390,23 @@ function localizarNumero(texto) {
       continue;
     }
 
-    let valor = NUMEROS.get(palavra);
+    let valor =
+      NUMEROS.get(palavra);
+
     let trecho = palavra;
 
     if (
       palavras[indice + 1] === "e" &&
-      NUMEROS.has(palavras[indice + 2])
+      NUMEROS.has(
+        palavras[indice + 2]
+      )
     ) {
       valor += NUMEROS.get(
         palavras[indice + 2]
       );
 
-      trecho += ` e ${palavras[indice + 2]}`;
+      trecho +=
+        ` e ${palavras[indice + 2]}`;
     }
 
     return {
@@ -387,9 +421,10 @@ function localizarNumero(texto) {
 
 function localizarUnidade(texto) {
   for (const unidade of ALIASES_UNIDADE) {
-    const resultado = String(texto || "").match(
-      unidade.regex
-    );
+    const resultado =
+      String(texto || "").match(
+        unidade.regex
+      );
 
     if (resultado) {
       return {
@@ -404,7 +439,8 @@ function localizarUnidade(texto) {
 
 
 function detectarModo(texto, modoPadrao) {
-  const normalizado = normalizarTexto(texto);
+  const normalizado =
+    normalizarTexto(texto);
 
   if (
     /\b(estoque|inventario|tenho|temos|comprei|recebi|entrou|disponivel|disponiveis)\b/.test(
@@ -429,12 +465,11 @@ function detectarModo(texto, modoPadrao) {
 
 
 function fraseIndicaEstoqueZero(texto) {
-  const normalizado = normalizarTexto(texto);
+  const normalizado =
+    normalizarTexto(texto);
 
-  return (
-    /\b(acabou|zerou|sem|nao tem|nao temos|faltou)\b/.test(
-      normalizado
-    )
+  return /\b(acabou|zerou|estou sem|estamos sem|nao tem|nao temos)\b/.test(
+    normalizado
   );
 }
 
@@ -464,8 +499,13 @@ function limparFraseNatural(texto) {
     /^\s*lista\s*lar\s*,?\s*/i
   ];
 
-  for (const expressao of EXPRESSOES_INICIAIS) {
-    limpo = limpo.replace(expressao, " ");
+  for (
+    const expressao of EXPRESSOES_INICIAIS
+  ) {
+    limpo = limpo.replace(
+      expressao,
+      " "
+    );
   }
 
   limpo = limpo
@@ -478,7 +518,7 @@ function limparFraseNatural(texto) {
       " "
     )
     .replace(
-      /^\s*(acabou|zerou|estamos sem|estou sem)\b/i,
+      /^\s*(acabou|zerou|estou sem|estamos sem)\b/i,
       " "
     )
     .replace(
@@ -504,19 +544,225 @@ function limparFraseNatural(texto) {
 }
 
 
+function procurarProdutoCadastrado(nome) {
+  const procurado =
+    normalizarTexto(nome);
+
+  return (
+    ESTADO.produtosCadastrados.find(
+      (produto) =>
+        normalizarTexto(produto.nome) ===
+        procurado
+    ) || null
+  );
+}
+
+
+function criarVariacoesProduto(produto) {
+  const nome =
+    normalizarTexto(produto.nome);
+
+  const variacoes = new Set([
+    nome
+  ]);
+
+  if (
+    nome.length > 3 &&
+    !nome.endsWith("s")
+  ) {
+    variacoes.add(`${nome}s`);
+  }
+
+  const plurais = {
+    feijao: "feijoes",
+    pao: "paes",
+    acucar: "acucares",
+    cafe: "cafes",
+    arroz: "arrozes",
+    macarrao: "macarroes",
+    oleo: "oleos"
+  };
+
+  if (plurais[nome]) {
+    variacoes.add(
+      plurais[nome]
+    );
+  }
+
+  return Array.from(variacoes);
+}
+
+
+function encontrarProdutosNaFrase(texto) {
+  const frase =
+    normalizarTexto(texto);
+
+  if (
+    !frase ||
+    ESTADO.produtosCadastrados.length === 0
+  ) {
+    return [];
+  }
+
+  const encontrados = [];
+
+  const produtosOrdenados = [
+    ...ESTADO.produtosCadastrados
+  ].sort(
+    (a, b) =>
+      normalizarTexto(b.nome).length -
+      normalizarTexto(a.nome).length
+  );
+
+  for (
+    const produto of produtosOrdenados
+  ) {
+    const variacoes =
+      criarVariacoesProduto(produto);
+
+    for (const variacao of variacoes) {
+      const regex = new RegExp(
+        `\\b${escaparRegex(variacao)}\\b`,
+        "i"
+      );
+
+      const resultado =
+        frase.match(regex);
+
+      if (!resultado) {
+        continue;
+      }
+
+      const inicio =
+        resultado.index ?? 0;
+
+      const fim =
+        inicio + resultado[0].length;
+
+      encontrados.push({
+        produto,
+        inicio,
+        fim,
+        trecho: resultado[0]
+      });
+
+      break;
+    }
+  }
+
+  encontrados.sort(
+    (a, b) => a.inicio - b.inicio
+  );
+
+  const semSobreposicao = [];
+
+  for (
+    const encontrado of encontrados
+  ) {
+    const sobrepoe =
+      semSobreposicao.some(
+        (item) =>
+          encontrado.inicio < item.fim &&
+          encontrado.fim > item.inicio
+      );
+
+    if (!sobrepoe) {
+      semSobreposicao.push(
+        encontrado
+      );
+    }
+  }
+
+  return semSobreposicao;
+}
+
+
+function separarTrechosPeloCadastro(texto) {
+  const encontrados =
+    encontrarProdutosNaFrase(texto);
+
+  if (encontrados.length < 2) {
+    return [];
+  }
+
+  const frase =
+    normalizarTexto(texto);
+
+  const partes = [];
+
+  for (
+    let indice = 0;
+    indice < encontrados.length;
+    indice += 1
+  ) {
+    const atual =
+      encontrados[indice];
+
+    const proximo =
+      encontrados[indice + 1];
+
+    let inicio = atual.inicio;
+
+    const prefixo =
+      frase.slice(
+        indice === 0
+          ? 0
+          : encontrados[indice - 1].fim,
+        atual.inicio
+      );
+
+    const numeroNoPrefixo =
+      localizarNumero(prefixo);
+
+    if (numeroNoPrefixo) {
+      inicio =
+        atual.inicio -
+        numeroNoPrefixo.trecho.length -
+        1;
+    }
+
+    const fim = proximo
+      ? proximo.inicio
+      : frase.length;
+
+    const trecho =
+      frase
+        .slice(inicio, fim)
+        .replace(
+          /^\s*(e|mais|tambem|depois)\b/i,
+          ""
+        )
+        .replace(
+          /\s+\be\b\s*$/i,
+          ""
+        )
+        .trim();
+
+    if (trecho) {
+      partes.push(trecho);
+    }
+  }
+
+  return partes;
+}
+
+
 function separarPorQuantidades(texto) {
-  const marcadorNumero =
+  const marcador =
     `(?:\\d+(?:[.,]\\d+)?|${PALAVRAS_NUMERO}|meia duzia|uma duzia|duzia)`;
 
   const regex = new RegExp(
-    `(?=\\b${marcadorNumero}\\b)`,
+    `(?=\\b${marcador}\\b)`,
     "gi"
   );
 
-  const partes = normalizarTexto(texto)
-    .split(regex)
-    .map((parte) => parte.trim())
-    .filter(Boolean);
+  const partes =
+    normalizarTexto(texto)
+      .split(regex)
+      .map(
+        (parte) => parte.trim()
+      )
+      .filter(Boolean);
 
   return partes.length > 1
     ? partes
@@ -533,112 +779,37 @@ function separarPorConectores(texto) {
       "|||"
     )
     .split("|||")
-    .map((parte) => parte.trim())
+    .map(
+      (parte) => parte.trim()
+    )
     .filter(Boolean);
 }
 
 
-function procurarProdutoCadastrado(nome) {
-  const procurado = normalizarTexto(nome);
-
-  return ESTADO.produtosCadastrados.find(
-    (produto) =>
-      normalizarTexto(produto.nome) === procurado
-  ) || null;
-}
-
-
-function separarUsandoProdutosCadastrados(texto) {
-  const fraseNormalizada = normalizarTexto(texto);
-
-  if (
-    !fraseNormalizada ||
-    ESTADO.produtosCadastrados.length === 0
-  ) {
-    return [];
-  }
-
-  const produtosOrdenados = [
-    ...ESTADO.produtosCadastrados
-  ].sort(
-    (a, b) =>
-      normalizarTexto(b.nome).length -
-      normalizarTexto(a.nome).length
-  );
-
-  const encontrados = [];
-
-  for (const produto of produtosOrdenados) {
-    const nomeNormalizado = normalizarTexto(
-      produto.nome
-    );
-
-    const regex = new RegExp(
-      `\\b${nomeNormalizado.replace(
-        /[.*+?^${}()|[\]\\]/g,
-        "\\$&"
-      )}s?\\b`,
-      "i"
-    );
-
-    const resultado = fraseNormalizada.match(regex);
-
-    if (!resultado) {
-      continue;
-    }
-
-    encontrados.push({
-      produto,
-      indice: resultado.index ?? 0,
-      trecho: resultado[0]
-    });
-  }
-
-  encontrados.sort(
-    (a, b) => a.indice - b.indice
-  );
-
-  const semSobreposicao = [];
-
-  for (const encontrado of encontrados) {
-    const inicio = encontrado.indice;
-    const fim =
-      inicio + encontrado.trecho.length;
-
-    const sobrepoe = semSobreposicao.some(
-      (item) =>
-        inicio < item.fim &&
-        fim > item.inicio
-    );
-
-    if (!sobrepoe) {
-      semSobreposicao.push({
-        ...encontrado,
-        inicio,
-        fim
-      });
-    }
-  }
-
-  if (semSobreposicao.length < 2) {
-    return [];
-  }
-
-  return semSobreposicao.map(
-    (item) => item.produto.nome
-  );
-}
-
-
 function dividirItens(texto) {
-  const limpo = limparFraseNatural(texto);
+  const limpo =
+    limparFraseNatural(texto);
+
+  const peloCadastro =
+    separarTrechosPeloCadastro(limpo);
+
+  if (peloCadastro.length > 1) {
+    return peloCadastro;
+  }
 
   const porQuantidade =
     separarPorQuantidades(limpo);
 
   if (porQuantidade.length > 1) {
     return porQuantidade.flatMap(
-      separarPorConectores
+      (parte) => {
+        const separadas =
+          separarPorConectores(parte);
+
+        return separadas.length
+          ? separadas
+          : [parte];
+      }
     );
   }
 
@@ -646,27 +817,7 @@ function dividirItens(texto) {
     separarPorConectores(limpo);
 
   if (porConectores.length > 1) {
-    const resultado = [];
-
-    for (const parte of porConectores) {
-      const porCadastro =
-        separarUsandoProdutosCadastrados(parte);
-
-      if (porCadastro.length > 1) {
-        resultado.push(...porCadastro);
-      } else {
-        resultado.push(parte);
-      }
-    }
-
-    return resultado;
-  }
-
-  const porCadastro =
-    separarUsandoProdutosCadastrados(limpo);
-
-  if (porCadastro.length > 1) {
-    return porCadastro;
+    return porConectores;
   }
 
   return [limpo];
@@ -715,27 +866,45 @@ function interpretarItem(
       /\b(de|do|da|dos|das)\s*$/i,
       " "
     )
-    .replace(/\s+\be\b\s*$/i, " ")
+    .replace(
+      /\s+\be\b\s*$/i,
+      " "
+    )
     .replace(/\s+/g, " ")
     .trim();
 
-  let produto = singularizarProduto(restante);
+  let produtoCadastrado = null;
+
+  const encontrados =
+    encontrarProdutosNaFrase(restante);
+
+  if (encontrados.length === 1) {
+    produtoCadastrado =
+      encontrados[0].produto;
+  }
+
+  let produto =
+    produtoCadastrado?.nome ||
+    singularizarProduto(restante);
 
   if (!produto) {
     return null;
   }
 
-  const cadastrado =
+  const cadastroExato =
+    produtoCadastrado ||
     procurarProdutoCadastrado(produto);
 
-  if (cadastrado) {
-    produto = cadastrado.nome;
+  if (cadastroExato) {
+    produto =
+      cadastroExato.nome;
   }
 
   let quantidade;
 
   if (quantidadeEncontrada) {
-    quantidade = quantidadeEncontrada.valor;
+    quantidade =
+      quantidadeEncontrada.valor;
   } else if (
     modo === "estoque" &&
     estoqueZero
@@ -745,19 +914,80 @@ function interpretarItem(
     quantidade = 1;
   }
 
-  const unidade =
-    unidadeEncontrada?.valor ||
-    cadastrado?.unidade ||
-    obterUnidadePadrao(produto) ||
-    "un";
+  let unidade = "un";
+
+  if (unidadeEncontrada?.valor) {
+    unidade =
+      unidadeEncontrada.valor;
+  } else if (cadastroExato?.unidade) {
+    unidade =
+      cadastroExato.unidade;
+  } else {
+    unidade =
+      obterUnidadePadrao(produto) ||
+      "un";
+  }
 
   return {
     produto,
-    quantidade: Math.max(0, quantidade),
+    quantidade: Math.max(
+      0,
+      quantidade
+    ),
     unidade,
-    minimo:
-      cadastrado?.minimo ?? null
+    produtoExistente:
+      Boolean(cadastroExato)
   };
+}
+
+
+function agruparItensRepetidos(itens) {
+  const agrupados = new Map();
+
+  for (const item of itens) {
+    const chave =
+      normalizarTexto(item.produto);
+
+    if (!agrupados.has(chave)) {
+      agrupados.set(
+        chave,
+        {
+          ...item
+        }
+      );
+
+      continue;
+    }
+
+    const existente =
+      agrupados.get(chave);
+
+    existente.quantidade =
+      numeroSeguro(
+        existente.quantidade,
+        0
+      ) +
+      numeroSeguro(
+        item.quantidade,
+        0
+      );
+
+    if (
+      existente.unidade === "un" &&
+      item.unidade !== "un"
+    ) {
+      existente.unidade =
+        item.unidade;
+    }
+
+    existente.produtoExistente =
+      existente.produtoExistente ||
+      item.produtoExistente;
+  }
+
+  return Array.from(
+    agrupados.values()
+  );
 }
 
 
@@ -765,10 +995,13 @@ function interpretarComandoMultiplo(
   texto,
   modoPadrao = "lista"
 ) {
-  const original = String(texto || "").trim();
+  const original =
+    String(texto || "").trim();
 
   if (!original) {
-    throw new Error("COMANDO_VAZIO");
+    throw new Error(
+      "COMANDO_VAZIO"
+    );
   }
 
   const modo = detectarModo(
@@ -779,17 +1012,25 @@ function interpretarComandoMultiplo(
   const estoqueZero =
     fraseIndicaEstoqueZero(original);
 
-  const partes = dividirItens(original);
+  const partes =
+    dividirItens(original);
 
-  const itens = partes
-    .map((parte) =>
-      interpretarItem(
-        parte,
-        modo,
-        estoqueZero
+  const itensInterpretados =
+    partes
+      .map(
+        (parte) =>
+          interpretarItem(
+            parte,
+            modo,
+            estoqueZero
+          )
       )
-    )
-    .filter(Boolean);
+      .filter(Boolean);
+
+  const itens =
+    agruparItensRepetidos(
+      itensInterpretados
+    );
 
   if (itens.length === 0) {
     throw new Error(
@@ -805,26 +1046,30 @@ function interpretarComandoMultiplo(
 
 
 function criarEstilos() {
-  if (elemento("listalar-audio-css")) {
+  if (
+    elemento("listalar-audio-css")
+  ) {
     return;
   }
 
-  const estilo = document.createElement("style");
+  const estilo =
+    document.createElement("style");
 
-  estilo.id = "listalar-audio-css";
+  estilo.id =
+    "listalar-audio-css";
 
   estilo.textContent = `
     .listalar-acao-com-audio {
       display: grid !important;
-      grid-template-columns: minmax(0, 1fr) 58px;
+      grid-template-columns:
+        minmax(0, 1fr) 58px;
       align-items: stretch;
       gap: 9px;
       width: 100%;
     }
 
-    .listalar-acao-com-audio > button:not(
-      .listalar-audio-microfone
-    ) {
+    .listalar-acao-com-audio
+    > button:not(.listalar-audio-microfone) {
       width: 100% !important;
       min-width: 0;
       margin: 0 !important;
@@ -833,7 +1078,6 @@ function criarEstilos() {
     .listalar-audio-microfone {
       width: 58px;
       min-width: 58px;
-      height: 100%;
       min-height: 48px;
       margin: 0 !important;
       padding: 0;
@@ -849,7 +1093,8 @@ function criarEstilos() {
       font-weight: 900;
       cursor: pointer;
       box-shadow:
-        0 7px 15px rgba(37, 99, 235, 0.2);
+        0 7px 15px
+        rgba(37, 99, 235, 0.2);
     }
 
     .listalar-audio-microfone.ouvindo {
@@ -859,7 +1104,8 @@ function criarEstilos() {
         #f97316
       );
       animation:
-        listalarMicrofonePulso 1.05s infinite;
+        listalarMicrofonePulso
+        1.05s infinite;
     }
 
     @keyframes listalarMicrofonePulso {
@@ -881,7 +1127,8 @@ function criarEstilos() {
       align-items: center;
       justify-content: center;
       padding: 18px;
-      background: rgba(15, 23, 42, 0.58);
+      background:
+        rgba(15, 23, 42, 0.58);
       backdrop-filter: blur(5px);
     }
 
@@ -897,7 +1144,8 @@ function criarEstilos() {
       color: #172033;
       text-align: center;
       box-shadow:
-        0 24px 60px rgba(15, 23, 42, 0.3);
+        0 24px 60px
+        rgba(15, 23, 42, 0.3);
     }
 
     .listalar-audio-ouvindo-icone {
@@ -910,19 +1158,22 @@ function criarEstilos() {
       background: #fee2e2;
       font-size: 38px;
       animation:
-        listalarOuvindoPulso 1.05s infinite;
+        listalarOuvindoPulso
+        1.05s infinite;
     }
 
     @keyframes listalarOuvindoPulso {
       0%,
       100% {
         box-shadow:
-          0 0 0 0 rgba(220, 38, 38, 0.22);
+          0 0 0 0
+          rgba(220, 38, 38, 0.22);
       }
 
       50% {
         box-shadow:
-          0 0 0 18px rgba(220, 38, 38, 0);
+          0 0 0 18px
+          rgba(220, 38, 38, 0);
       }
     }
 
@@ -960,7 +1211,8 @@ function criarEstilos() {
       align-items: center;
       justify-content: center;
       padding: 16px;
-      background: rgba(15, 23, 42, 0.62);
+      background:
+        rgba(15, 23, 42, 0.62);
       backdrop-filter: blur(5px);
     }
 
@@ -970,20 +1222,23 @@ function criarEstilos() {
 
     .listalar-audio-modal {
       width: min(100%, 500px);
-      max-height: calc(100vh - 30px);
+      max-height:
+        calc(100vh - 30px);
       overflow-y: auto;
       padding: 18px;
       border-radius: 22px;
       background: #ffffff;
       color: #172033;
       box-shadow:
-        0 24px 60px rgba(15, 23, 42, 0.3);
+        0 24px 60px
+        rgba(15, 23, 42, 0.3);
     }
 
     .listalar-audio-topo {
       display: flex;
       align-items: flex-start;
-      justify-content: space-between;
+      justify-content:
+        space-between;
       gap: 12px;
       margin-bottom: 12px;
     }
@@ -1016,43 +1271,14 @@ function criarEstilos() {
     }
 
     .listalar-audio-status {
-      margin-bottom: 10px;
-      padding: 10px 12px;
+      margin-bottom: 12px;
+      padding: 11px 12px;
       border-radius: 14px;
       background: #dcfce7;
       color: #166534;
       font-size: 12px;
       font-weight: 800;
       line-height: 1.4;
-    }
-
-    .listalar-audio-comando {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .listalar-audio-comando input {
-      width: 100%;
-      min-width: 0;
-      padding: 12px;
-      border: 2px solid #dbeafe;
-      border-radius: 13px;
-      color: #172033;
-      font-size: 15px;
-      font-weight: 800;
-      box-sizing: border-box;
-    }
-
-    .listalar-audio-interpretar {
-      padding: 0 14px;
-      border: none;
-      border-radius: 13px;
-      background: #e0e7ff;
-      color: #3730a3;
-      font-weight: 900;
-      cursor: pointer;
     }
 
     .listalar-audio-itens {
@@ -1070,7 +1296,8 @@ function criarEstilos() {
     .listalar-audio-item-topo {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content:
+        space-between;
       gap: 10px;
       margin-bottom: 8px;
     }
@@ -1078,6 +1305,17 @@ function criarEstilos() {
     .listalar-audio-item-topo strong {
       color: #1e3a8a;
       font-size: 13px;
+    }
+
+    .listalar-audio-novo {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 9px;
+      font-weight: 900;
     }
 
     .listalar-audio-remover {
@@ -1094,7 +1332,8 @@ function criarEstilos() {
 
     .listalar-audio-grade {
       display: grid;
-      grid-template-columns: 1fr 95px 120px;
+      grid-template-columns:
+        1fr 95px 120px;
       gap: 8px;
     }
 
@@ -1122,7 +1361,8 @@ function criarEstilos() {
 
     .listalar-audio-acoes {
       display: grid;
-      grid-template-columns: 1fr 1.5fr;
+      grid-template-columns:
+        1fr 1.5fr;
       gap: 8px;
       margin-top: 13px;
     }
@@ -1152,16 +1392,9 @@ function criarEstilos() {
     }
 
     @media (max-width: 430px) {
-      .listalar-audio-comando {
-        grid-template-columns: 1fr;
-      }
-
-      .listalar-audio-interpretar {
-        min-height: 44px;
-      }
-
       .listalar-audio-grade {
-        grid-template-columns: 1fr 95px;
+        grid-template-columns:
+          1fr 95px;
       }
 
       .listalar-audio-campo-produto {
@@ -1170,18 +1403,27 @@ function criarEstilos() {
     }
   `;
 
-  document.head.appendChild(estilo);
+  document.head.appendChild(
+    estilo
+  );
 }
 
 
 function criarTelaOuvindo() {
-  if (elemento("listalarAudioOuvindoFundo")) {
+  if (
+    elemento(
+      "listalarAudioOuvindoFundo"
+    )
+  ) {
     return;
   }
 
-  const fundo = document.createElement("div");
+  const fundo =
+    document.createElement("div");
 
-  fundo.id = "listalarAudioOuvindoFundo";
+  fundo.id =
+    "listalarAudioOuvindoFundo";
+
   fundo.className =
     "listalar-audio-ouvindo-fundo";
 
@@ -1207,7 +1449,9 @@ function criarTelaOuvindo() {
     </div>
   `;
 
-  document.body.appendChild(fundo);
+  document.body.appendChild(
+    fundo
+  );
 
   elemento("listalarAudioParar")
     .addEventListener(
@@ -1218,14 +1462,20 @@ function criarTelaOuvindo() {
 
 
 function criarModal() {
-  if (elemento("listalarAudioFundo")) {
+  if (
+    elemento("listalarAudioFundo")
+  ) {
     return;
   }
 
-  const fundo = document.createElement("div");
+  const fundo =
+    document.createElement("div");
 
-  fundo.id = "listalarAudioFundo";
-  fundo.className = "listalar-audio-fundo";
+  fundo.id =
+    "listalarAudioFundo";
+
+  fundo.className =
+    "listalar-audio-fundo";
 
   fundo.innerHTML = `
     <div class="listalar-audio-modal">
@@ -1236,7 +1486,7 @@ function criarModal() {
           </h2>
 
           <p id="listalarAudioDescricao">
-            Confira os itens antes de salvar.
+            Confira os produtos antes de salvar.
           </p>
         </div>
 
@@ -1255,23 +1505,6 @@ function criarModal() {
         class="listalar-audio-status"
       >
         Revise os produtos identificados.
-      </div>
-
-      <div class="listalar-audio-comando">
-        <input
-          id="listalarAudioTexto"
-          type="text"
-          autocomplete="off"
-          placeholder="Frase reconhecida"
-        >
-
-        <button
-          id="listalarAudioInterpretar"
-          class="listalar-audio-interpretar"
-          type="button"
-        >
-          Interpretar
-        </button>
       </div>
 
       <div
@@ -1299,7 +1532,9 @@ function criarModal() {
     </div>
   `;
 
-  document.body.appendChild(fundo);
+  document.body.appendChild(
+    fundo
+  );
 
   elemento("listalarAudioFechar")
     .addEventListener(
@@ -1313,35 +1548,20 @@ function criarModal() {
       fecharModal
     );
 
-  elemento("listalarAudioInterpretar")
-    .addEventListener(
-      "click",
-      interpretarCampoTexto
-    );
-
   elemento("listalarAudioSalvar")
     .addEventListener(
       "click",
       salvarTodosItens
     );
-
-  elemento("listalarAudioTexto")
-    .addEventListener(
-      "keydown",
-      (evento) => {
-        if (evento.key === "Enter") {
-          evento.preventDefault();
-          interpretarCampoTexto();
-        }
-      }
-    );
 }
 
 
-function mostrarStatus(texto, tipo = "sucesso") {
-  const status = elemento(
-    "listalarAudioStatus"
-  );
+function mostrarStatus(
+  texto,
+  tipo = "sucesso"
+) {
+  const status =
+    elemento("listalarAudioStatus");
 
   if (!status) {
     return;
@@ -1380,102 +1600,127 @@ function atualizarModalModo() {
   const estoque =
     ESTADO.modo === "estoque";
 
-  elemento("listalarAudioTitulo").textContent =
-    estoque
-      ? "Revisar atualização do estoque"
-      : "Revisar lista de compras";
+  elemento(
+    "listalarAudioTitulo"
+  ).textContent = estoque
+    ? "Revisar atualização do estoque"
+    : "Revisar lista de compras";
 
-  elemento("listalarAudioDescricao").textContent =
-    estoque
-      ? "Confira as quantidades disponíveis."
-      : "Confira os produtos antes de adicionar.";
+  elemento(
+    "listalarAudioDescricao"
+  ).textContent = estoque
+    ? "Confira as quantidades disponíveis."
+    : "Confira os produtos antes de adicionar.";
 
-  elemento("listalarAudioSalvar").textContent =
-    estoque
-      ? "Salvar produtos no estoque"
-      : "Adicionar produtos à lista";
+  elemento(
+    "listalarAudioSalvar"
+  ).textContent = estoque
+    ? "Salvar produtos no estoque"
+    : "Adicionar produtos à lista";
 }
 
 
 function renderizarItens() {
-  const area = elemento(
-    "listalarAudioItens"
-  );
+  const area =
+    elemento("listalarAudioItens");
 
-  area.innerHTML = ESTADO.itens
-    .map((item, indice) => `
-      <div class="listalar-audio-item">
-        <div class="listalar-audio-item-topo">
-          <strong>
-            Produto ${indice + 1}
-          </strong>
+  area.innerHTML =
+    ESTADO.itens
+      .map(
+        (item, indice) => `
+          <div class="listalar-audio-item">
+            <div class="listalar-audio-item-topo">
+              <strong>
+                Produto ${indice + 1}
 
-          <button
-            type="button"
-            class="listalar-audio-remover"
-            data-remover-item="${indice}"
-          >
-            ×
-          </button>
-        </div>
+                ${
+                  item.produtoExistente
+                    ? ""
+                    : `
+                      <span class="listalar-audio-novo">
+                        Novo
+                      </span>
+                    `
+                }
+              </strong>
 
-        <div class="listalar-audio-grade">
-          <div
-            class="
-              listalar-audio-campo
-              listalar-audio-campo-produto
-            "
-          >
-            <label>Produto</label>
+              <button
+                type="button"
+                class="listalar-audio-remover"
+                data-remover-item="${indice}"
+                aria-label="Remover produto"
+              >
+                ×
+              </button>
+            </div>
 
-            <input
-              type="text"
-              data-campo-produto="${indice}"
-              value="${escaparHtml(item.produto)}"
-            >
+            <div class="listalar-audio-grade">
+              <div
+                class="
+                  listalar-audio-campo
+                  listalar-audio-campo-produto
+                "
+              >
+                <label>
+                  Produto
+                </label>
+
+                <input
+                  type="text"
+                  data-campo-produto="${indice}"
+                  value="${escaparHtml(item.produto)}"
+                >
+              </div>
+
+              <div class="listalar-audio-campo">
+                <label>
+                  Quantidade
+                </label>
+
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  data-campo-quantidade="${indice}"
+                  value="${item.quantidade}"
+                >
+              </div>
+
+              <div class="listalar-audio-campo">
+                <label>
+                  Unidade
+                </label>
+
+                <select
+                  data-campo-unidade="${indice}"
+                >
+                  ${UNIDADES.map(
+                    (unidade) => `
+                      <option
+                        value="${unidade.valor}"
+                        ${
+                          unidade.valor ===
+                          item.unidade
+                            ? "selected"
+                            : ""
+                        }
+                      >
+                        ${unidade.nome}
+                      </option>
+                    `
+                  ).join("")}
+                </select>
+              </div>
+            </div>
           </div>
-
-          <div class="listalar-audio-campo">
-            <label>Quantidade</label>
-
-            <input
-              type="number"
-              min="0"
-              step="0.1"
-              data-campo-quantidade="${indice}"
-              value="${item.quantidade}"
-            >
-          </div>
-
-          <div class="listalar-audio-campo">
-            <label>Unidade</label>
-
-            <select
-              data-campo-unidade="${indice}"
-            >
-              ${UNIDADES.map(
-                (unidade) => `
-                  <option
-                    value="${unidade.valor}"
-                    ${
-                      unidade.valor === item.unidade
-                        ? "selected"
-                        : ""
-                    }
-                  >
-                    ${unidade.nome}
-                  </option>
-                `
-              ).join("")}
-            </select>
-          </div>
-        </div>
-      </div>
-    `)
-    .join("");
+        `
+      )
+      .join("");
 
   area
-    .querySelectorAll("[data-remover-item]")
+    .querySelectorAll(
+      "[data-remover-item]"
+    )
     .forEach((botao) => {
       botao.addEventListener(
         "click",
@@ -1523,11 +1768,9 @@ function abrirModalComResultado(
   texto,
   resultado
 ) {
+  ESTADO.transcricao = texto;
   ESTADO.modo = resultado.modo;
   ESTADO.itens = resultado.itens;
-
-  elemento("listalarAudioTexto").value =
-    texto;
 
   atualizarModalModo();
   renderizarItens();
@@ -1544,60 +1787,9 @@ function fecharModal() {
 }
 
 
-function interpretarTexto(texto) {
-  try {
-    const resultado =
-      interpretarComandoMultiplo(
-        texto,
-        ESTADO.modo
-      );
-
-    abrirModalComResultado(
-      texto,
-      resultado
-    );
-  } catch (erro) {
-    console.error(
-      "ListaLar Áudio: erro ao interpretar:",
-      erro
-    );
-
-    window.alert(
-      erro.message === "COMANDO_VAZIO"
-        ? "Fale ou digite um comando."
-        : "Não consegui identificar os produtos. Tente falar novamente."
-    );
-  }
-}
-
-
-function interpretarCampoTexto() {
-  const texto =
-    elemento("listalarAudioTexto").value;
-
-  try {
-    const resultado =
-      interpretarComandoMultiplo(
-        texto,
-        ESTADO.modo
-      );
-
-    ESTADO.modo = resultado.modo;
-    ESTADO.itens = resultado.itens;
-
-    atualizarModalModo();
-    renderizarItens();
-    atualizarResumo();
-  } catch (erro) {
-    mostrarStatus(
-      "Não consegui identificar os produtos.",
-      "erro"
-    );
-  }
-}
-
-
-function atualizarBotoesMicrofone(ouvindo) {
+function atualizarBotoesMicrofone(
+  ouvindo
+) {
   ESTADO.ouvindo = ouvindo;
 
   document
@@ -1605,32 +1797,33 @@ function atualizarBotoesMicrofone(ouvindo) {
       ".listalar-audio-microfone"
     )
     .forEach((botao) => {
-      botao.classList.toggle(
-        "ouvindo",
+      const ativo =
         ouvindo &&
         botao.dataset.modoAudio ===
-          ESTADO.modo
+          ESTADO.modo;
+
+      botao.classList.toggle(
+        "ouvindo",
+        ativo
       );
 
       botao.textContent =
-        ouvindo &&
-        botao.dataset.modoAudio ===
-          ESTADO.modo
-          ? "🔴"
-          : "🎤";
+        ativo ? "🔴" : "🎤";
     });
 }
 
 
 function mostrarTelaOuvindo() {
-  elemento("listalarAudioOuvindoFundo")
-    .classList.add("aberto");
+  elemento(
+    "listalarAudioOuvindoFundo"
+  )?.classList.add("aberto");
 }
 
 
 function esconderTelaOuvindo() {
-  elemento("listalarAudioOuvindoFundo")
-    .classList.remove("aberto");
+  elemento(
+    "listalarAudioOuvindoFundo"
+  )?.classList.remove("aberto");
 }
 
 
@@ -1642,7 +1835,7 @@ function pararReconhecimento() {
     try {
       ESTADO.reconhecimento.stop();
     } catch {
-      // O navegador já encerrou o reconhecimento.
+      // Reconhecimento já encerrado.
     }
   }
 
@@ -1651,7 +1844,9 @@ function pararReconhecimento() {
 }
 
 
-async function iniciarReconhecimento(modo) {
+async function iniciarReconhecimento(
+  modo
+) {
   ESTADO.modo =
     modo === "estoque"
       ? "estoque"
@@ -1667,7 +1862,7 @@ async function iniciarReconhecimento(modo) {
 
   pararReconhecimento();
 
-  await carregarContextoProdutos();
+  await carregarProdutosCadastrados();
 
   const reconhecimento =
     new SpeechRecognition();
@@ -1685,16 +1880,20 @@ async function iniciarReconhecimento(modo) {
     mostrarTelaOuvindo();
   };
 
-  reconhecimento.onresult = (evento) => {
-    const alternativas = Array.from(
-      evento.results?.[0] || []
-    );
+  reconhecimento.onresult = (
+    evento
+  ) => {
+    const alternativas =
+      Array.from(
+        evento.results?.[0] || []
+      );
 
-    const melhor = alternativas.sort(
-      (a, b) =>
-        (b.confidence || 0) -
-        (a.confidence || 0)
-    )[0];
+    const melhor =
+      alternativas.sort(
+        (a, b) =>
+          (b.confidence || 0) -
+          (a.confidence || 0)
+      )[0];
 
     const texto = String(
       melhor?.transcript || ""
@@ -1710,10 +1909,32 @@ async function iniciarReconhecimento(modo) {
       return;
     }
 
-    interpretarTexto(texto);
+    try {
+      const resultado =
+        interpretarComandoMultiplo(
+          texto,
+          ESTADO.modo
+        );
+
+      abrirModalComResultado(
+        texto,
+        resultado
+      );
+    } catch (erro) {
+      console.error(
+        "ListaLar Áudio: erro ao interpretar:",
+        erro
+      );
+
+      window.alert(
+        "Não consegui identificar os produtos. Tente falar novamente."
+      );
+    }
   };
 
-  reconhecimento.onerror = (evento) => {
+  reconhecimento.onerror = (
+    evento
+  ) => {
     atualizarBotoesMicrofone(false);
     esconderTelaOuvindo();
 
@@ -1770,14 +1991,21 @@ async function aguardarFirebase(
 ) {
   const inicio = Date.now();
 
-  while (Date.now() - inicio < limiteMs) {
+  while (
+    Date.now() - inicio < limiteMs
+  ) {
     if (getApps().length > 0) {
       return getApp();
     }
 
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 80);
-    });
+    await new Promise(
+      (resolve) => {
+        window.setTimeout(
+          resolve,
+          80
+        );
+      }
+    );
   }
 
   throw new Error(
@@ -1799,52 +2027,60 @@ async function aguardarUsuario(
       let finalizado = false;
       let cancelar = () => {};
 
-      const limite = window.setTimeout(
-        () => {
-          if (finalizado) {
-            return;
+      const limite =
+        window.setTimeout(
+          () => {
+            if (finalizado) {
+              return;
+            }
+
+            finalizado = true;
+            cancelar();
+
+            reject(
+              new Error(
+                "USUARIO_NAO_AUTENTICADO"
+              )
+            );
+          },
+          limiteMs
+        );
+
+      cancelar =
+        onAuthStateChanged(
+          auth,
+          (usuario) => {
+            if (
+              finalizado ||
+              !usuario
+            ) {
+              return;
+            }
+
+            finalizado = true;
+
+            window.clearTimeout(
+              limite
+            );
+
+            cancelar();
+            resolve(usuario);
+          },
+          (erro) => {
+            if (finalizado) {
+              return;
+            }
+
+            finalizado = true;
+
+            window.clearTimeout(
+              limite
+            );
+
+            cancelar();
+            reject(erro);
           }
-
-          finalizado = true;
-          cancelar();
-
-          reject(
-            new Error(
-              "USUARIO_NAO_AUTENTICADO"
-            )
-          );
-        },
-        limiteMs
-      );
-
-      cancelar = onAuthStateChanged(
-        auth,
-        (usuario) => {
-          if (
-            finalizado ||
-            !usuario
-          ) {
-            return;
-          }
-
-          finalizado = true;
-          window.clearTimeout(limite);
-          cancelar();
-
-          resolve(usuario);
-        },
-        (erro) => {
-          if (finalizado) {
-            return;
-          }
-
-          finalizado = true;
-          window.clearTimeout(limite);
-          cancelar();
-
-          reject(erro);
-        }
-      );
+        );
     }
   );
 }
@@ -1855,18 +2091,26 @@ async function obterContextoFirebase() {
     return ESTADO.contextoFirebase;
   }
 
-  const app = await aguardarFirebase();
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  const usuario = await aguardarUsuario(auth);
+  const app =
+    await aguardarFirebase();
 
-  const usuarioSnap = await getDoc(
-    doc(
-      db,
-      "usuarios",
-      usuario.uid
-    )
-  );
+  const auth =
+    getAuth(app);
+
+  const db =
+    getFirestore(app);
+
+  const usuario =
+    await aguardarUsuario(auth);
+
+  const usuarioSnap =
+    await getDoc(
+      doc(
+        db,
+        "usuarios",
+        usuario.uid
+      )
+    );
 
   if (!usuarioSnap.exists()) {
     throw new Error(
@@ -1887,6 +2131,7 @@ async function obterContextoFirebase() {
     db,
     usuario,
     familiaId,
+
     produtosRef: collection(
       db,
       "familias",
@@ -1899,12 +2144,12 @@ async function obterContextoFirebase() {
 }
 
 
-async function carregarContextoProdutos() {
-  if (ESTADO.carregandoContexto) {
+async function carregarProdutosCadastrados() {
+  if (ESTADO.carregandoProdutos) {
     return;
   }
 
-  ESTADO.carregandoContexto = true;
+  ESTADO.carregandoProdutos = true;
 
   try {
     const contexto =
@@ -1924,13 +2169,13 @@ async function carregarContextoProdutos() {
       );
   } catch (erro) {
     console.warn(
-      "ListaLar Áudio: não foi possível carregar os produtos cadastrados:",
+      "ListaLar Áudio: não foi possível carregar os produtos:",
       erro
     );
 
     ESTADO.produtosCadastrados = [];
   } finally {
-    ESTADO.carregandoContexto = false;
+    ESTADO.carregandoProdutos = false;
   }
 }
 
@@ -1942,15 +2187,15 @@ async function encontrarProduto(
   const nomeNormalizado =
     normalizarTexto(nome);
 
-  const produtoEmMemoria =
+  const emMemoria =
     ESTADO.produtosCadastrados.find(
       (produto) =>
         normalizarTexto(produto.nome) ===
         nomeNormalizado
     );
 
-  if (produtoEmMemoria) {
-    return produtoEmMemoria;
+  if (emMemoria) {
+    return emMemoria;
   }
 
   const produtosSnap =
@@ -2003,7 +2248,8 @@ async function salvarItemLista(
         unidade: item.unidade,
         manualLista: true,
         qtdManual: item.quantidade,
-        qtdComprada: item.quantidade,
+        qtdComprada:
+          item.quantidade,
         comprado: false,
         atualizadoEm:
           serverTimestamp()
@@ -2024,8 +2270,10 @@ async function salvarItemLista(
       estoque: 0,
       minimo: 0,
       comprado: false,
-      qtdComprada: item.quantidade,
-      qtdManual: item.quantidade,
+      qtdComprada:
+        item.quantidade,
+      qtdManual:
+        item.quantidade,
       manualLista: true,
       listaAutomatica: false,
       historico: 0,
@@ -2092,36 +2340,46 @@ async function salvarItemEstoque(
 
 function lerItensRevisados() {
   return ESTADO.itens
-    .map((item, indice) => {
-      const produto =
-        formatarNomeProduto(
+    .map(
+      (item, indice) => {
+        const produto =
+          formatarNomeProduto(
+            document.querySelector(
+              `[data-campo-produto="${indice}"]`
+            )?.value
+          );
+
+        const quantidade =
+          numeroSeguro(
+            document.querySelector(
+              `[data-campo-quantidade="${indice}"]`
+            )?.value,
+            1
+          );
+
+        const unidade =
           document.querySelector(
-            `[data-campo-produto="${indice}"]`
-          )?.value
-        );
+            `[data-campo-unidade="${indice}"]`
+          )?.value || "un";
 
-      const quantidade =
-        numeroSeguro(
-          document.querySelector(
-            `[data-campo-quantidade="${indice}"]`
-          )?.value,
-          1
-        );
+        return {
+          produto,
 
-      const unidade =
-        document.querySelector(
-          `[data-campo-unidade="${indice}"]`
-        )?.value || "un";
+          quantidade:
+            ESTADO.modo === "lista"
+              ? Math.max(
+                  1,
+                  quantidade
+                )
+              : Math.max(
+                  0,
+                  quantidade
+                ),
 
-      return {
-        produto,
-        quantidade:
-          ESTADO.modo === "lista"
-            ? Math.max(1, quantidade)
-            : Math.max(0, quantidade),
-        unidade
-      };
-    })
+          unidade
+        };
+      }
+    )
     .filter(
       (item) => item.produto
     );
@@ -2129,13 +2387,19 @@ function lerItensRevisados() {
 
 
 async function salvarTodosItens() {
-  const botao = elemento(
-    "listalarAudioSalvar"
-  );
+  const botao =
+    elemento(
+      "listalarAudioSalvar"
+    );
 
   try {
-    const itens =
+    let itens =
       lerItensRevisados();
+
+    itens =
+      agruparItensRepetidos(
+        itens
+      );
 
     if (itens.length === 0) {
       mostrarStatus(
@@ -2154,7 +2418,9 @@ async function salvarTodosItens() {
       await obterContextoFirebase();
 
     for (const item of itens) {
-      if (ESTADO.modo === "estoque") {
+      if (
+        ESTADO.modo === "estoque"
+      ) {
         await salvarItemEstoque(
           contexto,
           item
@@ -2168,7 +2434,6 @@ async function salvarTodosItens() {
     }
 
     ESTADO.produtosCadastrados = [];
-    ESTADO.contextoFirebase = null;
 
     fecharModal();
 
@@ -2197,6 +2462,7 @@ async function salvarTodosItens() {
           ESTADO.modo === "estoque"
             ? "Estoque atualizado"
             : "Produtos adicionados",
+
         texto: mensagem,
         tipo: "success"
       });
@@ -2214,8 +2480,10 @@ async function salvarTodosItens() {
       "erro"
     );
   } finally {
-    botao.disabled = false;
-    atualizarModalModo();
+    if (botao) {
+      botao.disabled = false;
+      atualizarModalModo();
+    }
   }
 }
 
@@ -2237,21 +2505,28 @@ function encontrarBotaoPorTexto(
     return null;
   }
 
-  const botoes = Array.from(
-    tela.querySelectorAll(
-      "button, a.btn, .btn"
-    )
-  );
-
-  return botoes.find((botao) => {
-    const texto =
-      normalizarTextoBotao(botao);
-
-    return expressoes.some(
-      (expressao) =>
-        expressao.test(texto)
+  const botoes =
+    Array.from(
+      tela.querySelectorAll(
+        "button, a.btn, .btn"
+      )
     );
-  }) || null;
+
+  return (
+    botoes.find(
+      (botao) => {
+        const texto =
+          normalizarTextoBotao(
+            botao
+          );
+
+        return expressoes.some(
+          (expressao) =>
+            expressao.test(texto)
+        );
+      }
+    ) || null
+  );
 }
 
 
@@ -2283,7 +2558,9 @@ function instalarMicrofoneAoLado(
 
   if (!grupo) {
     grupo =
-      document.createElement("div");
+      document.createElement(
+        "div"
+      );
 
     grupo.className =
       "listalar-acao-com-audio";
@@ -2299,14 +2576,21 @@ function instalarMicrofoneAoLado(
   }
 
   const microfone =
-    document.createElement("button");
+    document.createElement(
+      "button"
+    );
 
   microfone.id = idMicrofone;
   microfone.type = "button";
+
   microfone.className =
     "listalar-audio-microfone";
-  microfone.dataset.modoAudio = modo;
+
+  microfone.dataset.modoAudio =
+    modo;
+
   microfone.textContent = "🎤";
+
   microfone.title =
     modo === "estoque"
       ? "Atualizar estoque por áudio"
@@ -2319,10 +2603,15 @@ function instalarMicrofoneAoLado(
 
   microfone.addEventListener(
     "click",
-    () => iniciarReconhecimento(modo)
+    () =>
+      iniciarReconhecimento(
+        modo
+      )
   );
 
-  grupo.appendChild(microfone);
+  grupo.appendChild(
+    microfone
+  );
 
   return true;
 }
@@ -2330,7 +2619,9 @@ function instalarMicrofoneAoLado(
 
 function instalarMicrofoneLista() {
   if (
-    elemento("listalarAudioMicrofoneLista")
+    elemento(
+      "listalarAudioMicrofoneLista"
+    )
   ) {
     return true;
   }
@@ -2377,11 +2668,12 @@ function instalarMicrofoneEstoque() {
     elemento("estoque") ||
     document.querySelector(
       '[data-tela="estoque"]'
-    );
+    ) ||
+    document;
 
   const botaoPrincipal =
     encontrarBotaoPorTexto(
-      telaEstoque || document,
+      telaEstoque,
       [
         /^atualizar estoque$/,
         /^atualizar$/,
@@ -2403,17 +2695,21 @@ function removerBotoesAntigos() {
   [
     "listalarAudioBotaoLista",
     "listalarAudioBotaoEstoque"
-  ].forEach((id) => {
-    elemento(id)?.remove();
-  });
+  ].forEach(
+    (id) => {
+      elemento(id)?.remove();
+    }
+  );
 
   document
     .querySelectorAll(
       ".listalar-audio-botao"
     )
-    .forEach((botao) => {
-      botao.remove();
-    });
+    .forEach(
+      (botao) => {
+        botao.remove();
+      }
+    );
 }
 
 
@@ -2450,11 +2746,13 @@ function instalarListaAudio() {
   tentarInstalar();
 
   const observador =
-    new MutationObserver(() => {
-      removerBotoesAntigos();
-      instalarMicrofoneLista();
-      instalarMicrofoneEstoque();
-    });
+    new MutationObserver(
+      () => {
+        removerBotoesAntigos();
+        instalarMicrofoneLista();
+        instalarMicrofoneEstoque();
+      }
+    );
 
   observador.observe(
     document.body,
@@ -2467,32 +2765,38 @@ function instalarListaAudio() {
 
 
 window.abrirAudioLista = () => {
-  iniciarReconhecimento("lista");
+  iniciarReconhecimento(
+    "lista"
+  );
 };
 
 
 window.abrirAudioEstoque = () => {
-  iniciarReconhecimento("estoque");
+  iniciarReconhecimento(
+    "estoque"
+  );
 };
 
 
-window.ListaLarAudio = Object.freeze({
-  abrirLista:
-    window.abrirAudioLista,
+window.ListaLarAudio =
+  Object.freeze({
+    abrirLista:
+      window.abrirAudioLista,
 
-  abrirEstoque:
-    window.abrirAudioEstoque,
+    abrirEstoque:
+      window.abrirAudioEstoque,
 
-  interpretar:
-    interpretarComandoMultiplo,
+    interpretar:
+      interpretarComandoMultiplo,
 
-  instalar:
-    instalarListaAudio
-});
+    instalar:
+      instalarListaAudio
+  });
 
 
 if (
-  document.readyState === "loading"
+  document.readyState ===
+  "loading"
 ) {
   document.addEventListener(
     "DOMContentLoaded",
