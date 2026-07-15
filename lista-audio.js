@@ -1877,7 +1877,6 @@ async function iniciarReconhecimento(
 
   reconhecimento.onstart = () => {
     atualizarBotoesMicrofone(true);
-    mostrarTelaOuvindo();
   };
 
   reconhecimento.onresult = (
@@ -1962,6 +1961,33 @@ async function iniciarReconhecimento(
       );
     }
   };
+
+  reconhecimento.onend = () => {
+    atualizarBotoesMicrofone(false);
+    esconderTelaOuvindo();
+  };
+
+  mostrarTelaOuvindo();
+  atualizarBotoesMicrofone(true);
+
+  window.setTimeout(() => {
+    try {
+      reconhecimento.start();
+    } catch (erro) {
+      console.error(
+        "ListaLar Áudio: erro ao iniciar:",
+        erro
+      );
+
+      atualizarBotoesMicrofone(false);
+      esconderTelaOuvindo();
+
+      window.alert(
+        "Não foi possível iniciar o microfone."
+      );
+    }
+  }, 300);
+}
 
   reconhecimento.onend = () => {
     atualizarBotoesMicrofone(false);
