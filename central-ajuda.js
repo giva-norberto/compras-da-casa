@@ -1,103 +1,219 @@
 // ============================================================
 // ListaLar - central-ajuda.js
+// Versão 2.0.0
 //
-// Central de Ajuda independente.
-// Não altera a lógica do index.html.
-// Cria:
-// - botão flutuante de ajuda;
-// - categorias clicáveis;
-// - instruções das principais funções;
-// - orientações para Android e iPhone;
-// - configuração do microfone no iPhone;
-// - acesso ao WhatsApp de suporte.
+// Central de Ajuda independente e completa.
+// Mantém o botão flutuante já publicado.
+// Não altera as regras nem as funções do index.html.
+//
+// Conteúdo incluído:
+// - formas de uso: lista manual e lista automática;
+// - primeiro acesso;
+// - lista manual;
+// - comandos por voz;
+// - cadastro, pesquisa e atualização do estoque;
+// - campos Atual, Mínimo e Comprar;
+// - unidades de medida;
+// - uso durante as compras;
+// - finalizar e cancelar compra;
+// - exclusão de produtos;
+// - tela IA;
+// - compartilhamento familiar;
+// - instalação no Android e iPhone;
+// - microfone no iPhone;
+// - atualização do aplicativo;
+// - ciclo automático;
+// - perguntas frequentes;
+// - suporte por WhatsApp.
 // ============================================================
 
 const CENTRAL_AJUDA = {
   aberta: false,
-  categoriaAtual: null
+  categoriaAtual: null,
+  overflowAnterior: "",
+  elementoFocadoAnterior: null
 };
 
 
 const AJUDA_CATEGORIAS = [
   {
-    id: "primeiros-passos",
-    icone: "🚀",
-    titulo: "Primeiros passos",
-    descricao: "Conta, login e início de utilização.",
+    id: "como-usar",
+    icone: "🏠",
+    titulo: "Como você pode usar",
+    descricao: "Escolha entre lista manual, automática ou as duas.",
     conteudo: `
-      <h3>🚀 Primeiros passos</h3>
+      <h3>🏠 Como você pode usar o ListaLar</h3>
 
       <p>
-        O ListaLar ajuda sua família a organizar a lista de compras
-        e o estoque doméstico em um único lugar.
+        O ListaLar permite escolher a forma mais simples ou mais
+        completa de organizar as compras da sua casa.
       </p>
 
-      <h4>1. Entrar no aplicativo</h4>
+      <div class="central-ajuda-escolhas">
+        <div class="central-ajuda-escolha">
+          <strong>📝 Opção 1 — Lista Manual</strong>
 
-      <p>
-        Toque em <strong>Entrar com Google</strong> e selecione sua
-        conta.
-      </p>
+          <p>
+            Para quem deseja somente escrever o que precisa comprar,
+            marcar os itens durante a compra e finalizar.
+          </p>
+        </div>
 
-      <h4>2. Criar ou entrar em uma família</h4>
+        <div class="central-ajuda-escolha">
+          <strong>📦 Opção 2 — Lista Automática</strong>
 
-      <p>
-        No primeiro acesso, você poderá criar sua própria família ou
-        entrar por meio de um convite recebido.
-      </p>
+          <p>
+            Para quem deseja controlar o estoque da casa e deixar o
+            ListaLar calcular automaticamente o que falta comprar.
+          </p>
+        </div>
 
-      <h4>3. Começar a usar</h4>
+        <div class="central-ajuda-escolha">
+          <strong>🔄 Opção 3 — Usar as duas formas</strong>
 
-      <p>
-        Depois do login, você poderá cadastrar produtos, criar a lista
-        de compras, controlar o estoque e compartilhar tudo com sua
-        família.
-      </p>
+          <p>
+            Você também pode misturar produtos adicionados manualmente
+            com produtos gerados pelo controle de estoque. Todos podem
+            aparecer juntos na mesma lista.
+          </p>
+        </div>
+      </div>
+
+      <div class="central-ajuda-destaque">
+        Você não é obrigado a controlar o estoque. É possível usar
+        somente a Lista Manual.
+      </div>
     `
   },
 
   {
-    id: "lista-compras",
-    icone: "🛒",
-    titulo: "Lista de compras",
-    descricao: "Adicionar, editar e concluir compras.",
+    id: "primeiros-passos",
+    icone: "🔐",
+    titulo: "Primeiro acesso",
+    descricao: "Login com Google, criação da família e início.",
     conteudo: `
-      <h3>🛒 Lista de compras</h3>
+      <h3>🔐 Primeiro acesso</h3>
 
-      <h4>Adicionar um produto</h4>
+      <div class="central-ajuda-passos">
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">1</span>
+
+          <div>
+            <strong>Entre com sua conta Google</strong>
+
+            <p>
+              Toque em <strong>Entrar com Google</strong> e escolha
+              a conta que deseja utilizar.
+            </p>
+          </div>
+        </div>
+
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">2</span>
+
+          <div>
+            <strong>Crie sua família</strong>
+
+            <p>
+              No primeiro acesso, informe um nome para o grupo
+              familiar, como <strong>Família Silva</strong>.
+            </p>
+          </div>
+        </div>
+
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">3</span>
+
+          <div>
+            <strong>Comece a organizar suas compras</strong>
+
+            <p>
+              Depois do login, você poderá criar a lista, cadastrar
+              produtos, controlar o estoque e convidar familiares.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="central-ajuda-destaque">
+        Depois do primeiro acesso, o ListaLar normalmente permanece
+        conectado no mesmo navegador ou aplicativo instalado.
+      </div>
+    `
+  },
+
+  {
+    id: "lista-manual",
+    icone: "📝",
+    titulo: "Lista Manual",
+    descricao: "Adicione produtos sem precisar controlar estoque.",
+    conteudo: `
+      <h3>📝 Usar somente a Lista Manual</h3>
 
       <p>
-        Digite o nome do produto, informe a quantidade e toque em
-        <strong>Incluir na lista</strong>.
+        Não é obrigatório controlar o estoque. Você pode usar o
+        ListaLar apenas como uma lista de compras compartilhada.
       </p>
 
-      <h4>Adicionar por voz</h4>
+      <div class="central-ajuda-passos">
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">1</span>
 
-      <p>
-        Toque no botão de microfone ao lado de
-        <strong>Incluir na lista</strong> e fale os produtos
-        naturalmente.
-      </p>
+          <div>
+            <strong>Abra a tela Lista</strong>
 
-      <h4>Editar um produto</h4>
+            <p>
+              A tela Lista é a primeira tela exibida ao abrir o
+              aplicativo.
+            </p>
+          </div>
+        </div>
 
-      <p>
-        Utilize os controles disponíveis no item para ajustar a
-        quantidade ou os dados do produto.
-      </p>
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">2</span>
 
-      <h4>Remover um produto</h4>
+          <div>
+            <strong>Digite o produto</strong>
 
-      <p>
-        Toque na opção de excluir do item que deseja retirar da lista.
-      </p>
+            <p>
+              Use o campo <strong>Adicionar compra manual</strong>
+              e informe o nome do produto.
+            </p>
+          </div>
+        </div>
 
-      <h4>Finalizar a compra</h4>
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">3</span>
 
-      <p>
-        Marque os produtos comprados e finalize a compra. O ListaLar
-        poderá atualizar o estoque com as quantidades adquiridas.
-      </p>
+          <div>
+            <strong>Informe a quantidade</strong>
+
+            <p>
+              Escolha quanto deseja comprar e toque em
+              <strong>Incluir na lista</strong>.
+            </p>
+          </div>
+        </div>
+
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">4</span>
+
+          <div>
+            <strong>Marque durante a compra</strong>
+
+            <p>
+              No mercado, toque no quadrado ao lado do produto para
+              marcar o item como <strong>OK</strong>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="central-ajuda-aviso">
+        Quando o produto já existe no estoque, o ListaLar reutiliza o
+        cadastro existente. Ele também evita nomes duplicados por
+        diferenças de letras maiúsculas, minúsculas ou acentos.
+      </div>
     `
   },
 
@@ -105,24 +221,24 @@ const AJUDA_CATEGORIAS = [
     id: "comandos-voz",
     icone: "🎤",
     titulo: "Comandos por voz",
-    descricao: "Crie listas e atualize o estoque falando.",
+    descricao: "Crie a lista e atualize o estoque falando.",
     conteudo: `
       <h3>🎤 Comandos por voz</h3>
 
       <p>
-        Toque no microfone e fale naturalmente. O ListaLar identifica
-        os produtos, quantidades e unidades.
+        Toque no botão do microfone e fale naturalmente. O ListaLar
+        identifica produtos, quantidades e unidades de medida.
       </p>
 
-      <h4>Exemplos para a lista</h4>
+      <h4>Adicionar produtos à lista</h4>
 
       <div class="central-ajuda-exemplos">
         <p>“Comprar dois feijões e um arroz.”</p>
-        <p>“Colocar leite, café e açúcar na lista.”</p>
+        <p>“Adicionar leite, café e açúcar.”</p>
         <p>“Preciso de três macarrões e dois detergentes.”</p>
       </div>
 
-      <h4>Exemplos para o estoque</h4>
+      <h4>Atualizar produtos do estoque</h4>
 
       <div class="central-ajuda-exemplos">
         <p>“Tenho cinco leites.”</p>
@@ -130,97 +246,486 @@ const AJUDA_CATEGORIAS = [
         <p>“Acabou o café.”</p>
       </div>
 
-      <h4>Revisão antes de salvar</h4>
+      <h4>Revisar antes de salvar</h4>
 
       <p>
         Depois do reconhecimento, confira os produtos, quantidades e
-        unidades. Você pode corrigir qualquer informação antes de
-        salvar.
+        unidades. Você pode corrigir qualquer informação ou remover um
+        item antes de confirmar.
       </p>
 
-      <div class="central-ajuda-aviso">
-        Fale de forma clara e faça uma pequena pausa entre os produtos
-        quando necessário.
+      <div class="central-ajuda-destaque">
+        É possível falar vários produtos no mesmo comando. Fale de
+        forma clara e faça uma pequena pausa entre eles quando
+        necessário.
       </div>
     `
   },
 
   {
-    id: "estoque",
+    id: "cadastrar-estoque",
     icone: "📦",
-    titulo: "Estoque doméstico",
-    descricao: "Quantidades atuais, mínimas e lista automática.",
+    titulo: "Cadastrar no Estoque",
+    descricao: "Inclua os produtos controlados pela família.",
     conteudo: `
-      <h3>📦 Estoque doméstico</h3>
-
-      <h4>Quantidade atual</h4>
+      <h3>📦 Cadastrar produtos no Estoque</h3>
 
       <p>
-        Informe quanto existe de cada produto em sua casa.
+        A tela Estoque reúne todos os produtos controlados pela
+        família.
       </p>
 
-      <h4>Estoque mínimo</h4>
+      <div class="central-ajuda-passos">
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">1</span>
+
+          <div>
+            <strong>Abra a aba Estoque</strong>
+
+            <p>
+              Toque no botão <strong>Estoque</strong> localizado na
+              parte inferior da tela.
+            </p>
+          </div>
+        </div>
+
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">2</span>
+
+          <div>
+            <strong>Digite o nome do produto</strong>
+
+            <p>
+              Use o campo <strong>Novo produto</strong> e toque em
+              <strong>Adicionar</strong>.
+            </p>
+          </div>
+        </div>
+
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">3</span>
+
+          <div>
+            <strong>Defina as quantidades</strong>
+
+            <p>
+              Depois, use <strong>Atualizar estoque</strong> para
+              informar quanto existe em casa e quanto deseja manter.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="central-ajuda-aviso">
+        Ao tentar cadastrar um nome que já existe, o ListaLar avisa
+        que o produto já está cadastrado.
+      </div>
+    `
+  },
+
+  {
+    id: "pesquisar",
+    icone: "🔍",
+    titulo: "Pesquisar produtos",
+    descricao: "Encontre itens rapidamente nas telas do aplicativo.",
+    conteudo: `
+      <h3>🔍 Pesquisar produtos</h3>
 
       <p>
-        O estoque mínimo representa a quantidade que você deseja
-        manter disponível.
+        As telas <strong>Lista</strong>, <strong>Estoque</strong> e
+        <strong>IA</strong> possuem campo de pesquisa.
       </p>
 
-      <h4>Lista automática</h4>
+      <ul class="central-ajuda-lista-check">
+        <li>Digite uma parte do nome do produto.</li>
+        <li>Os resultados são filtrados imediatamente.</li>
+        <li>Não é necessário tocar em um botão de consulta.</li>
+        <li>A pesquisa reconhece nomes mesmo sem acentos.</li>
+      </ul>
+
+      <div class="central-ajuda-exemplos">
+        <p>Exemplo: digitar “acucar” encontra “Açúcar”.</p>
+      </div>
+    `
+  },
+
+  {
+    id: "atualizar-estoque",
+    icone: "🔄",
+    titulo: "Atualizar o Estoque",
+    descricao: "Confira quantidades e gere a lista automática.",
+    conteudo: `
+      <h3>🔄 Atualizar o Estoque</h3>
 
       <p>
-        Quando a quantidade atual fica abaixo do mínimo definido, o
-        ListaLar pode sugerir automaticamente a quantidade necessária
-        para reposição.
+        Esta função inicia um novo ciclo de conferência dos produtos
+        existentes em casa.
       </p>
 
-      <h4>Atualizar por voz</h4>
+      <div class="central-ajuda-passos">
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">1</span>
+
+          <div>
+            <strong>Toque em Atualizar estoque</strong>
+
+            <p>
+              Os controles de quantidade ficarão disponíveis para
+              edição.
+            </p>
+          </div>
+        </div>
+
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">2</span>
+
+          <div>
+            <strong>Ajuste o campo Atual</strong>
+
+            <p>
+              Informe quanto daquele produto ainda existe em casa.
+            </p>
+          </div>
+        </div>
+
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">3</span>
+
+          <div>
+            <strong>Defina o Mínimo</strong>
+
+            <p>
+              Informe a quantidade que deseja manter disponível.
+            </p>
+          </div>
+        </div>
+
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">4</span>
+
+          <div>
+            <strong>Conclua a atualização</strong>
+
+            <p>
+              Toque em <strong>Concluir atualização</strong>. O
+              ListaLar calculará o que precisa ser comprado.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="central-ajuda-exemplos">
+        <p>
+          Exemplo: Arroz com atual de 1 kg e mínimo de 3 kg.
+          O ListaLar colocará 2 kg na lista de compras.
+        </p>
+      </div>
+    `
+  },
+
+  {
+    id: "campos-estoque",
+    icone: "📊",
+    titulo: "Campos do Estoque",
+    descricao: "Entenda Atual, Mínimo e Comprar.",
+    conteudo: `
+      <h3>📊 Entenda os campos do Estoque</h3>
+
+      <div class="central-ajuda-escolhas">
+        <div class="central-ajuda-escolha">
+          <strong>Atual</strong>
+
+          <p>
+            É a quantidade que realmente existe em casa naquele
+            momento.
+          </p>
+        </div>
+
+        <div class="central-ajuda-escolha">
+          <strong>Mínimo</strong>
+
+          <p>
+            É a quantidade que você deseja manter disponível.
+          </p>
+        </div>
+
+        <div class="central-ajuda-escolha">
+          <strong>Comprar</strong>
+
+          <p>
+            É a diferença entre o mínimo desejado e o estoque atual.
+          </p>
+        </div>
+      </div>
+
+      <div class="central-ajuda-formula">
+        Comprar = Mínimo − Atual
+      </div>
+
+      <div class="central-ajuda-destaque">
+        Quando o estoque atual for igual ou maior que o mínimo, o
+        produto não entra na lista automática.
+      </div>
+    `
+  },
+
+  {
+    id: "unidades",
+    icone: "📏",
+    titulo: "Unidades de medida",
+    descricao: "Use kg, L, un, pct, ml e outras unidades.",
+    conteudo: `
+      <h3>📏 Unidade de medida</h3>
 
       <p>
-        Toque no microfone ao lado de
-        <strong>Atualizar Estoque</strong> e informe os produtos e as
-        quantidades.
+        Cada produto pode ser controlado com a unidade mais adequada.
       </p>
+
+      <ul>
+        <li><strong>Arroz:</strong> kg</li>
+        <li><strong>Leite:</strong> L</li>
+        <li><strong>Ovos:</strong> un</li>
+        <li><strong>Papel higiênico:</strong> pct</li>
+        <li><strong>Azeite:</strong> ml</li>
+      </ul>
+
+      <h4>Como alterar a unidade</h4>
+
+      <ol>
+        <li>Abra a tela <strong>Estoque</strong>.</li>
+        <li>Toque em <strong>Atualizar estoque</strong>.</li>
+        <li>Toque no botão que mostra a unidade do produto.</li>
+        <li>Escolha a nova unidade.</li>
+      </ol>
+
+      <div class="central-ajuda-aviso">
+        Alterar a unidade não converte automaticamente as quantidades.
+        Confira o valor atual e o mínimo depois da mudança.
+      </div>
+    `
+  },
+
+  {
+    id: "durante-compras",
+    icone: "🛒",
+    titulo: "Durante as compras",
+    descricao: "Ajuste quantidades e marque os produtos como OK.",
+    conteudo: `
+      <h3>🛒 Durante as compras</h3>
+
+      <div class="central-ajuda-passos">
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">1</span>
+
+          <div>
+            <strong>Abra a Lista</strong>
+
+            <p>
+              Veja todos os produtos manuais e automáticos que precisam
+              ser comprados.
+            </p>
+          </div>
+        </div>
+
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">2</span>
+
+          <div>
+            <strong>Confira a quantidade sugerida</strong>
+
+            <p>
+              O aplicativo mostra quanto comprar e qual unidade
+              utilizar.
+            </p>
+          </div>
+        </div>
+
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">3</span>
+
+          <div>
+            <strong>Ajuste a quantidade comprada</strong>
+
+            <p>
+              Use os botões de mais e menos caso tenha comprado uma
+              quantidade diferente.
+            </p>
+          </div>
+        </div>
+
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">4</span>
+
+          <div>
+            <strong>Marque como OK</strong>
+
+            <p>
+              Toque no quadrado ao lado do produto depois de colocá-lo
+              no carrinho.
+            </p>
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  {
+    id: "finalizar-compra",
+    icone: "✅",
+    titulo: "Finalizar a compra",
+    descricao: "Conclua os itens comprados e atualize o estoque.",
+    conteudo: `
+      <h3>✅ Finalizar a compra</h3>
+
+      <p>
+        Depois de concluir as compras, toque em
+        <strong>Finalizar compra</strong>.
+      </p>
+
+      <ul class="central-ajuda-lista-check">
+        <li>Somente os itens marcados como OK serão finalizados.</li>
+        <li>A quantidade comprada será adicionada ao estoque.</li>
+        <li>As marcações da compra serão limpas.</li>
+        <li>Os itens concluídos sairão da lista daquele ciclo.</li>
+      </ul>
+
+      <div class="central-ajuda-destaque">
+        Uma nova lista automática será criada somente quando você
+        utilizar novamente a função Atualizar estoque.
+      </div>
+    `
+  },
+
+  {
+    id: "cancelar-compra",
+    icone: "❌",
+    titulo: "Cancelar compra",
+    descricao: "Desfaça as marcações sem alterar o estoque.",
+    conteudo: `
+      <h3>❌ Cancelar compra</h3>
+
+      <p>
+        O botão <strong>Cancelar compra</strong> limpa as marcações e
+        as quantidades informadas durante a compra atual.
+      </p>
+
+      <ul>
+        <li>Não altera o estoque.</li>
+        <li>Não exclui os produtos da lista.</li>
+        <li>A lista continuará disponível para uma nova tentativa.</li>
+      </ul>
+
+      <div class="central-ajuda-aviso">
+        Use essa opção quando tiver marcado produtos ou alterado
+        quantidades por engano.
+      </div>
+    `
+  },
+
+  {
+    id: "excluir-produtos",
+    icone: "🗑️",
+    titulo: "Excluir produtos",
+    descricao: "Remova um item que não será mais controlado.",
+    conteudo: `
+      <h3>🗑️ Excluir produtos</h3>
+
+      <p>
+        Na tela Estoque, cada produto possui a opção
+        <strong>Excluir</strong>.
+      </p>
+
+      <ol>
+        <li>Localize o produto.</li>
+        <li>Toque em <strong>Excluir</strong>.</li>
+        <li>Confirme a exclusão na mensagem exibida.</li>
+      </ol>
+
+      <div class="central-ajuda-aviso">
+        A exclusão remove o produto do estoque da família. Utilize essa
+        opção apenas quando o item não precisar mais ser controlado.
+      </div>
+    `
+  },
+
+  {
+    id: "tela-ia",
+    icone: "🤖",
+    titulo: "Tela IA",
+    descricao: "Consulte avisos e sugestões sobre os produtos.",
+    conteudo: `
+      <h3>🤖 Tela IA</h3>
+
+      <p>
+        A tela IA apresenta avisos rápidos sobre a situação dos
+        produtos.
+      </p>
+
+      <ul class="central-ajuda-lista-check">
+        <li>Produtos que precisam ser comprados.</li>
+        <li>Produtos com estoque zerado.</li>
+        <li>Produtos em excesso.</li>
+        <li>Itens com consumo elevado.</li>
+        <li>Sugestões para revisar o estoque mínimo.</li>
+      </ul>
+
+      <div class="central-ajuda-destaque">
+        A IA utiliza os dados registrados nas compras para gerar
+        informações mais úteis ao longo do tempo.
+      </div>
     `
   },
 
   {
     id: "familia",
-    icone: "👨‍👩‍👧",
-    titulo: "Minha família",
-    descricao: "Convites e compartilhamento em tempo real.",
+    icone: "👨‍👩‍👧‍👦",
+    titulo: "Compartilhar com a família",
+    descricao: "Convide familiares e sincronize tudo em tempo real.",
     conteudo: `
-      <h3>👨‍👩‍👧 Minha família</h3>
+      <h3>👨‍👩‍👧‍👦 Compartilhar com a família</h3>
 
-      <p>
-        Todos os integrantes da família podem acompanhar a mesma lista
-        e o mesmo estoque.
-      </p>
+      <div class="central-ajuda-passos">
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">1</span>
 
-      <h4>Convidar uma pessoa</h4>
+          <div>
+            <strong>Toque no botão da família</strong>
 
-      <p>
-        Abra a área <strong>Minha Família</strong>, gere o convite e
-        compartilhe o link pelo WhatsApp ou outro aplicativo.
-      </p>
+            <p>
+              Ele fica no canto superior direito do aplicativo.
+            </p>
+          </div>
+        </div>
 
-      <h4>Entrar por convite</h4>
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">2</span>
 
-      <p>
-        A pessoa convidada deve abrir o link e entrar com sua conta
-        Google.
-      </p>
+          <div>
+            <strong>Compartilhe o convite</strong>
 
-      <h4>Sincronização</h4>
+            <p>
+              Escolha WhatsApp, mensagem, e-mail ou copie o link.
+            </p>
+          </div>
+        </div>
 
-      <p>
-        As alterações realizadas por um integrante aparecem para os
-        demais em tempo real.
-      </p>
+        <div class="central-ajuda-passo">
+          <span class="central-ajuda-passo-numero">3</span>
 
-      <div class="central-ajuda-aviso">
-        Os familiares convidados utilizam a família compartilhada sem
-        cobrança individual.
+          <div>
+            <strong>O familiar entra com o Google</strong>
+
+            <p>
+              Depois do login, ele passa a participar da mesma
+              família.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="central-ajuda-destaque">
+        Todos os membros utilizam a mesma lista e o mesmo estoque. As
+        alterações aparecem para a família em tempo real.
       </div>
     `
   },
@@ -229,33 +734,35 @@ const AJUDA_CATEGORIAS = [
     id: "instalacao",
     icone: "📱",
     titulo: "Instalar no celular",
-    descricao: "Use o ListaLar como um aplicativo.",
+    descricao: "Use o ListaLar como aplicativo no Android ou iPhone.",
     conteudo: `
       <h3>📱 Instalar no celular</h3>
 
-      <h4>Android</h4>
-
-      <ol>
-        <li>Abra o ListaLar no navegador Chrome.</li>
-        <li>Abra o menu do navegador.</li>
-        <li>Toque em <strong>Instalar aplicativo</strong> ou
-          <strong>Adicionar à tela inicial</strong>.</li>
-        <li>Confirme a instalação.</li>
-      </ol>
-
-      <h4>iPhone</h4>
+      <h4>No iPhone</h4>
 
       <ol>
         <li>Abra o ListaLar no Safari.</li>
-        <li>Toque no botão de compartilhamento.</li>
+        <li>Toque no botão <strong>Compartilhar</strong>.</li>
         <li>Escolha <strong>Adicionar à Tela de Início</strong>.</li>
         <li>Confirme tocando em <strong>Adicionar</strong>.</li>
       </ol>
 
-      <p>
-        Depois disso, o ícone do ListaLar aparecerá junto aos seus
-        outros aplicativos.
-      </p>
+      <h4>No Android</h4>
+
+      <ol>
+        <li>Abra o ListaLar no Chrome.</li>
+        <li>Abra o menu do navegador.</li>
+        <li>
+          Escolha <strong>Instalar app</strong> ou
+          <strong>Adicionar à tela inicial</strong>.
+        </li>
+        <li>Confirme a instalação.</li>
+      </ol>
+
+      <div class="central-ajuda-destaque">
+        Depois da instalação, o ícone do ListaLar aparecerá junto aos
+        outros aplicativos do celular.
+      </div>
     `
   },
 
@@ -263,13 +770,13 @@ const AJUDA_CATEGORIAS = [
     id: "iphone-microfone",
     icone: "🍎",
     titulo: "Microfone no iPhone",
-    descricao: "Evite pedidos repetidos de permissão.",
+    descricao: "Configure a permissão para usar os comandos por voz.",
     conteudo: `
       <h3>🍎 Configurar o microfone no iPhone</h3>
 
       <p>
-        Caso o iPhone solicite autorização para o microfone toda vez
-        que o ListaLar for aberto, faça esta configuração:
+        Caso o iPhone solicite autorização para o microfone sempre que
+        o ListaLar for aberto, faça esta configuração:
       </p>
 
       <ol>
@@ -280,15 +787,12 @@ const AJUDA_CATEGORIAS = [
         <li>Selecione <strong>Permitir</strong>.</li>
       </ol>
 
-      <div class="central-ajuda-destaque">
-        Caminho:
-        <strong>
-          Ajustes → Apps → Safari → Microfone → Permitir
-        </strong>
+      <div class="central-ajuda-formula">
+        Ajustes → Apps → Safari → Microfone → Permitir
       </div>
 
       <p>
-        Após essa alteração, o ListaLar poderá utilizar o microfone
+        Depois dessa alteração, o ListaLar poderá utilizar o microfone
         sem solicitar a mesma autorização repetidamente.
       </p>
     `
@@ -296,31 +800,62 @@ const AJUDA_CATEGORIAS = [
 
   {
     id: "atualizacoes",
-    icone: "🔄",
-    titulo: "Atualizações",
-    descricao: "Como receber as novas versões.",
+    icone: "🔔",
+    titulo: "Atualizar o aplicativo",
+    descricao: "Receba novas versões sem reinstalar o ListaLar.",
     conteudo: `
-      <h3>🔄 Atualizações do ListaLar</h3>
+      <h3>🔔 Atualizar o aplicativo</h3>
 
       <p>
-        O ListaLar verifica periodicamente se existe uma nova versão
-        disponível.
+        Quando houver uma nova versão, o ListaLar exibirá uma mensagem
+        automaticamente.
       </p>
 
-      <p>
-        Quando uma atualização for identificada, siga a orientação
-        mostrada na tela para carregar a versão mais recente.
-      </p>
+      <ol>
+        <li>
+          Aguarde a mensagem
+          <strong>Nova versão disponível</strong>.
+        </li>
 
-      <h4>Não é necessário reinstalar</h4>
+        <li>Toque em <strong>Atualizar agora</strong>.</li>
 
-      <p>
-        Na maioria das atualizações, você não precisa excluir ou
-        instalar novamente o aplicativo.
-      </p>
+        <li>O aplicativo recarregará sozinho.</li>
+      </ol>
+
+      <div class="central-ajuda-destaque">
+        Não é necessário apagar, desinstalar ou adicionar novamente o
+        aplicativo à tela inicial.
+      </div>
+    `
+  },
+
+  {
+    id: "ciclo-automatico",
+    icone: "🔁",
+    titulo: "Ciclo automático",
+    descricao: "Veja o fluxo completo entre estoque e compras.",
+    conteudo: `
+      <h3>🔁 Resumo do ciclo automático</h3>
+
+      <div class="central-ajuda-fluxo">
+        <span>Atualizar estoque</span>
+        <b>↓</b>
+        <span>Ajustar as quantidades atuais</span>
+        <b>↓</b>
+        <span>Concluir atualização</span>
+        <b>↓</b>
+        <span>Lista automática gerada</span>
+        <b>↓</b>
+        <span>Fazer as compras</span>
+        <b>↓</b>
+        <span>Finalizar compra</span>
+        <b>↓</b>
+        <span>Estoque atualizado</span>
+      </div>
 
       <div class="central-ajuda-aviso">
-        Mantenha conexão com a internet durante a atualização.
+        A lista automática é recalculada quando uma nova atualização
+        do estoque é concluída.
       </div>
     `
   },
@@ -329,51 +864,110 @@ const AJUDA_CATEGORIAS = [
     id: "perguntas",
     icone: "❓",
     titulo: "Perguntas frequentes",
-    descricao: "Respostas rápidas sobre o ListaLar.",
+    descricao: "Respostas rápidas sobre as principais funções.",
     conteudo: `
       <h3>❓ Perguntas frequentes</h3>
 
-      <h4>O ListaLar é gratuito?</h4>
+      <div class="central-ajuda-faq-item">
+        <strong>Preciso usar o estoque?</strong>
 
-      <p>
-        O aplicativo está disponível gratuitamente durante sua fase
-        Beta.
-      </p>
+        <p>
+          Não. Você pode usar somente a Lista Manual.
+        </p>
+      </div>
 
-      <h4>Preciso instalar?</h4>
+      <div class="central-ajuda-faq-item">
+        <strong>
+          Posso usar a lista manual e o estoque juntos?
+        </strong>
 
-      <p>
-        Não. Você pode usar pelo navegador ou instalar na tela inicial
-        para ter uma experiência semelhante à de um aplicativo.
-      </p>
+        <p>
+          Sim. Itens manuais e automáticos podem aparecer na mesma
+          lista.
+        </p>
+      </div>
 
-      <h4>Minha família precisa criar outra lista?</h4>
+      <div class="central-ajuda-faq-item">
+        <strong>Quando a lista automática é criada?</strong>
 
-      <p>
-        Não. Ao entrar pelo convite, todos passam a utilizar a mesma
-        lista e o mesmo estoque.
-      </p>
+        <p>
+          Depois que você concluir uma atualização do estoque.
+        </p>
+      </div>
 
-      <h4>Posso cadastrar produtos novos pelo áudio?</h4>
+      <div class="central-ajuda-faq-item">
+        <strong>O estoque é atualizado depois da compra?</strong>
 
-      <p>
-        Sim. Depois do reconhecimento, o produto novo será identificado
-        na tela de revisão antes de ser salvo.
-      </p>
+        <p>
+          Sim. A quantidade realmente comprada é adicionada ao estoque
+          quando a compra é finalizada.
+        </p>
+      </div>
 
-      <h4>O que acontece se o áudio entender algo errado?</h4>
+      <div class="central-ajuda-faq-item">
+        <strong>Todos da família podem editar?</strong>
 
-      <p>
-        Você pode editar o nome, a quantidade e a unidade antes de
-        confirmar.
-      </p>
+        <p>
+          Sim. Os membros podem criar, editar e excluir produtos, além
+          de atualizar a lista compartilhada.
+        </p>
+      </div>
 
-      <h4>Meus dados ficam sincronizados?</h4>
+      <div class="central-ajuda-faq-item">
+        <strong>Preciso reinstalar após uma atualização?</strong>
 
-      <p>
-        Sim. As informações ficam sincronizadas entre os integrantes
-        da mesma família.
-      </p>
+        <p>
+          Não. Basta tocar em <strong>Atualizar agora</strong> quando
+          o aviso aparecer.
+        </p>
+      </div>
+
+      <div class="central-ajuda-faq-item">
+        <strong>Preciso instalar o ListaLar?</strong>
+
+        <p>
+          Não. Você pode utilizar pelo navegador ou instalar na tela
+          inicial para ter uma experiência semelhante à de um
+          aplicativo.
+        </p>
+      </div>
+
+      <div class="central-ajuda-faq-item">
+        <strong>Posso cadastrar produtos novos pelo áudio?</strong>
+
+        <p>
+          Sim. O produto será mostrado na revisão antes de ser salvo.
+        </p>
+      </div>
+
+      <div class="central-ajuda-faq-item">
+        <strong>
+          O que acontece se o áudio entender algo errado?
+        </strong>
+
+        <p>
+          Você pode corrigir o nome, a quantidade e a unidade antes de
+          confirmar.
+        </p>
+      </div>
+
+      <div class="central-ajuda-faq-item">
+        <strong>Os dados ficam sincronizados?</strong>
+
+        <p>
+          Sim. As informações ficam sincronizadas entre os integrantes
+          da mesma família.
+        </p>
+      </div>
+
+      <div class="central-ajuda-faq-item">
+        <strong>O ListaLar é gratuito?</strong>
+
+        <p>
+          O aplicativo está disponível gratuitamente durante a fase
+          Beta.
+        </p>
+      </div>
     `
   }
 ];
@@ -415,8 +1009,21 @@ function centralAjudaCriarEstilos() {
       -webkit-tap-highlight-color: transparent;
     }
 
+    .central-ajuda-botao:hover {
+      filter: brightness(1.04);
+    }
+
     .central-ajuda-botao:active {
       transform: scale(0.96);
+    }
+
+    .central-ajuda-botao:focus-visible,
+    .central-ajuda-fechar:focus-visible,
+    .central-ajuda-voltar:focus-visible,
+    .central-ajuda-categoria:focus-visible,
+    .central-ajuda-whatsapp:focus-visible {
+      outline: 3px solid rgba(37, 99, 235, 0.35);
+      outline-offset: 3px;
     }
 
     .central-ajuda-fundo {
@@ -437,7 +1044,7 @@ function centralAjudaCriarEstilos() {
 
     .central-ajuda-painel {
       width: 100%;
-      max-width: 620px;
+      max-width: 680px;
       max-height: 94vh;
       max-height: 94dvh;
       display: flex;
@@ -466,13 +1073,14 @@ function centralAjudaCriarEstilos() {
 
     .central-ajuda-topo h2 {
       margin: 0;
+      color: #ffffff;
       font-size: 21px;
       font-weight: 900;
     }
 
     .central-ajuda-topo p {
       margin: 4px 0 0;
-      color: rgba(255, 255, 255, 0.90);
+      color: rgba(255, 255, 255, 0.92);
       font-size: 12px;
       font-weight: 700;
     }
@@ -497,6 +1105,7 @@ function centralAjudaCriarEstilos() {
       padding: 15px;
       overflow-y: auto;
       overscroll-behavior: contain;
+      scrollbar-gutter: stable;
     }
 
     .central-ajuda-inicio {
@@ -569,6 +1178,11 @@ function centralAjudaCriarEstilos() {
       text-align: left;
       cursor: pointer;
       box-shadow: 0 5px 14px rgba(15, 23, 42, 0.06);
+    }
+
+    .central-ajuda-categoria:hover {
+      border-color: #93c5fd;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.09);
     }
 
     .central-ajuda-categoria:active {
@@ -682,6 +1296,25 @@ function centralAjudaCriarEstilos() {
       margin-bottom: 7px;
     }
 
+    .central-ajuda-lista-check {
+      list-style: none;
+      padding-left: 0 !important;
+    }
+
+    .central-ajuda-lista-check li {
+      position: relative;
+      padding-left: 25px;
+    }
+
+    .central-ajuda-lista-check li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: #16a34a;
+      font-weight: 900;
+    }
+
     .central-ajuda-exemplos {
       display: grid;
       gap: 8px;
@@ -698,8 +1331,76 @@ function centralAjudaCriarEstilos() {
       font-weight: 800;
     }
 
+    .central-ajuda-escolhas {
+      display: grid;
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .central-ajuda-escolha {
+      padding: 13px;
+      border: 1px solid #dbeafe;
+      border-radius: 15px;
+      background: #f8fafc;
+    }
+
+    .central-ajuda-escolha strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #1d4ed8;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .central-ajuda-escolha p {
+      margin: 0;
+    }
+
+    .central-ajuda-passos {
+      display: grid;
+      gap: 12px;
+      margin: 12px 0;
+    }
+
+    .central-ajuda-passo {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+    }
+
+    .central-ajuda-passo-numero {
+      width: 31px;
+      height: 31px;
+      flex: 0 0 31px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .central-ajuda-passo > div {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .central-ajuda-passo strong {
+      display: block;
+      margin-bottom: 3px;
+      color: #172033;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .central-ajuda-passo p {
+      margin: 0;
+    }
+
     .central-ajuda-aviso,
-    .central-ajuda-destaque {
+    .central-ajuda-destaque,
+    .central-ajuda-formula {
       margin-top: 14px;
       padding: 13px;
       border-radius: 14px;
@@ -718,6 +1419,62 @@ function centralAjudaCriarEstilos() {
       border: 1px solid #86efac;
       background: #dcfce7;
       color: #166534;
+    }
+
+    .central-ajuda-formula {
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: #1e3a8a;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .central-ajuda-fluxo {
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+      margin: 13px 0;
+      padding: 15px;
+      border: 1px solid #dbeafe;
+      border-radius: 16px;
+      background: #f8fafc;
+      color: #1d4ed8;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .central-ajuda-fluxo span {
+      width: 100%;
+      padding: 9px 11px;
+      border-radius: 12px;
+      background: #eff6ff;
+    }
+
+    .central-ajuda-fluxo b {
+      color: #06b6d4;
+      font-size: 18px;
+    }
+
+    .central-ajuda-faq-item {
+      padding: 12px 0;
+      border-bottom: 1px solid #dbeafe;
+    }
+
+    .central-ajuda-faq-item:last-child {
+      border-bottom: 0;
+    }
+
+    .central-ajuda-faq-item strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #172033;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .central-ajuda-faq-item p {
+      margin: 0;
     }
 
     .central-ajuda-rodape {
@@ -743,6 +1500,10 @@ function centralAjudaCriarEstilos() {
       font-weight: 900;
     }
 
+    .central-ajuda-whatsapp:hover {
+      filter: brightness(1.04);
+    }
+
     @media (min-width: 700px) {
       .central-ajuda-fundo {
         align-items: center;
@@ -750,7 +1511,7 @@ function centralAjudaCriarEstilos() {
       }
 
       .central-ajuda-painel {
-        max-height: min(760px, calc(100vh - 36px));
+        max-height: min(780px, calc(100vh - 36px));
         border-radius: 25px;
       }
 
@@ -766,6 +1527,21 @@ function centralAjudaCriarEstilos() {
 
       .central-ajuda-categoria {
         min-height: auto;
+      }
+
+      .central-ajuda-corpo {
+        padding: 12px;
+      }
+
+      .central-ajuda-conteudo {
+        padding: 15px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .central-ajuda-botao,
+      .central-ajuda-categoria {
+        transition: none;
       }
     }
   `;
@@ -786,15 +1562,9 @@ function centralAjudaCriarInterface() {
   botao.className = "central-ajuda-botao";
   botao.textContent = "?";
   botao.title = "Central de Ajuda";
-  botao.setAttribute(
-    "aria-label",
-    "Abrir Central de Ajuda"
-  );
+  botao.setAttribute("aria-label", "Abrir Central de Ajuda");
 
-  botao.addEventListener(
-    "click",
-    centralAjudaAbrir
-  );
+  botao.addEventListener("click", centralAjudaAbrir);
 
   document.body.appendChild(botao);
 
@@ -802,6 +1572,7 @@ function centralAjudaCriarInterface() {
 
   fundo.id = "centralAjudaFundo";
   fundo.className = "central-ajuda-fundo";
+  fundo.setAttribute("aria-hidden", "true");
 
   fundo.innerHTML = `
     <section
@@ -849,6 +1620,7 @@ function centralAjudaCriarInterface() {
             class="central-ajuda-busca"
             type="search"
             placeholder="🔎 Buscar na ajuda"
+            aria-label="Buscar assunto na Central de Ajuda"
             autocomplete="off"
           >
 
@@ -893,19 +1665,19 @@ function centralAjudaCriarInterface() {
   document.body.appendChild(fundo);
 
   centralAjudaElemento("centralAjudaFechar")
-    .addEventListener(
+    ?.addEventListener(
       "click",
       centralAjudaFechar
     );
 
   centralAjudaElemento("centralAjudaVoltar")
-    .addEventListener(
+    ?.addEventListener(
       "click",
       centralAjudaMostrarInicio
     );
 
   centralAjudaElemento("centralAjudaBusca")
-    .addEventListener(
+    ?.addEventListener(
       "input",
       (evento) => {
         centralAjudaRenderizarCategorias(
@@ -944,6 +1716,8 @@ function centralAjudaNormalizarTexto(texto) {
     .toLocaleLowerCase("pt-BR")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -959,23 +1733,29 @@ function centralAjudaRenderizarCategorias(
     return;
   }
 
-  const termo = centralAjudaNormalizarTexto(busca);
+  const termo = centralAjudaNormalizarTexto(
+    busca
+  );
 
   const categoriasFiltradas =
-    AJUDA_CATEGORIAS.filter((categoria) => {
-      if (!termo) {
-        return true;
-      }
+    AJUDA_CATEGORIAS.filter(
+      (categoria) => {
+        if (!termo) {
+          return true;
+        }
 
-      const conteudoPesquisa =
-        centralAjudaNormalizarTexto(
-          `${categoria.titulo}
-           ${categoria.descricao}
-           ${categoria.conteudo}`
+        const conteudoPesquisa =
+          centralAjudaNormalizarTexto(
+            `${categoria.titulo}
+             ${categoria.descricao}
+             ${categoria.conteudo}`
+          );
+
+        return conteudoPesquisa.includes(
+          termo
         );
-
-      return conteudoPesquisa.includes(termo);
-    });
+      }
+    );
 
   if (categoriasFiltradas.length === 0) {
     area.innerHTML = `
@@ -1014,21 +1794,28 @@ function centralAjudaRenderizarCategorias(
     .join("");
 
   area
-    .querySelectorAll("[data-ajuda-categoria]")
-    .forEach((botaoCategoria) => {
-      botaoCategoria.addEventListener(
-        "click",
-        () => {
-          centralAjudaAbrirCategoria(
-            botaoCategoria.dataset.ajudaCategoria
-          );
-        }
-      );
-    });
+    .querySelectorAll(
+      "[data-ajuda-categoria]"
+    )
+    .forEach(
+      (botaoCategoria) => {
+        botaoCategoria.addEventListener(
+          "click",
+          () => {
+            centralAjudaAbrirCategoria(
+              botaoCategoria.dataset
+                .ajudaCategoria
+            );
+          }
+        );
+      }
+    );
 }
 
 
-function centralAjudaAbrirCategoria(idCategoria) {
+function centralAjudaAbrirCategoria(
+  idCategoria
+) {
   const categoria = AJUDA_CATEGORIAS.find(
     (item) => item.id === idCategoria
   );
@@ -1037,7 +1824,8 @@ function centralAjudaAbrirCategoria(idCategoria) {
     return;
   }
 
-  CENTRAL_AJUDA.categoriaAtual = idCategoria;
+  CENTRAL_AJUDA.categoriaAtual =
+    idCategoria;
 
   const inicio = centralAjudaElemento(
     "centralAjudaInicio"
@@ -1055,7 +1843,8 @@ function centralAjudaAbrirCategoria(idCategoria) {
   detalhe?.classList.add("aberto");
 
   if (conteudo) {
-    conteudo.innerHTML = categoria.conteudo;
+    conteudo.innerHTML =
+      categoria.conteudo;
   }
 
   const corpo = detalhe?.closest(
@@ -1065,17 +1854,23 @@ function centralAjudaAbrirCategoria(idCategoria) {
   if (corpo) {
     corpo.scrollTop = 0;
   }
+
+  centralAjudaElemento(
+    "centralAjudaVoltar"
+  )?.focus();
 }
 
 
 function centralAjudaMostrarInicio() {
   CENTRAL_AJUDA.categoriaAtual = null;
 
-  centralAjudaElemento("centralAjudaInicio")
-    ?.classList.remove("oculto");
+  centralAjudaElemento(
+    "centralAjudaInicio"
+  )?.classList.remove("oculto");
 
-  centralAjudaElemento("centralAjudaDetalhe")
-    ?.classList.remove("aberto");
+  centralAjudaElemento(
+    "centralAjudaDetalhe"
+  )?.classList.remove("aberto");
 
   const busca = centralAjudaElemento(
     "centralAjudaBusca"
@@ -1094,6 +1889,10 @@ function centralAjudaMostrarInicio() {
   if (corpo) {
     corpo.scrollTop = 0;
   }
+
+  if (CENTRAL_AJUDA.aberta) {
+    busca?.focus();
+  }
 }
 
 
@@ -1108,11 +1907,25 @@ function centralAjudaAbrir(
     return;
   }
 
+  if (!CENTRAL_AJUDA.aberta) {
+    CENTRAL_AJUDA.overflowAnterior =
+      document.body.style.overflow;
+
+    CENTRAL_AJUDA.elementoFocadoAnterior =
+      document.activeElement;
+  }
+
   CENTRAL_AJUDA.aberta = true;
 
   fundo.classList.add("aberto");
 
-  document.body.style.overflow = "hidden";
+  fundo.setAttribute(
+    "aria-hidden",
+    "false"
+  );
+
+  document.body.style.overflow =
+    "hidden";
 
   if (categoriaInicial) {
     centralAjudaAbrirCategoria(
@@ -1125,12 +1938,36 @@ function centralAjudaAbrir(
 
 
 function centralAjudaFechar() {
+  if (!CENTRAL_AJUDA.aberta) {
+    return;
+  }
+
   CENTRAL_AJUDA.aberta = false;
 
-  centralAjudaElemento("centralAjudaFundo")
-    ?.classList.remove("aberto");
+  const fundo = centralAjudaElemento(
+    "centralAjudaFundo"
+  );
 
-  document.body.style.overflow = "";
+  fundo?.classList.remove("aberto");
+
+  fundo?.setAttribute(
+    "aria-hidden",
+    "true"
+  );
+
+  document.body.style.overflow =
+    CENTRAL_AJUDA.overflowAnterior;
+
+  if (
+    CENTRAL_AJUDA.elementoFocadoAnterior &&
+    typeof CENTRAL_AJUDA
+      .elementoFocadoAnterior.focus ===
+      "function"
+  ) {
+    CENTRAL_AJUDA
+      .elementoFocadoAnterior
+      .focus();
+  }
 }
 
 
@@ -1155,7 +1992,8 @@ window.fecharCentralAjuda = () => {
 window.ListaLarAjuda = Object.freeze({
   abrir: centralAjudaAbrir,
   fechar: centralAjudaFechar,
-  abrirCategoria: centralAjudaAbrirCategoria,
+  abrirCategoria:
+    centralAjudaAbrirCategoria,
   instalar: centralAjudaInstalar
 });
 
