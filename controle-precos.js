@@ -1,6 +1,6 @@
 // ============================================================
 // ListaLar - controle-precos.js
-// Versão 1.0.0
+// Versão 1.0.1
 //
 // Primeira etapa do Controle de Preços.
 //
@@ -11,7 +11,8 @@
 // - adiciona preço unitário somente na Lista;
 // - calcula subtotal por produto;
 // - calcula o total atual da compra;
-// - salva temporariamente o preço atual no produto;
+// - preserva o valor durante atualizações da tela;
+// - salva o preço no Firebase ao sair do campo;
 // - acompanha alterações de quantidade;
 // - não altera a lógica atual de finalizar compra;
 // - não altera o estoque;
@@ -51,7 +52,7 @@ const PRECO_ESTADO = {
   unsubscribeFamilia: null,
   observadorLista: null,
 
-  temporizadoresPreco: new Map(),
+  precosDigitados: new Map(),
   instalandoCampos: false
 };
 
@@ -133,24 +134,6 @@ function precoFormatarCampo(valor) {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }
-  );
-}
-
-
-function precoEscaparSeletor(valor) {
-  if (
-    window.CSS &&
-    typeof window.CSS.escape ===
-      "function"
-  ) {
-    return window.CSS.escape(
-      String(valor)
-    );
-  }
-
-  return String(valor).replace(
-    /["\\]/g,
-    "\\$&"
   );
 }
 
@@ -999,8 +982,26 @@ function precoAtualizarVisibilidade() {
 
 
 function precoObterPrecoInicial(
-  card
+  card,
+  produtoId
 ) {
+  const precoEmMemoria =
+    PRECO_ESTADO
+      .precosDigitados
+      .get(produtoId);
+
+  if (
+    precoEmMemoria !== undefined
+  ) {
+    return Math.max(
+      0,
+      precoNumeroSeguro(
+        precoEmMemoria,
+        0
+      )
+    );
+  }
+
   const precoDoCard =
     precoNumeroSeguro(
       card.dataset
@@ -1009,6 +1010,13 @@ function precoObterPrecoInicial(
     );
 
   if (precoDoCard > 0) {
+    PRECO_ESTADO
+      .precosDigitados
+      .set(
+        produtoId,
+        precoDoCard
+      );
+
     return precoDoCard;
   }
 
@@ -1024,47 +1032,6 @@ function precoObterPrecoInicial(
     precoDoInputAntigo,
     0
   );
-}
-
-
-function precoAgendarSalvamento(
-  produtoId,
-  valor
-) {
-  if (!produtoId) {
-    return;
-  }
-
-  const anterior =
-    PRECO_ESTADO
-      .temporizadoresPreco
-      .get(produtoId);
-
-  if (anterior) {
-    window.clearTimeout(anterior);
-  }
-
-  const temporizador =
-    window.setTimeout(
-      async () => {
-        PRECO_ESTADO
-          .temporizadoresPreco
-          .delete(produtoId);
-
-        await precoSalvarPrecoProduto(
-          produtoId,
-          valor
-        );
-      },
-      650
-    );
-
-  PRECO_ESTADO
-    .temporizadoresPreco
-    .set(
-      produtoId,
-      temporizador
-    );
 }
 
 
@@ -1223,7 +1190,15 @@ function precoInstalarCampoNoCard(
 
   const precoInicial =
     precoObterPrecoInicial(
-      card
+      card,
+      produtoId
+    );
+
+  PRECO_ESTADO
+    .precosDigitados
+    .set(
+      produtoId,
+      precoInicial
     );
 
   input.value =
@@ -1264,22 +1239,24 @@ function precoInstalarCampoNoCard(
         .precoCompraAtual =
         String(valor);
 
+      PRECO_ESTADO
+        .precosDigitados
+        .set(
+          produtoId,
+          valor
+        );
+
       precoAtualizarSubtotalCard(
         card
       );
 
       precoAtualizarTotal();
-
-      precoAgendarSalvamento(
-        produtoId,
-        valor
-      );
     }
   );
 
   input.addEventListener(
     "blur",
-    () => {
+    async () => {
       const valor =
         Math.max(
           0,
@@ -1288,6 +1265,17 @@ function precoInstalarCampoNoCard(
             0
           )
         );
+
+      PRECO_ESTADO
+        .precosDigitados
+        .set(
+          produtoId,
+          valor
+        );
+
+      card.dataset
+        .precoCompraAtual =
+        String(valor);
 
       input.value =
         precoFormatarCampo(
@@ -1299,6 +1287,11 @@ function precoInstalarCampoNoCard(
       );
 
       precoAtualizarTotal();
+
+      await precoSalvarPrecoProduto(
+        produtoId,
+        valor
+      );
     }
   );
 
@@ -1765,17 +1758,7 @@ window.addEventListener(
     }
 
     PRECO_ESTADO
-      .temporizadoresPreco
-      .forEach(
-        (temporizador) => {
-          window.clearTimeout(
-            temporizador
-          );
-        }
-      );
-
-    PRECO_ESTADO
-      .temporizadoresPreco
+      .precosDigitados
       .clear();
   }
 );
