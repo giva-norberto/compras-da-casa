@@ -1193,11 +1193,20 @@ function centralAjudaCriarEstilos() {
       width: 42px;
       height: 42px;
       flex: 0 0 42px;
-      display: grid;
+      display: grid !important;
       place-items: center;
+      margin-top: 0 !important;
       border-radius: 14px;
       background: #eff6ff;
-      font-size: 21px;
+      color: initial;
+      font-family:
+        "Apple Color Emoji",
+        "Segoe UI Emoji",
+        "Noto Color Emoji",
+        sans-serif;
+      font-size: 22px !important;
+      font-weight: normal;
+      line-height: 1;
     }
 
     .central-ajuda-categoria-texto {
@@ -1211,14 +1220,14 @@ function centralAjudaCriarEstilos() {
       line-height: 1.25;
     }
 
-    .central-ajuda-categoria span {
-      display: block;
-      margin-top: 5px;
-      color: #64748b;
-      font-size: 11px;
-      font-weight: 700;
-      line-height: 1.35;
-    }
+     .central-ajuda-categoria-texto > span {
+        display: block;
+        margin-top: 5px;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.35;
+      }
 
     .central-ajuda-sem-resultado {
       grid-column: 1 / -1;
