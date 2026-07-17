@@ -171,6 +171,41 @@
       display:flex; align-items:center; justify-content:center; cursor:pointer;
     }
     .remover-manual-icon:active { transform:scale(.96); }
+    .lista-controles-linha {
+      display:grid;
+      grid-template-columns:48px minmax(0, 1fr) 40px;
+      gap:8px;
+      align-items:center;
+      margin-top:8px;
+    }
+
+    .remover-lista-icon {
+      grid-column:3;
+      grid-row:1;
+      width:40px;
+      height:40px;
+      padding:0;
+      border:0;
+      border-radius:12px;
+      background:var(--vermelho-bg);
+      color:var(--vermelho);
+      font-size:18px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+    }
+
+    .remover-lista-icon:active { transform:scale(.96); }
+    .lista-controles-linha > .check { grid-column:1; grid-row:1; }
+    .lista-controles-linha > .comprado-controle { grid-column:2; grid-row:1; }
+    .lista-controles-linha > .controle-precos-area {
+      grid-column:1 / -1;
+      grid-row:2;
+      width:100%;
+      margin-top:0;
+    }
+
     .info { margin-top:3px; color:var(--cinza); font-size:12px; font-weight:800; }
 
     .badge { padding:6px 9px; border-radius:999px; font-size:10.5px; font-weight:900; white-space:nowrap; }
@@ -280,7 +315,7 @@
       padding:0 12px; cursor:pointer;
     }
 
-    .buy-row { display:grid; grid-template-columns:52px 1fr; gap:9px; align-items:start; }
+    .buy-row { display:block; }
 
     .check {
       width:48px; height:48px; border-radius:16px; border:3px solid var(--azul1);
@@ -293,8 +328,8 @@
     .buy-qtd { font-size:15px; font-weight:900; color:var(--azul1); margin-top:4px; }
 
     .comprado-controle {
-      margin-top:4px; background:white; border:1px solid var(--borda); border-radius:15px;
-      padding:7px 8px; display:flex; justify-content:flex-end; align-items:center;
+      margin-top:0; min-width:0; background:white; border:1px solid var(--borda); border-radius:15px;
+      padding:7px 8px; display:flex; justify-content:center; align-items:center;
     }
 
     .comprado-stepper {
@@ -2120,7 +2155,7 @@
       }, { merge: true });
     }
 
-    window.removerItemManual = async function(id) {
+    window.removerItemDaLista = async function(id) {
       const produto = produtos.find(p => p.id === id);
       if (!produto) return;
 
@@ -2138,6 +2173,7 @@
       await setDoc(doc(produtosRef, id), {
         manualLista: false,
         qtdManual: 0,
+        listaAutomatica: false,
         comprado: false,
         qtdComprada: 0,
         atualizadoEm: serverTimestamp()
@@ -2407,37 +2443,34 @@
         return `
           <div class="buy-item ${p.comprado ? 'checked' : ''}">
             <div class="buy-row">
-              <div class="check" onclick="alternarComprado('${p.id}')">${p.comprado ? '✓' : ''}</div>
+              <div class="item-name">${p.comprado ? '✅ ' : ''}${p.nome}</div>
 
-              <div>
-                <div class="item-top">
-                  <div class="item-name">${p.comprado ? '✅ ' : ''}${p.nome}</div>
-
-                  <div class="item-top-actions">
-                    <span class="badge ${p.comprado ? 'badge-ok' : (p.manualLista ? 'badge-extra' : 'badge-low')}">${p.comprado ? 'OK' : (p.manualLista ? 'Manual' : 'Pendente')}</span>
-
-                    ${p.manualLista ? `
-                      <button
-                        type="button"
-                        class="remover-manual-icon"
-                        onclick="removerItemManual('${p.id}')"
-                        title="Remover item da lista"
-                        aria-label="Remover ${p.nome} da lista"
-                      >
-                        🗑️
-                      </button>
-                    ` : ''}
-                  </div>
-                </div>
+              <div class="lista-controles-linha">
+                <div
+                  class="check"
+                  onclick="alternarComprado('${p.id}')"
+                  title="${p.comprado ? 'Desmarcar item' : 'Marcar item como OK'}"
+                  aria-label="${p.comprado ? 'Desmarcar' : 'Marcar'} ${p.nome}"
+                >${p.comprado ? '✓' : ''}</div>
 
                 <div class="comprado-controle">
                   <div class="comprado-stepper">
-                    <button onclick="alterarQtdComprada('${p.id}', -1)">−</button>
+                    <button onclick="alterarQtdComprada('${p.id}', -1)" aria-label="Diminuir quantidade de ${p.nome}">−</button>
                     <div class="comprado-num">${qtdComprada}</div>
                     <span class="comprado-unidade">${unidadeProduto(p)}</span>
-                    <button onclick="alterarQtdComprada('${p.id}', 1)">+</button>
+                    <button onclick="alterarQtdComprada('${p.id}', 1)" aria-label="Aumentar quantidade de ${p.nome}">+</button>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  class="remover-lista-icon"
+                  onclick="removerItemDaLista('${p.id}')"
+                  title="Remover item da lista"
+                  aria-label="Remover ${p.nome} da lista"
+                >
+                  🗑️
+                </button>
               </div>
             </div>
           </div>
