@@ -1,7 +1,10 @@
 // ==========================================
 // ListaLar - Menu Administrativo
 // Mostra o botão Admin somente para usuários
-// que possuem admin: true no Firestore.
+// que possuem adminSistema: true no Firestore.
+//
+// Evita que o menu comum apareça antes do menu
+// administrativo estar completamente definido.
 // ==========================================
 
 import {
@@ -21,16 +24,95 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const ID_BOTAO_ADMIN = "tab-admin";
+const ID_ESTILO_BLOQUEIO = "admin-menu-bloqueio";
 const PAGINA_ADMIN = "./admin.html";
 
+const MAXIMO_TENTATIVAS_FIREBASE = 100;
+const INTERVALO_FIREBASE = 50;
+const TEMPO_MAXIMO_MENU_OCULTO = 8000;
+
 let observadorIniciado = false;
+let menuLiberado = false;
+let numeroVerificacao = 0;
 
 /**
- * Aguarda o Firebase principal do ListaLar ser inicializado.
+ * Oculta imediatamente o menu inferior.
+ *
+ * Isso impede que o usuário veja primeiro o menu
+ * comum e depois veja o botão Admin aparecer.
+ */
+function bloquearExibicaoInicialMenu() {
+  if (document.getElementById(ID_ESTILO_BLOQUEIO)) {
+    return;
+  }
+
+  const estilo = document.createElement("style");
+
+  estilo.id = ID_ESTILO_BLOQUEIO;
+
+  estilo.textContent = `
+    .bottom-nav {
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+  `;
+
+  document.head.appendChild(estilo);
+}
+
+/**
+ * Exibe o menu inferior somente depois que sua
+ * configuração estiver completamente definida.
+ */
+function liberarExibicaoMenu() {
+  if (menuLiberado) {
+    return;
+  }
+
+  menuLiberado = true;
+
+  const estilo =
+    document.getElementById(ID_ESTILO_BLOQUEIO);
+
+  if (estilo) {
+    estilo.remove();
+  }
+
+  const menu = obterMenuInferior();
+
+  if (menu) {
+    menu.style.visibility = "visible";
+    menu.style.opacity = "1";
+    menu.style.pointerEvents = "auto";
+  }
+}
+
+/**
+ * Proteção para que o menu não permaneça oculto
+ * caso aconteça algum erro inesperado.
+ */
+function iniciarProtecaoDeTempo() {
+  window.setTimeout(() => {
+    if (!menuLiberado) {
+      console.warn(
+        "A verificação administrativa demorou. " +
+        "O menu comum será exibido."
+      );
+
+      removerBotaoAdmin();
+      liberarExibicaoMenu();
+    }
+  }, TEMPO_MAXIMO_MENU_OCULTO);
+}
+
+/**
+ * Aguarda o Firebase principal do ListaLar
+ * ser inicializado.
  */
 async function aguardarFirebase(
-  tentativas = 100,
-  intervalo = 100
+  tentativas = MAXIMO_TENTATIVAS_FIREBASE,
+  intervalo = INTERVALO_FIREBASE
 ) {
   for (
     let tentativa = 0;
@@ -59,7 +141,34 @@ function obterMenuInferior() {
 }
 
 /**
- * Ajusta automaticamente a quantidade de colunas do menu.
+ * Aguarda o menu inferior existir no HTML.
+ */
+async function aguardarMenuInferior(
+  tentativas = 100,
+  intervalo = 30
+) {
+  for (
+    let tentativa = 0;
+    tentativa < tentativas;
+    tentativa++
+  ) {
+    const menu = obterMenuInferior();
+
+    if (menu) {
+      return menu;
+    }
+
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, intervalo);
+    });
+  }
+
+  return null;
+}
+
+/**
+ * Ajusta automaticamente a quantidade de
+ * colunas conforme os botões presentes.
  */
 function ajustarColunasMenu() {
   const menu = obterMenuInferior();
@@ -76,7 +185,8 @@ function ajustarColunasMenu() {
 }
 
 /**
- * Remove o botão Admin quando o usuário não possui acesso.
+ * Remove o botão Admin quando o usuário
+ * não possui acesso administrativo.
  */
 function removerBotaoAdmin() {
   const botao =
@@ -101,6 +211,7 @@ function abrirPainelAdmin() {
  */
 function criarBotaoAdmin() {
   if (document.getElementById(ID_BOTAO_ADMIN)) {
+    ajustarColunasMenu();
     return;
   }
 
@@ -142,7 +253,8 @@ function criarBotaoAdmin() {
 }
 
 /**
- * Consulta no Firestore se o usuário possui admin: true.
+ * Consulta no Firestore se o usuário possui
+ * adminSistema: true.
  */
 async function usuarioEhAdmin(usuario) {
   if (!usuario?.uid) {
@@ -150,7 +262,8 @@ async function usuarioEhAdmin(usuario) {
   }
 
   try {
-    const db = getFirestore();
+    const aplicativo = getApp();
+    const db = getFirestore(aplicativo);
 
     const referenciaUsuario = doc(
       db,
@@ -180,20 +293,50 @@ async function usuarioEhAdmin(usuario) {
 }
 
 /**
- * Verifica o usuário conectado e controla o botão Admin.
+ * Verifica o usuário conectado e monta o menu
+ * antes de exibi-lo.
  */
 async function verificarAcessoAdmin(usuario) {
+  const verificacaoAtual = ++numeroVerificacao;
+
   removerBotaoAdmin();
 
-  if (!usuario) {
-    return;
-  }
+  try {
+    if (!usuario) {
+      return;
+    }
 
-  const possuiAcesso =
-    await usuarioEhAdmin(usuario);
+    const possuiAcesso =
+      await usuarioEhAdmin(usuario);
 
-  if (possuiAcesso) {
-    criarBotaoAdmin();
+    /*
+     * Evita aplicar o resultado de uma consulta antiga
+     * caso o usuário conectado tenha mudado durante
+     * a verificação.
+     */
+    if (verificacaoAtual !== numeroVerificacao) {
+      return;
+    }
+
+    if (possuiAcesso) {
+      criarBotaoAdmin();
+    }
+  } catch (erro) {
+    console.error(
+      "Erro durante a montagem do menu administrativo:",
+      erro
+    );
+
+    removerBotaoAdmin();
+  } finally {
+    /*
+     * Só libera o menu quando a consulta mais recente
+     * estiver concluída.
+     */
+    if (verificacaoAtual === numeroVerificacao) {
+      ajustarColunasMenu();
+      liberarExibicaoMenu();
+    }
   }
 }
 
@@ -205,17 +348,35 @@ async function inicializarMenuAdmin() {
     return;
   }
 
+  observadorIniciado = true;
+
   try {
+    const menu = await aguardarMenuInferior();
+
+    if (!menu) {
+      throw new Error(
+        "O menu inferior do ListaLar não foi encontrado."
+      );
+    }
+
     await aguardarFirebase();
 
-    const auth = getAuth();
-
-    observadorIniciado = true;
+    const aplicativo = getApp();
+    const auth = getAuth(aplicativo);
 
     onAuthStateChanged(
       auth,
       async (usuario) => {
         await verificarAcessoAdmin(usuario);
+      },
+      (erro) => {
+        console.error(
+          "Erro ao observar o usuário autenticado:",
+          erro
+        );
+
+        removerBotaoAdmin();
+        liberarExibicaoMenu();
       }
     );
   } catch (erro) {
@@ -225,8 +386,15 @@ async function inicializarMenuAdmin() {
     );
 
     removerBotaoAdmin();
+    liberarExibicaoMenu();
   }
 }
+
+/*
+ * Executa imediatamente, antes da exibição do menu.
+ */
+bloquearExibicaoInicialMenu();
+iniciarProtecaoDeTempo();
 
 /**
  * Aguarda o HTML carregar.
