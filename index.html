@@ -173,7 +173,7 @@
     .remover-manual-icon:active { transform:scale(.96); }
     .lista-controles-linha {
       display:grid;
-      grid-template-columns:48px minmax(0, 1fr) 40px;
+      grid-template-columns:40px minmax(0, 1fr) 40px;
       gap:8px;
       align-items:center;
       margin-top:8px;
@@ -318,8 +318,8 @@
     .buy-row { display:block; }
 
     .check {
-      width:48px; height:48px; border-radius:16px; border:3px solid var(--azul1);
-      background:white; color:white; font-size:30px; font-weight:900; display:flex;
+      width:40px; height:40px; border-radius:13px; border:3px solid var(--azul1);
+      background:white; color:white; font-size:25px; font-weight:900; display:flex;
       align-items:center; justify-content:center; cursor:pointer; user-select:none;
     }
 
@@ -2443,7 +2443,7 @@
         return `
           <div class="buy-item ${p.comprado ? 'checked' : ''}">
             <div class="buy-row">
-              <div class="item-name">${p.comprado ? '✅ ' : ''}${p.nome}</div>
+              <div class="item-name">${p.nome}</div>
 
               <div class="lista-controles-linha">
                 <div
