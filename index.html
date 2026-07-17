@@ -1647,7 +1647,10 @@
 
           setStatus('Salvo no Firebase');
           renderizar();
-          await garantirUnidadesProdutos();
+
+          // Não executa migração de unidades durante a abertura.
+          // A unidade continua sendo exibida normalmente por unidadeProduto(),
+          // sem gerar várias gravações e novos eventos do onSnapshot.
         },
         (erro) => {
           console.error(erro);
@@ -1870,25 +1873,38 @@
     }
 
     async function criarListaInicialSeVazio() {
-      const snap = await getDocs(produtosRef);
+      if (!produtosRef || !familiaIdAtual) return;
 
+      const snap = await getDocs(produtosRef);
       if (!snap.empty) return;
 
-      for (const item of listaInicial) {
-        await addDoc(produtosRef, {
-          nome: item[0],
-          unidade: obterUnidadePadrao(item[0]),
-          estoque: item[1],
-          minimo: item[2],
-          comprado: false,
-          qtdComprada: 0,
-          historico: 0,
-          manualLista: false,
-          qtdManual: 0,
-          listaAutomatica: false,
-          criadoEm: serverTimestamp()
-        });
-      }
+      const operacoes = listaInicial.map((item) => {
+        const nome = item[0];
+
+        const idSeguro = normalizarTexto(nome)
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+
+        return setDoc(
+          doc(produtosRef, `padrao-${idSeguro}`),
+          {
+            nome,
+            unidade: obterUnidadePadrao(nome),
+            estoque: item[1],
+            minimo: item[2],
+            comprado: false,
+            qtdComprada: 0,
+            historico: 0,
+            manualLista: false,
+            qtdManual: 0,
+            listaAutomatica: false,
+            criadoEm: serverTimestamp()
+          },
+          { merge: false }
+        );
+      });
+
+      await Promise.all(operacoes);
     }
 
     window.adicionarProduto = async function() {
