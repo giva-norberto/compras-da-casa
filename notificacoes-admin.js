@@ -52,7 +52,7 @@ const REGIAO_FUNCOES =
  * A chave VAPID pública pode ficar no navegador.
  */
 const CHAVE_PUBLICA_VAPID =
-  "COLE_AQUI_A_CHAVE_PUBLICA_VAPID";
+  "BP6CuPfL918ej5k3JtJZFB1KlJIi24krhr9RVeLOsiO9cRC-FVqy8fClDVRWorxqbtO4HROZnOqGakFyYMCZFyE";
 
 const functions = getFunctions(
   app,
