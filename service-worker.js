@@ -1,3 +1,34 @@
+/**
+ * ============================================================================
+ * LISTALAR - SERVICE WORKER
+ *
+ * RESPONSABILIDADES:
+ * - Controle de versão e cache da PWA.
+ * - Atualização dos arquivos locais.
+ * - Funcionamento offline básico.
+ * - Carregamento do módulo separado de notificações administrativas.
+ *
+ * A lógica do Firebase Cloud Messaging fica em:
+ * notificacoes-admin-sw.js
+ * ============================================================================
+ */
+
+/*
+ * Carrega o módulo separado responsável pelas notificações
+ * administrativas em segundo plano.
+ *
+ * O try/catch evita que uma eventual falha nas notificações
+ * impeça o funcionamento normal do cache e da PWA.
+ */
+try {
+  importScripts('./notificacoes-admin-sw.js');
+} catch (erro) {
+  console.error(
+    '[ListaLar] Não foi possível carregar o módulo de notificações:',
+    erro
+  );
+}
+
 const parametros =
   new URL(self.location.href).searchParams;
 
