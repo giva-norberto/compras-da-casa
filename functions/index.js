@@ -587,3 +587,13 @@ exports.excluirUsuarioAdministrativo = onCall(
     }
   }
 );
+
+
+// NOTIFICAÇÕES ADMINISTRATIVAS
+const {
+  registrarDispositivoAdmin,
+  notificarNovaFamiliaAdmin,
+} = require("./notificacoes-admin");
+
+exports.registrarDispositivoAdmin = registrarDispositivoAdmin;
+exports.notificarNovaFamiliaAdmin = notificarNovaFamiliaAdmin;
