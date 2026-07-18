@@ -865,6 +865,7 @@
       orderBy,
       getDocs,
       getDoc,
+      runTransaction,
       limit
     } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
@@ -899,6 +900,8 @@
     let atualizandoEstoque = false;
     let unidadesAntigasVerificadas = false;
     let produtoUnidadeEmEdicao = null;
+    let salvandoProduto = false;
+    let salvandoItemManual = false;
 
     const unidadesDisponiveis = [
       'un',
@@ -1812,6 +1815,44 @@
         .replace(/\s+/g, ' ');
     }
 
+    function gerarHashProduto(texto) {
+      let hash = 2166136261;
+
+      for (let indice = 0; indice < texto.length; indice += 1) {
+        hash ^= texto.charCodeAt(indice);
+        hash = Math.imul(hash, 16777619);
+      }
+
+      return (hash >>> 0).toString(36);
+    }
+
+    function gerarIdProduto(nome) {
+      const nomeNormalizado = normalizarTexto(nome);
+
+      const slug = nomeNormalizado
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80) || 'item';
+
+      return `produto-${slug}-${gerarHashProduto(nomeNormalizado)}`;
+    }
+
+    function compararProdutosPorNome(a, b) {
+      const comparacao = String(a?.nome || '').localeCompare(
+        String(b?.nome || ''),
+        'pt-BR',
+        {
+          sensitivity: 'base',
+          numeric: true,
+          ignorePunctuation: true
+        }
+      );
+
+      if (comparacao !== 0) return comparacao;
+
+      return String(a?.id || '').localeCompare(String(b?.id || ''), 'pt-BR');
+    }
+
     function passaBusca(produto, termo) {
       const busca = normalizarTexto(termo);
       if (!busca) return true;
@@ -1825,6 +1866,35 @@
       return produtos.find(
         (produto) => normalizarTexto(produto.nome) === nomeNormalizado
       ) || null;
+    }
+
+    async function encontrarProdutoNoFirebasePorNome(nome) {
+      if (!produtosRef) return null;
+
+      const nomeNormalizado = normalizarTexto(nome);
+      if (!nomeNormalizado) return null;
+
+      const snap = await getDocs(produtosRef);
+
+      for (const produtoDoc of snap.docs) {
+        const dados = produtoDoc.data();
+
+        if (normalizarTexto(dados?.nome) === nomeNormalizado) {
+          return {
+            id: produtoDoc.id,
+            ...dados
+          };
+        }
+      }
+
+      return null;
+    }
+
+    async function encontrarProdutoSeguro(nome) {
+      return (
+        encontrarProdutoPorNome(nome) ||
+        await encontrarProdutoNoFirebasePorNome(nome)
+      );
     }
 
     function qtdParaLista(produto) {
@@ -1880,15 +1950,13 @@
 
       const operacoes = listaInicial.map((item) => {
         const nome = item[0];
-
-        const idSeguro = normalizarTexto(nome)
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '');
+        const nomeNormalizado = normalizarTexto(nome);
 
         return setDoc(
-          doc(produtosRef, `padrao-${idSeguro}`),
+          doc(produtosRef, gerarIdProduto(nome)),
           {
             nome,
+            nomeNormalizado,
             unidade: obterUnidadePadrao(nome),
             estoque: item[1],
             minimo: item[2],
@@ -1898,7 +1966,8 @@
             manualLista: false,
             qtdManual: 0,
             listaAutomatica: false,
-            criadoEm: serverTimestamp()
+            criadoEm: serverTimestamp(),
+            atualizadoEm: serverTimestamp()
           },
           { merge: false }
         );
@@ -1908,7 +1977,10 @@
     }
 
     window.adicionarProduto = async function() {
+      if (salvandoProduto) return;
+
       const input = document.getElementById('novoProduto');
+      const botao = document.querySelector('.form .btn-primary');
       const nome = input.value.trim();
 
       if (!nome) {
@@ -1920,33 +1992,72 @@
         return;
       }
 
-      const existente = encontrarProdutoPorNome(nome);
+      salvandoProduto = true;
+      if (botao) botao.disabled = true;
 
-      if (existente) {
-        await mostrarMensagem({
-          titulo: 'Produto já cadastrado',
-          texto: `O produto "${existente.nome}" já está cadastrado no estoque com a unidade "${unidadeProduto(existente)}".`,
-          tipo: 'warning'
+      try {
+        const existente = await encontrarProdutoSeguro(nome);
+
+        if (existente) {
+          await mostrarMensagem({
+            titulo: 'Produto já cadastrado',
+            texto: `O produto "${existente.nome}" já está cadastrado no estoque com a unidade "${unidadeProduto(existente)}".`,
+            tipo: 'warning'
+          });
+          input.value = '';
+          return;
+        }
+
+        const nomeNormalizado = normalizarTexto(nome);
+        const produtoRefSeguro = doc(produtosRef, gerarIdProduto(nome));
+
+        await runTransaction(db, async (transacao) => {
+          const produtoSnap = await transacao.get(produtoRefSeguro);
+
+          if (produtoSnap.exists()) {
+            throw new Error('PRODUTO_DUPLICADO');
+          }
+
+          transacao.set(produtoRefSeguro, {
+            nome,
+            nomeNormalizado,
+            unidade: obterUnidadePadrao(nome),
+            estoque: 0,
+            minimo: 1,
+            comprado: false,
+            qtdComprada: 0,
+            historico: 0,
+            manualLista: false,
+            qtdManual: 0,
+            listaAutomatica: false,
+            criadoEm: serverTimestamp(),
+            atualizadoEm: serverTimestamp()
+          });
         });
+
         input.value = '';
-        return;
+      } catch (erro) {
+        if (erro?.message === 'PRODUTO_DUPLICADO') {
+          await mostrarMensagem({
+            titulo: 'Produto já cadastrado',
+            texto: `O produto "${nome}" já está cadastrado no estoque.`,
+            tipo: 'warning'
+          });
+          input.value = '';
+          return;
+        }
+
+        console.error('Erro ao cadastrar produto:', erro);
+
+        await mostrarMensagem({
+          titulo: 'Erro ao cadastrar',
+          texto: 'Não foi possível cadastrar o produto.',
+          tipo: 'danger'
+        });
+      } finally {
+        salvandoProduto = false;
+        if (botao) botao.disabled = false;
       }
-
-      await addDoc(produtosRef, {
-        nome,
-        unidade: obterUnidadePadrao(nome),
-        estoque: 0,
-        minimo: 1,
-        comprado: false,
-        qtdComprada: 0,
-        historico: 0,
-        manualLista: false,
-        qtdManual: 0,
-        listaAutomatica: false,
-        criadoEm: serverTimestamp()
-      });
-
-      input.value = '';
     }
 
     window.renderSugestoesManual = function() {
@@ -1964,7 +2075,7 @@
 
       const encontrados = produtos
         .filter(p => String(p.nome || '').toLowerCase().startsWith(termo))
-        .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'))
+        .sort(compararProdutosPorNome)
         .slice(0, 6);
 
       if (encontrados.length === 0) {
@@ -1995,8 +2106,13 @@
     }
 
     window.adicionarItemManual = async function() {
+      if (salvandoItemManual) return;
+
       const inputProduto = document.getElementById('produtoManual');
       const inputQtd = document.getElementById('qtdManual');
+      const botao = inputProduto
+        ?.closest('.manual-box')
+        ?.querySelector('.btn-primary');
 
       const nome = inputProduto.value.trim();
       const quantidade = Math.max(1, Number(inputQtd.value || 1));
@@ -2010,41 +2126,85 @@
         return;
       }
 
-      const existente = encontrarProdutoPorNome(nome);
+      salvandoItemManual = true;
+      if (botao) botao.disabled = true;
 
-      if (existente) {
-        await setDoc(doc(produtosRef, existente.id), {
-          unidade: unidadeProduto(existente),
-          manualLista: true,
-          qtdManual: quantidade,
-          comprado: false,
-          qtdComprada: quantidade,
-          atualizadoEm: serverTimestamp()
-        }, { merge: true });
-      } else {
-        await addDoc(produtosRef, {
-          nome,
-          unidade: obterUnidadePadrao(nome),
-          estoque: 0,
-          minimo: 0,
-          comprado: false,
-          qtdComprada: quantidade,
-          qtdManual: quantidade,
-          manualLista: true,
-          listaAutomatica: false,
-          historico: 0,
-          criadoEm: serverTimestamp()
+      try {
+        const existente = await encontrarProdutoSeguro(nome);
+        const nomeNormalizado = normalizarTexto(nome);
+
+        if (existente) {
+          await setDoc(doc(produtosRef, existente.id), {
+            nomeNormalizado,
+            unidade: unidadeProduto(existente),
+            manualLista: true,
+            qtdManual: quantidade,
+            comprado: false,
+            qtdComprada: quantidade,
+            atualizadoEm: serverTimestamp()
+          }, { merge: true });
+        } else {
+          const produtoRefSeguro = doc(produtosRef, gerarIdProduto(nome));
+
+          await runTransaction(db, async (transacao) => {
+            const produtoSnap = await transacao.get(produtoRefSeguro);
+
+            if (produtoSnap.exists()) {
+              transacao.set(
+                produtoRefSeguro,
+                {
+                  nomeNormalizado,
+                  manualLista: true,
+                  qtdManual: quantidade,
+                  comprado: false,
+                  qtdComprada: quantidade,
+                  atualizadoEm: serverTimestamp()
+                },
+                { merge: true }
+              );
+              return;
+            }
+
+            transacao.set(produtoRefSeguro, {
+              nome,
+              nomeNormalizado,
+              unidade: obterUnidadePadrao(nome),
+              estoque: 0,
+              minimo: 0,
+              comprado: false,
+              qtdComprada: quantidade,
+              qtdManual: quantidade,
+              manualLista: true,
+              listaAutomatica: false,
+              historico: 0,
+              criadoEm: serverTimestamp(),
+              atualizadoEm: serverTimestamp()
+            });
+          });
+        }
+
+        inputProduto.value = '';
+        inputQtd.value = 1;
+
+        const areaSugestoes = document.getElementById('sugestoesManual');
+        if (areaSugestoes) {
+          areaSugestoes.classList.remove('active');
+          areaSugestoes.innerHTML = '';
+        }
+
+        abrirTela('lista');
+      } catch (erro) {
+        console.error('Erro ao incluir item manual:', erro);
+
+        await mostrarMensagem({
+          titulo: 'Erro ao incluir',
+          texto: 'Não foi possível incluir o produto na lista.',
+          tipo: 'danger'
         });
+      } finally {
+        salvandoItemManual = false;
+        if (botao) botao.disabled = false;
       }
-
-      inputProduto.value = '';
-      inputQtd.value = 1;
-      const areaSugestoes = document.getElementById('sugestoesManual');
-      if (areaSugestoes) {
-        areaSugestoes.classList.remove('active');
-        areaSugestoes.innerHTML = '';
-      }
-      abrirTela('lista');
     }
 
     window.iniciarAtualizacaoEstoque = function() {
@@ -2348,17 +2508,7 @@
       const termo = textoBusca('buscaEstoque');
       const listaEstoque = produtos
         .filter(p => passaBusca(p, termo))
-        .sort((a, b) => {
-          const listaA = produtosLista().some(p => p.id === a.id) ? 1 : 0;
-          const listaB = produtosLista().some(p => p.id === b.id) ? 1 : 0;
-          if (listaA !== listaB) return listaB - listaA;
-
-          const histA = Number(a.historico || 0);
-          const histB = Number(b.historico || 0);
-          if (histA !== histB) return histB - histA;
-
-          return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR');
-        });
+        .sort(compararProdutosPorNome);
 
       if (listaEstoque.length === 0) {
         area.innerHTML = '<div class="empty">Nenhum produto encontrado.</div>';
@@ -2445,7 +2595,7 @@
       const termo = textoBusca('buscaLista');
       const lista = produtosLista()
         .filter(p => passaBusca(p, termo))
-        .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'));
+        .sort(compararProdutosPorNome);
 
       if (lista.length === 0) {
         area.innerHTML = '<div class="empty">Nenhum item para comprar.<br>Seu estoque está em dia.</div>';
