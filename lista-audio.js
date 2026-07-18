@@ -1914,7 +1914,19 @@ async function iniciarReconhecimento(
 
   pararReconhecimento();
 
-  await carregarProdutosCadastrados();
+  /*
+   * IMPORTANTE PARA IPHONE/SAFARI:
+   *
+   * O reconhecimento precisa ser iniciado diretamente dentro
+   * do clique do usuário. Não pode existir um await antes do
+   * reconhecimento.start(), pois o Safari pode bloquear o
+   * microfone entendendo que a ação não veio do toque.
+   *
+   * Os produtos são carregados em paralelo e aguardados somente
+   * quando o resultado da fala for processado.
+   */
+  const carregamentoProdutos =
+    carregarProdutosCadastrados();
 
   const reconhecimento =
     new SpeechRecognition();
@@ -1932,7 +1944,7 @@ async function iniciarReconhecimento(
     mostrarTelaOuvindo();
   };
 
-  reconhecimento.onresult = (
+  reconhecimento.onresult = async (
     evento
   ) => {
     const alternativas =
@@ -1962,6 +1974,12 @@ async function iniciarReconhecimento(
     }
 
     try {
+      /*
+       * Aguarda os produtos somente depois que o Safari já
+       * iniciou e concluiu o reconhecimento da fala.
+       */
+      await carregamentoProdutos;
+
       const resultado =
         interpretarComandoMultiplo(
           texto,
@@ -1983,6 +2001,63 @@ async function iniciarReconhecimento(
       );
     }
   };
+
+  reconhecimento.onerror = (
+    evento
+  ) => {
+    atualizarBotoesMicrofone(false);
+    esconderTelaOuvindo();
+
+    const MENSAGENS = {
+      "not-allowed":
+        "O acesso ao microfone foi bloqueado. Libere a permissão do microfone para este site nos ajustes do Safari.",
+
+      "service-not-allowed":
+        "O serviço de voz não está permitido neste navegador.",
+
+      "no-speech":
+        "Nenhuma fala foi identificada. Tente novamente.",
+
+      "audio-capture":
+        "Não foi possível acessar o microfone.",
+
+      network:
+        "O reconhecimento encontrou um problema de conexão."
+    };
+
+    if (evento.error !== "aborted") {
+      window.alert(
+        MENSAGENS[evento.error] ||
+        "Não foi possível reconhecer a fala."
+      );
+    }
+  };
+
+  reconhecimento.onend = () => {
+    atualizarBotoesMicrofone(false);
+    esconderTelaOuvindo();
+  };
+
+  try {
+    /*
+     * Precisa permanecer imediatamente associado ao clique.
+     * Não colocar nenhum await antes desta linha.
+     */
+    reconhecimento.start();
+  } catch (erro) {
+    console.error(
+      "ListaLar Áudio: erro ao iniciar:",
+      erro
+    );
+
+    atualizarBotoesMicrofone(false);
+    esconderTelaOuvindo();
+
+    window.alert(
+      "Não foi possível iniciar o microfone."
+    );
+  }
+}
 
   reconhecimento.onerror = (
     evento
