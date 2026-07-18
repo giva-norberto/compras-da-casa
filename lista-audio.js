@@ -28,10 +28,10 @@ import {
   getFirestore,
   collection,
   doc,
+  addDoc,
   setDoc,
   getDoc,
   getDocs,
-  runTransaction,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -208,57 +208,6 @@ function normalizarTexto(texto) {
 }
 
 
-/*
- * Usa a mesma chave de produto do index.html.
- * Assim, o cadastro normal e o cadastro por áudio gravam no mesmo
- * documento e não criam duplicidade entre dispositivos.
- */
-function normalizarNomeProdutoParaId(nome) {
-  return String(nome || "")
-    .trim()
-    .toLocaleLowerCase("pt-BR")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ");
-}
-
-
-function gerarHashProduto(texto) {
-  let hash = 2166136261;
-
-  for (
-    let indice = 0;
-    indice < texto.length;
-    indice += 1
-  ) {
-    hash ^= texto.charCodeAt(indice);
-
-    hash = Math.imul(
-      hash,
-      16777619
-    );
-  }
-
-  return (hash >>> 0).toString(36);
-}
-
-
-function gerarIdProduto(nome) {
-  const nomeNormalizado =
-    normalizarNomeProdutoParaId(nome);
-
-  const slug = nomeNormalizado
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80) || "item";
-
-  return (
-    `produto-${slug}-` +
-    gerarHashProduto(nomeNormalizado)
-  );
-}
-
-
 function escaparHtml(valor) {
   return String(valor ?? "")
     .replace(/&/g, "&amp;")
@@ -388,7 +337,6 @@ function singularizarProduto(nome) {
 
 function localizarNumero(texto) {
   const original = String(texto || "");
-
   const normalizado =
     normalizarTexto(original);
 
@@ -1914,19 +1862,7 @@ async function iniciarReconhecimento(
 
   pararReconhecimento();
 
-  /*
-   * IMPORTANTE PARA IPHONE/SAFARI:
-   *
-   * O reconhecimento precisa ser iniciado diretamente dentro
-   * do clique do usuário. Não pode existir um await antes do
-   * reconhecimento.start(), pois o Safari pode bloquear o
-   * microfone entendendo que a ação não veio do toque.
-   *
-   * Os produtos são carregados em paralelo e aguardados somente
-   * quando o resultado da fala for processado.
-   */
-  const carregamentoProdutos =
-    carregarProdutosCadastrados();
+  await carregarProdutosCadastrados();
 
   const reconhecimento =
     new SpeechRecognition();
@@ -1944,7 +1880,7 @@ async function iniciarReconhecimento(
     mostrarTelaOuvindo();
   };
 
-  reconhecimento.onresult = async (
+  reconhecimento.onresult = (
     evento
   ) => {
     const alternativas =
@@ -1974,12 +1910,6 @@ async function iniciarReconhecimento(
     }
 
     try {
-      /*
-       * Aguarda os produtos somente depois que o Safari já
-       * iniciou e concluiu o reconhecimento da fala.
-       */
-      await carregamentoProdutos;
-
       const resultado =
         interpretarComandoMultiplo(
           texto,
@@ -2001,63 +1931,6 @@ async function iniciarReconhecimento(
       );
     }
   };
-
-  reconhecimento.onerror = (
-    evento
-  ) => {
-    atualizarBotoesMicrofone(false);
-    esconderTelaOuvindo();
-
-    const MENSAGENS = {
-      "not-allowed":
-        "O acesso ao microfone foi bloqueado. Libere a permissão do microfone para este site nos ajustes do Safari.",
-
-      "service-not-allowed":
-        "O serviço de voz não está permitido neste navegador.",
-
-      "no-speech":
-        "Nenhuma fala foi identificada. Tente novamente.",
-
-      "audio-capture":
-        "Não foi possível acessar o microfone.",
-
-      network:
-        "O reconhecimento encontrou um problema de conexão."
-    };
-
-    if (evento.error !== "aborted") {
-      window.alert(
-        MENSAGENS[evento.error] ||
-        "Não foi possível reconhecer a fala."
-      );
-    }
-  };
-
-  reconhecimento.onend = () => {
-    atualizarBotoesMicrofone(false);
-    esconderTelaOuvindo();
-  };
-
-  try {
-    /*
-     * Precisa permanecer imediatamente associado ao clique.
-     * Não colocar nenhum await antes desta linha.
-     */
-    reconhecimento.start();
-  } catch (erro) {
-    console.error(
-      "ListaLar Áudio: erro ao iniciar:",
-      erro
-    );
-
-    atualizarBotoesMicrofone(false);
-    esconderTelaOuvindo();
-
-    window.alert(
-      "Não foi possível iniciar o microfone."
-    );
-  }
-}
 
   reconhecimento.onerror = (
     evento
@@ -2111,7 +1984,6 @@ async function iniciarReconhecimento(
     );
   }
 }
-
 
 async function aguardarFirebase(
   limiteMs = 8000
@@ -2389,67 +2261,25 @@ async function salvarItemLista(
     return;
   }
 
-  const produtoRefSeguro =
-    doc(
-      contexto.produtosRef,
-      gerarIdProduto(item.produto)
-    );
-
-  await runTransaction(
-    contexto.db,
-    async (transacao) => {
-      const produtoSnap =
-        await transacao.get(
-          produtoRefSeguro
-        );
-
-      if (produtoSnap.exists()) {
-        transacao.set(
-          produtoRefSeguro,
-          {
-            unidade: item.unidade,
-            manualLista: true,
-            qtdManual:
-              item.quantidade,
-            qtdComprada:
-              item.quantidade,
-            comprado: false,
-            atualizadoEm:
-              serverTimestamp()
-          },
-          {
-            merge: true
-          }
-        );
-
-        return;
-      }
-
-      transacao.set(
-        produtoRefSeguro,
-        {
-          nome: item.produto,
-          nomeNormalizado:
-            normalizarNomeProdutoParaId(
-              item.produto
-            ),
-          unidade: item.unidade,
-          estoque: 0,
-          minimo: 0,
-          comprado: false,
-          qtdComprada:
-            item.quantidade,
-          qtdManual:
-            item.quantidade,
-          manualLista: true,
-          listaAutomatica: false,
-          historico: 0,
-          criadoEm:
-            serverTimestamp(),
-          atualizadoEm:
-            serverTimestamp()
-        }
-      );
+  await addDoc(
+    contexto.produtosRef,
+    {
+      nome: item.produto,
+      unidade: item.unidade,
+      estoque: 0,
+      minimo: 0,
+      comprado: false,
+      qtdComprada:
+        item.quantidade,
+      qtdManual:
+        item.quantidade,
+      manualLista: true,
+      listaAutomatica: false,
+      historico: 0,
+      criadoEm:
+        serverTimestamp(),
+      atualizadoEm:
+        serverTimestamp()
     }
   );
 }
@@ -2485,61 +2315,23 @@ async function salvarItemEstoque(
     return;
   }
 
-  const produtoRefSeguro =
-    doc(
-      contexto.produtosRef,
-      gerarIdProduto(item.produto)
-    );
-
-  await runTransaction(
-    contexto.db,
-    async (transacao) => {
-      const produtoSnap =
-        await transacao.get(
-          produtoRefSeguro
-        );
-
-      if (produtoSnap.exists()) {
-        transacao.set(
-          produtoRefSeguro,
-          {
-            unidade: item.unidade,
-            estoque:
-              item.quantidade,
-            atualizadoEm:
-              serverTimestamp()
-          },
-          {
-            merge: true
-          }
-        );
-
-        return;
-      }
-
-      transacao.set(
-        produtoRefSeguro,
-        {
-          nome: item.produto,
-          nomeNormalizado:
-            normalizarNomeProdutoParaId(
-              item.produto
-            ),
-          unidade: item.unidade,
-          estoque: item.quantidade,
-          minimo: 1,
-          comprado: false,
-          qtdComprada: 0,
-          qtdManual: 0,
-          manualLista: false,
-          listaAutomatica: false,
-          historico: 0,
-          criadoEm:
-            serverTimestamp(),
-          atualizadoEm:
-            serverTimestamp()
-        }
-      );
+  await addDoc(
+    contexto.produtosRef,
+    {
+      nome: item.produto,
+      unidade: item.unidade,
+      estoque: item.quantidade,
+      minimo: 1,
+      comprado: false,
+      qtdComprada: 0,
+      qtdManual: 0,
+      manualLista: false,
+      listaAutomatica: false,
+      historico: 0,
+      criadoEm:
+        serverTimestamp(),
+      atualizadoEm:
+        serverTimestamp()
     }
   );
 }
