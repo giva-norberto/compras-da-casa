@@ -152,6 +152,66 @@ function formatarData(valor) {
   ).format(data);
 }
 
+function formatarUltimoAcesso(valor) {
+  const data = obterData(valor);
+
+  if (!data) {
+    return "Ainda não registrado";
+  }
+
+  const agora = new Date();
+
+  const inicioHoje = new Date(
+    agora.getFullYear(),
+    agora.getMonth(),
+    agora.getDate()
+  );
+
+  const inicioData = new Date(
+    data.getFullYear(),
+    data.getMonth(),
+    data.getDate()
+  );
+
+  const diferencaDias = Math.floor(
+    (
+      inicioHoje.getTime() -
+      inicioData.getTime()
+    ) / 86400000
+  );
+
+  const horario = new Intl.DateTimeFormat(
+    "pt-BR",
+    {
+      hour: "2-digit",
+      minute: "2-digit"
+    }
+  ).format(data);
+
+  if (diferencaDias === 0) {
+    return `Hoje às ${horario}`;
+  }
+
+  if (diferencaDias === 1) {
+    return `Ontem às ${horario}`;
+  }
+
+  if (
+    diferencaDias > 1 &&
+    diferencaDias <= 7
+  ) {
+    return `Há ${diferencaDias} dias`;
+  }
+
+  return new Intl.DateTimeFormat(
+    "pt-BR",
+    {
+      dateStyle: "short",
+      timeStyle: "short"
+    }
+  ).format(data);
+}
+
 function obterDataFamilia(familia) {
   return (
     familia.atualizadaEm ||
@@ -244,13 +304,19 @@ function definirLoader(texto) {
 }
 
 function exibirPainel() {
-  elemento("adminLoader")?.classList.add("hidden");
-  elemento("adminApp")?.classList.remove("hidden");
+  elemento("adminLoader")
+    ?.classList.add("hidden");
+
+  elemento("adminApp")
+    ?.classList.remove("hidden");
 }
 
 function ocultarPainel() {
-  elemento("adminApp")?.classList.add("hidden");
-  elemento("adminLoader")?.classList.remove("hidden");
+  elemento("adminApp")
+    ?.classList.add("hidden");
+
+  elemento("adminLoader")
+    ?.classList.remove("hidden");
 }
 
 
@@ -272,10 +338,17 @@ function abrirAdminModal({
     return;
   }
 
-  elemento("adminModalTitle").textContent = titulo;
-  elemento("adminModalText").textContent = texto;
-  elemento("adminModalIcon").textContent = icone;
-  elemento("adminModalButton").textContent = textoBotao;
+  elemento("adminModalTitle").textContent =
+    titulo;
+
+  elemento("adminModalText").textContent =
+    texto;
+
+  elemento("adminModalIcon").textContent =
+    icone;
+
+  elemento("adminModalButton").textContent =
+    textoBotao;
 
   acaoDepoisDoModal =
     typeof depoisDeFechar === "function"
@@ -286,9 +359,11 @@ function abrirAdminModal({
 }
 
 window.fecharAdminModal = function() {
-  elemento("adminModal")?.classList.remove("active");
+  elemento("adminModal")
+    ?.classList.remove("active");
 
   const acao = acaoDepoisDoModal;
+
   acaoDepoisDoModal = null;
 
   if (acao) {
@@ -303,10 +378,12 @@ window.fecharAdminModal = function() {
 
 function preencherPerfilAdministrador(usuario) {
   elemento("adminNome").textContent =
-    usuario.displayName || "Administrador";
+    usuario.displayName ||
+    "Administrador";
 
   elemento("adminEmail").textContent =
-    usuario.email || "";
+    usuario.email ||
+    "";
 
   const foto = elemento("adminFoto");
 
@@ -332,7 +409,9 @@ async function validarAdministrador(usuario) {
     usuario.uid
   );
 
-  const snapshot = await getDoc(usuarioRef);
+  const snapshot = await getDoc(
+    usuarioRef
+  );
 
   if (!snapshot.exists()) {
     return false;
@@ -398,17 +477,25 @@ window.abrirSecao = async function(nomeSecao) {
 // ==========================================
 
 function renderizarFamiliasRecentes() {
-  const area = elemento("familiasRecentes");
+  const area = elemento(
+    "familiasRecentes"
+  );
 
   if (!area) {
     return;
   }
 
-  const recentes = [...familiasCarregadas]
+  const recentes = [
+    ...familiasCarregadas
+  ]
     .sort((a, b) => {
       return (
-        obterTempoData(obterDataFamilia(b)) -
-        obterTempoData(obterDataFamilia(a))
+        obterTempoData(
+          obterDataFamilia(b)
+        ) -
+        obterTempoData(
+          obterDataFamilia(a)
+        )
       );
     })
     .slice(0, 5);
@@ -437,7 +524,9 @@ function renderizarFamiliasRecentes() {
       );
 
       const data = escaparHtml(
-        formatarData(obterDataFamilia(familia))
+        formatarData(
+          obterDataFamilia(familia)
+        )
       );
 
       return `
@@ -470,33 +559,50 @@ window.carregarDashboard = async function() {
       snapshotComunicado,
       snapshotConfiguracoes
     ] = await Promise.all([
-      getDocs(collection(db, "familias")),
-      getDocs(collection(db, "usuarios")),
-      getDoc(REFERENCIA_COMUNICADO),
-      getDoc(REFERENCIA_CONFIGURACOES)
+      getDocs(
+        collection(db, "familias")
+      ),
+      getDocs(
+        collection(db, "usuarios")
+      ),
+      getDoc(
+        REFERENCIA_COMUNICADO
+      ),
+      getDoc(
+        REFERENCIA_CONFIGURACOES
+      )
     ]);
 
     familiasCarregadas =
-      snapshotFamilias.docs.map((documento) => ({
-        id: documento.id,
-        ...documento.data()
-      }));
+      snapshotFamilias.docs.map(
+        (documento) => ({
+          id: documento.id,
+          ...documento.data()
+        })
+      );
 
     usuariosCarregados =
-      snapshotUsuarios.docs.map((documento) => ({
-        id: documento.id,
-        ...documento.data()
-      }));
+      snapshotUsuarios.docs.map(
+        (documento) => ({
+          id: documento.id,
+          ...documento.data()
+        })
+      );
 
     elemento("totalFamilias").textContent =
-      String(familiasCarregadas.length);
+      String(
+        familiasCarregadas.length
+      );
 
     elemento("totalUsuarios").textContent =
-      String(usuariosCarregados.length);
+      String(
+        usuariosCarregados.length
+      );
 
-    const comunicado = snapshotComunicado.exists()
-      ? snapshotComunicado.data()
-      : {};
+    const comunicado =
+      snapshotComunicado.exists()
+        ? snapshotComunicado.data()
+        : {};
 
     elemento("statusComunicado").textContent =
       comunicado.ativo === true
@@ -534,7 +640,9 @@ window.carregarDashboard = async function() {
 // ==========================================
 
 function renderizarFamilias() {
-  const area = elemento("listaFamiliasAdmin");
+  const area = elemento(
+    "listaFamiliasAdmin"
+  );
 
   if (!area) {
     return;
@@ -544,26 +652,29 @@ function renderizarFamilias() {
     elemento("buscaFamilias")?.value
   );
 
-  const filtradas = familiasCarregadas
-    .filter((familia) => {
-      const conteudo = textoNormalizado(
-        [
-          obterNomeFamilia(familia),
-          familia.criadoPorEmail,
-          familia.donoEmail,
-          familia.donoId,
-          familia.id
-        ].join(" ")
-      );
+  const filtradas =
+    familiasCarregadas
+      .filter((familia) => {
+        const conteudo =
+          textoNormalizado(
+            [
+              obterNomeFamilia(familia),
+              familia.criadoPorEmail,
+              familia.donoEmail,
+              familia.donoId,
+              familia.id
+            ].join(" ")
+          );
 
-      return conteudo.includes(termo);
-    })
-    .sort((a, b) => {
-      return obterNomeFamilia(a).localeCompare(
-        obterNomeFamilia(b),
-        "pt-BR"
-      );
-    });
+        return conteudo.includes(termo);
+      })
+      .sort((a, b) => {
+        return obterNomeFamilia(a)
+          .localeCompare(
+            obterNomeFamilia(b),
+            "pt-BR"
+          );
+      });
 
   if (filtradas.length === 0) {
     area.innerHTML = `
@@ -581,15 +692,18 @@ function renderizarFamilias() {
         obterNomeFamilia(familia)
       );
 
-      const responsavel = escaparHtml(
-        familia.criadoPorEmail ||
-        familia.donoEmail ||
-        familia.donoId ||
-        "Responsável não informado"
-      );
+      const responsavel =
+        escaparHtml(
+          familia.criadoPorEmail ||
+          familia.donoEmail ||
+          familia.donoId ||
+          "Responsável não informado"
+        );
 
       const data = escaparHtml(
-        formatarData(obterDataFamilia(familia))
+        formatarData(
+          obterDataFamilia(familia)
+        )
       );
 
       return `
@@ -619,7 +733,9 @@ function renderizarFamilias() {
 }
 
 window.carregarFamilias = async function() {
-  const area = elemento("listaFamiliasAdmin");
+  const area = elemento(
+    "listaFamiliasAdmin"
+  );
 
   if (area) {
     area.innerHTML = `
@@ -635,10 +751,12 @@ window.carregarFamilias = async function() {
     );
 
     familiasCarregadas =
-      snapshot.docs.map((documento) => ({
-        id: documento.id,
-        ...documento.data()
-      }));
+      snapshot.docs.map(
+        (documento) => ({
+          id: documento.id,
+          ...documento.data()
+        })
+      );
 
     renderizarFamilias();
   } catch (erro) {
@@ -656,7 +774,8 @@ window.carregarFamilias = async function() {
     }
 
     abrirAdminModal({
-      titulo: "Erro ao carregar famílias",
+      titulo:
+        "Erro ao carregar famílias",
       texto: mensagemErro(erro),
       icone: "⚠️"
     });
@@ -669,7 +788,9 @@ window.carregarFamilias = async function() {
 // ==========================================
 
 function renderizarUsuarios() {
-  const area = elemento("listaUsuariosAdmin");
+  const area = elemento(
+    "listaUsuariosAdmin"
+  );
 
   if (!area) {
     return;
@@ -679,25 +800,31 @@ function renderizarUsuarios() {
     elemento("buscaUsuarios")?.value
   );
 
-  const filtrados = usuariosCarregados
-    .filter((usuario) => {
-      const conteudo = textoNormalizado(
-        [
-          obterNomeUsuario(usuario),
-          usuario.email,
-          usuario.familiaId,
-          usuario.id
-        ].join(" ")
-      );
+  const filtrados =
+    usuariosCarregados
+      .filter((usuario) => {
+        const conteudo =
+          textoNormalizado(
+            [
+              obterNomeUsuario(usuario),
+              usuario.email,
+              usuario.familiaId,
+              formatarUltimoAcesso(
+                usuario.ultimoAcesso
+              ),
+              usuario.id
+            ].join(" ")
+          );
 
-      return conteudo.includes(termo);
-    })
-    .sort((a, b) => {
-      return obterNomeUsuario(a).localeCompare(
-        obterNomeUsuario(b),
-        "pt-BR"
-      );
-    });
+        return conteudo.includes(termo);
+      })
+      .sort((a, b) => {
+        return obterNomeUsuario(a)
+          .localeCompare(
+            obterNomeUsuario(b),
+            "pt-BR"
+          );
+      });
 
   if (filtrados.length === 0) {
     area.innerHTML = `
@@ -711,8 +838,11 @@ function renderizarUsuarios() {
 
   area.innerHTML = filtrados
     .map((usuario) => {
-      const nomeUsuario = obterNomeUsuario(usuario);
-      const nome = escaparHtml(nomeUsuario);
+      const nomeUsuario =
+        obterNomeUsuario(usuario);
+
+      const nome =
+        escaparHtml(nomeUsuario);
 
       const email = escaparHtml(
         usuario.email ||
@@ -741,12 +871,20 @@ function renderizarUsuarios() {
             primeiraLetra(nomeUsuario)
           );
 
-      const tipo = usuario.adminSistema === true
-        ? "Administrador"
-        : escaparHtml(
-            usuario.papel ||
-            "Usuário"
-          );
+      const tipo =
+        usuario.adminSistema === true
+          ? "Administrador"
+          : escaparHtml(
+              usuario.papel ||
+              "Usuário"
+            );
+
+      const ultimoAcesso =
+        escaparHtml(
+          formatarUltimoAcesso(
+            usuario.ultimoAcesso
+          )
+        );
 
       return `
         <div class="data-item">
@@ -762,6 +900,10 @@ function renderizarUsuarios() {
                 ${email}
                 · Família: ${familia}
               </span>
+
+              <span>
+                Último acesso: ${ultimoAcesso}
+              </span>
             </div>
           </div>
 
@@ -775,7 +917,9 @@ function renderizarUsuarios() {
 }
 
 window.carregarUsuarios = async function() {
-  const area = elemento("listaUsuariosAdmin");
+  const area = elemento(
+    "listaUsuariosAdmin"
+  );
 
   if (area) {
     area.innerHTML = `
@@ -791,10 +935,12 @@ window.carregarUsuarios = async function() {
     );
 
     usuariosCarregados =
-      snapshot.docs.map((documento) => ({
-        id: documento.id,
-        ...documento.data()
-      }));
+      snapshot.docs.map(
+        (documento) => ({
+          id: documento.id,
+          ...documento.data()
+        })
+      );
 
     renderizarUsuarios();
   } catch (erro) {
@@ -812,7 +958,8 @@ window.carregarUsuarios = async function() {
     }
 
     abrirAdminModal({
-      titulo: "Erro ao carregar usuários",
+      titulo:
+        "Erro ao carregar usuários",
       texto: mensagemErro(erro),
       icone: "⚠️"
     });
@@ -826,11 +973,13 @@ window.carregarUsuarios = async function() {
 
 function renderizarPreviewComunicado() {
   const titulo =
-    elemento("comunicadoTitulo")?.value.trim() ||
+    elemento("comunicadoTitulo")
+      ?.value.trim() ||
     "Comunicado ListaLar";
 
   const mensagem =
-    elemento("comunicadoMensagem")?.value.trim() ||
+    elemento("comunicadoMensagem")
+      ?.value.trim() ||
     "Preencha os campos acima para visualizar.";
 
   const tipo =
@@ -844,23 +993,39 @@ function renderizarPreviewComunicado() {
     maintenance: "🛠️"
   };
 
-  const preview = elemento("previewComunicado");
+  const preview = elemento(
+    "previewComunicado"
+  );
 
   if (!preview) {
     return;
   }
 
-  preview.querySelector(
-    ".announcement-icon"
-  ).textContent = icones[tipo] || "📢";
+  const iconePreview =
+    preview.querySelector(
+      ".announcement-icon"
+    );
 
-  preview.querySelector(
-    "strong"
-  ).textContent = titulo;
+  const tituloPreview =
+    preview.querySelector("strong");
 
-  preview.querySelector(
-    "p"
-  ).textContent = mensagem;
+  const mensagemPreview =
+    preview.querySelector("p");
+
+  if (iconePreview) {
+    iconePreview.textContent =
+      icones[tipo] || "📢";
+  }
+
+  if (tituloPreview) {
+    tituloPreview.textContent =
+      titulo;
+  }
+
+  if (mensagemPreview) {
+    mensagemPreview.textContent =
+      mensagem;
+  }
 }
 
 async function carregarComunicadoSalvo() {
@@ -877,18 +1042,23 @@ async function carregarComunicadoSalvo() {
     const dados = snapshot.data();
 
     elemento("comunicadoTitulo").value =
-      dados.titulo || "";
+      dados.titulo ||
+      "";
 
     elemento("comunicadoMensagem").value =
-      dados.mensagem || "";
+      dados.mensagem ||
+      "";
 
     elemento("comunicadoTipo").value =
-      dados.tipo || "info";
+      dados.tipo ||
+      "info";
 
     elemento("comunicadoAtivo").checked =
       dados.ativo === true;
 
-    elemento("comunicadoObrigatorio").checked =
+    elemento(
+      "comunicadoObrigatorio"
+    ).checked =
       dados.obrigatorio === true;
 
     renderizarPreviewComunicado();
@@ -900,102 +1070,123 @@ async function carregarComunicadoSalvo() {
   }
 }
 
-window.limparFormularioComunicado = function() {
-  elemento("comunicadoTitulo").value = "";
-  elemento("comunicadoMensagem").value = "";
-  elemento("comunicadoTipo").value = "info";
-  elemento("comunicadoAtivo").checked = false;
-  elemento("comunicadoObrigatorio").checked = false;
+window.limparFormularioComunicado =
+  function() {
+    elemento("comunicadoTitulo").value =
+      "";
 
-  renderizarPreviewComunicado();
-};
+    elemento("comunicadoMensagem").value =
+      "";
 
-window.salvarComunicado = async function() {
-  const titulo =
-    elemento("comunicadoTitulo").value.trim();
+    elemento("comunicadoTipo").value =
+      "info";
 
-  const mensagem =
-    elemento("comunicadoMensagem").value.trim();
+    elemento("comunicadoAtivo").checked =
+      false;
 
-  const tipo =
-    elemento("comunicadoTipo").value;
-
-  const ativo =
-    elemento("comunicadoAtivo").checked;
-
-  const obrigatorio =
-    elemento("comunicadoObrigatorio").checked;
-
-  if (ativo && !titulo) {
-    abrirAdminModal({
-      titulo: "Título necessário",
-      texto:
-        "Informe um título antes de ativar o comunicado.",
-      icone: "⚠️"
-    });
-
-    return;
-  }
-
-  if (ativo && !mensagem) {
-    abrirAdminModal({
-      titulo: "Mensagem necessária",
-      texto:
-        "Informe a mensagem antes de ativar o comunicado.",
-      icone: "⚠️"
-    });
-
-    return;
-  }
-
-  try {
-    await setDoc(
-      REFERENCIA_COMUNICADO,
-      {
-        titulo,
-        mensagem,
-        tipo,
-        ativo,
-        obrigatorio,
-        atualizadoEm: serverTimestamp(),
-        atualizadoPorUid:
-          usuarioAdminAtual?.uid || "",
-        atualizadoPorEmail:
-          usuarioAdminAtual?.email || ""
-      },
-      {
-        merge: true
-      }
-    );
-
-    elemento("statusComunicado").textContent =
-      ativo
-        ? "Ativo"
-        : "Inativo";
+    elemento(
+      "comunicadoObrigatorio"
+    ).checked =
+      false;
 
     renderizarPreviewComunicado();
+  };
 
-    abrirAdminModal({
-      titulo: "Comunicado salvo",
-      texto:
+window.salvarComunicado =
+  async function() {
+    const titulo =
+      elemento("comunicadoTitulo")
+        .value.trim();
+
+    const mensagem =
+      elemento("comunicadoMensagem")
+        .value.trim();
+
+    const tipo =
+      elemento("comunicadoTipo").value;
+
+    const ativo =
+      elemento("comunicadoAtivo").checked;
+
+    const obrigatorio =
+      elemento(
+        "comunicadoObrigatorio"
+      ).checked;
+
+    if (ativo && !titulo) {
+      abrirAdminModal({
+        titulo: "Título necessário",
+        texto:
+          "Informe um título antes de ativar o comunicado.",
+        icone: "⚠️"
+      });
+
+      return;
+    }
+
+    if (ativo && !mensagem) {
+      abrirAdminModal({
+        titulo: "Mensagem necessária",
+        texto:
+          "Informe a mensagem antes de ativar o comunicado.",
+        icone: "⚠️"
+      });
+
+      return;
+    }
+
+    try {
+      await setDoc(
+        REFERENCIA_COMUNICADO,
+        {
+          titulo,
+          mensagem,
+          tipo,
+          ativo,
+          obrigatorio,
+          atualizadoEm:
+            serverTimestamp(),
+          atualizadoPorUid:
+            usuarioAdminAtual?.uid ||
+            "",
+          atualizadoPorEmail:
+            usuarioAdminAtual?.email ||
+            ""
+        },
+        {
+          merge: true
+        }
+      );
+
+      elemento(
+        "statusComunicado"
+      ).textContent =
         ativo
+          ? "Ativo"
+          : "Inativo";
+
+      renderizarPreviewComunicado();
+
+      abrirAdminModal({
+        titulo: "Comunicado salvo",
+        texto: ativo
           ? "O comunicado foi salvo e está ativo."
           : "O comunicado foi salvo como inativo.",
-      icone: "✅"
-    });
-  } catch (erro) {
-    console.error(
-      "Erro ao salvar comunicado:",
-      erro
-    );
+        icone: "✅"
+      });
+    } catch (erro) {
+      console.error(
+        "Erro ao salvar comunicado:",
+        erro
+      );
 
-    abrirAdminModal({
-      titulo: "Erro ao salvar",
-      texto: mensagemErro(erro),
-      icone: "⚠️"
-    });
-  }
-};
+      abrirAdminModal({
+        titulo: "Erro ao salvar",
+        texto: mensagemErro(erro),
+        icone: "⚠️"
+      });
+    }
+  };
 
 
 // ==========================================
@@ -1017,22 +1208,35 @@ async function carregarConfiguracoesGerais() {
     elemento("modoManutencao").checked =
       dados.modoManutencao === true;
 
-    elemento("mensagemManutencao").value =
-      dados.mensagemManutencao || "";
+    elemento(
+      "mensagemManutencao"
+    ).value =
+      dados.mensagemManutencao ||
+      "";
 
-    elemento("permitirNovasFamilias").checked =
-      dados.permitirNovasFamilias !== false;
+    elemento(
+      "permitirNovasFamilias"
+    ).checked =
+      dados.permitirNovasFamilias !==
+      false;
 
-    elemento("atualizacaoObrigatoria").checked =
-      dados.atualizacaoObrigatoria === true;
+    elemento(
+      "atualizacaoObrigatoria"
+    ).checked =
+      dados.atualizacaoObrigatoria ===
+      true;
 
     elemento("versaoMinima").value =
-      dados.versaoMinima || "";
+      dados.versaoMinima ||
+      "";
 
     elemento("versaoAtual").value =
-      dados.versaoAtual || "";
+      dados.versaoAtual ||
+      "";
 
-    elemento("statusManutencao").textContent =
+    elemento(
+      "statusManutencao"
+    ).textContent =
       dados.modoManutencao === true
         ? "Ativada"
         : "Desativada";
@@ -1044,98 +1248,118 @@ async function carregarConfiguracoesGerais() {
   }
 }
 
-window.salvarConfiguracoesGerais = async function() {
-  const modoManutencao =
-    elemento("modoManutencao").checked;
+window.salvarConfiguracoesGerais =
+  async function() {
+    const modoManutencao =
+      elemento(
+        "modoManutencao"
+      ).checked;
 
-  const mensagemManutencao =
-    elemento("mensagemManutencao").value.trim();
+    const mensagemManutencao =
+      elemento(
+        "mensagemManutencao"
+      ).value.trim();
 
-  const permitirNovasFamilias =
-    elemento("permitirNovasFamilias").checked;
+    const permitirNovasFamilias =
+      elemento(
+        "permitirNovasFamilias"
+      ).checked;
 
-  const atualizacaoObrigatoria =
-    elemento("atualizacaoObrigatoria").checked;
+    const atualizacaoObrigatoria =
+      elemento(
+        "atualizacaoObrigatoria"
+      ).checked;
 
-  const versaoMinima =
-    elemento("versaoMinima").value.trim();
+    const versaoMinima =
+      elemento(
+        "versaoMinima"
+      ).value.trim();
 
-  const versaoAtual =
-    elemento("versaoAtual").value.trim();
+    const versaoAtual =
+      elemento(
+        "versaoAtual"
+      ).value.trim();
 
-  if (
-    modoManutencao &&
-    !mensagemManutencao
-  ) {
-    abrirAdminModal({
-      titulo: "Mensagem necessária",
-      texto:
-        "Informe uma mensagem antes de ativar o modo manutenção.",
-      icone: "⚠️"
-    });
+    if (
+      modoManutencao &&
+      !mensagemManutencao
+    ) {
+      abrirAdminModal({
+        titulo: "Mensagem necessária",
+        texto:
+          "Informe uma mensagem antes de ativar o modo manutenção.",
+        icone: "⚠️"
+      });
 
-    return;
-  }
+      return;
+    }
 
-  if (
-    atualizacaoObrigatoria &&
-    !versaoMinima
-  ) {
-    abrirAdminModal({
-      titulo: "Versão mínima necessária",
-      texto:
-        "Informe a versão mínima antes de ativar a atualização obrigatória.",
-      icone: "⚠️"
-    });
+    if (
+      atualizacaoObrigatoria &&
+      !versaoMinima
+    ) {
+      abrirAdminModal({
+        titulo:
+          "Versão mínima necessária",
+        texto:
+          "Informe a versão mínima antes de ativar a atualização obrigatória.",
+        icone: "⚠️"
+      });
 
-    return;
-  }
+      return;
+    }
 
-  try {
-    await setDoc(
-      REFERENCIA_CONFIGURACOES,
-      {
-        modoManutencao,
-        mensagemManutencao,
-        permitirNovasFamilias,
-        atualizacaoObrigatoria,
-        versaoMinima,
-        versaoAtual,
-        atualizadoEm: serverTimestamp(),
-        atualizadoPorUid:
-          usuarioAdminAtual?.uid || "",
-        atualizadoPorEmail:
-          usuarioAdminAtual?.email || ""
-      },
-      {
-        merge: true
-      }
-    );
+    try {
+      await setDoc(
+        REFERENCIA_CONFIGURACOES,
+        {
+          modoManutencao,
+          mensagemManutencao,
+          permitirNovasFamilias,
+          atualizacaoObrigatoria,
+          versaoMinima,
+          versaoAtual,
+          atualizadoEm:
+            serverTimestamp(),
+          atualizadoPorUid:
+            usuarioAdminAtual?.uid ||
+            "",
+          atualizadoPorEmail:
+            usuarioAdminAtual?.email ||
+            ""
+        },
+        {
+          merge: true
+        }
+      );
 
-    elemento("statusManutencao").textContent =
-      modoManutencao
-        ? "Ativada"
-        : "Desativada";
+      elemento(
+        "statusManutencao"
+      ).textContent =
+        modoManutencao
+          ? "Ativada"
+          : "Desativada";
 
-    abrirAdminModal({
-      titulo: "Configurações salvas",
-      texto:
-        "As configurações gerais foram atualizadas com sucesso.",
-      icone: "✅"
-    });
-  } catch (erro) {
-    console.error(
-      "Erro ao salvar configurações:",
-      erro
-    );
+      abrirAdminModal({
+        titulo:
+          "Configurações salvas",
+        texto:
+          "As configurações gerais foram atualizadas com sucesso.",
+        icone: "✅"
+      });
+    } catch (erro) {
+      console.error(
+        "Erro ao salvar configurações:",
+        erro
+      );
 
-    abrirAdminModal({
-      titulo: "Erro ao salvar",
-      texto: mensagemErro(erro),
-      icone: "⚠️"
-    });
-  }
-};
+      abrirAdminModal({
+        titulo: "Erro ao salvar",
+        texto: mensagemErro(erro),
+        icone: "⚠️"
+      });
+    }
+  };
 
 
 // ==========================================
@@ -1160,15 +1384,17 @@ function configurarEventos() {
     "comunicadoMensagem",
     "comunicadoTipo"
   ].forEach((id) => {
-    elemento(id)?.addEventListener(
-      "input",
-      renderizarPreviewComunicado
-    );
+    elemento(id)
+      ?.addEventListener(
+        "input",
+        renderizarPreviewComunicado
+      );
 
-    elemento(id)?.addEventListener(
-      "change",
-      renderizarPreviewComunicado
-    );
+    elemento(id)
+      ?.addEventListener(
+        "change",
+        renderizarPreviewComunicado
+      );
   });
 }
 
@@ -1180,7 +1406,8 @@ function configurarEventos() {
 async function inicializarPainel(usuario) {
   if (
     painelInicializado &&
-    usuarioAdminAtual?.uid === usuario.uid
+    usuarioAdminAtual?.uid ===
+      usuario.uid
   ) {
     return;
   }
@@ -1188,7 +1415,10 @@ async function inicializarPainel(usuario) {
   painelInicializado = true;
   usuarioAdminAtual = usuario;
 
-  preencherPerfilAdministrador(usuario);
+  preencherPerfilAdministrador(
+    usuario
+  );
+
   configurarEventos();
   exibirPainel();
 
@@ -1201,6 +1431,7 @@ async function inicializarPainel(usuario) {
 
 async function iniciarAdministracao() {
   ocultarPainel();
+
   definirLoader(
     "Validando acesso administrativo..."
   );
@@ -1220,13 +1451,15 @@ async function iniciarAdministracao() {
           );
 
           abrirAdminModal({
-            titulo: "Acesso necessário",
+            titulo:
+              "Acesso necessário",
             texto:
               "Entre no ListaLar antes de acessar a administração.",
             icone: "🔒",
             textoBotao: "Voltar",
             depoisDeFechar: () => {
-              window.location.href = "./index.html";
+              window.location.href =
+                "./index.html";
             }
           });
 
@@ -1239,24 +1472,30 @@ async function iniciarAdministracao() {
 
         try {
           const possuiAcesso =
-            await validarAdministrador(usuario);
+            await validarAdministrador(
+              usuario
+            );
 
           if (!possuiAcesso) {
             abrirAdminModal({
-              titulo: "Acesso não autorizado",
+              titulo:
+                "Acesso não autorizado",
               texto:
                 "Seu usuário não possui permissão para acessar o painel administrativo.",
               icone: "🔒",
               textoBotao: "Voltar",
               depoisDeFechar: () => {
-                window.location.href = "./index.html";
+                window.location.href =
+                  "./index.html";
               }
             });
 
             return;
           }
 
-          await inicializarPainel(usuario);
+          await inicializarPainel(
+            usuario
+          );
         } catch (erro) {
           console.error(
             "Erro ao validar administrador:",
@@ -1268,12 +1507,15 @@ async function iniciarAdministracao() {
           );
 
           abrirAdminModal({
-            titulo: "Erro de acesso",
-            texto: mensagemErro(erro),
+            titulo:
+              "Erro de acesso",
+            texto:
+              mensagemErro(erro),
             icone: "⚠️",
             textoBotao: "Voltar",
             depoisDeFechar: () => {
-              window.location.href = "./index.html";
+              window.location.href =
+                "./index.html";
             }
           });
         }
@@ -1290,8 +1532,10 @@ async function iniciarAdministracao() {
     );
 
     abrirAdminModal({
-      titulo: "Erro de inicialização",
-      texto: mensagemErro(erro),
+      titulo:
+        "Erro de inicialização",
+      texto:
+        mensagemErro(erro),
       icone: "⚠️"
     });
   }
@@ -1301,7 +1545,9 @@ async function iniciarAdministracao() {
 // O arquivo é carregado no final do admin.html,
 // mas esta verificação deixa a inicialização segura.
 
-if (document.readyState === "loading") {
+if (
+  document.readyState === "loading"
+) {
   document.addEventListener(
     "DOMContentLoaded",
     iniciarAdministracao,
