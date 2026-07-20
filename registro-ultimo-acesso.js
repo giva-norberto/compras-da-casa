@@ -1,35 +1,39 @@
 // ==========================================
 // registro-ultimo-acesso.js
-// Atualiza automaticamente o último acesso
-// do usuário no Firestore.
+// Registra o último acesso do usuário
+// usando Firebase modular.
 // ==========================================
 
-(async function registrarUltimoAcesso() {
-    try {
+import {
+    getAuth,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+import {
+    getFirestore,
+    doc,
+    updateDoc,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        auth.onAuthStateChanged(async (user) => {
+const auth = getAuth();
+const db = getFirestore();
 
-            if (!user) return;
-
-            await db.collection("usuarios")
-                .doc(user.uid)
-                .update({
-
-                    ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp()
-
-                });
-
-            console.log("Último acesso atualizado.");
-
-        });
-
-    } catch (erro) {
-
-        console.error("Erro ao registrar último acesso:", erro);
-
+onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+        return;
     }
 
-})();
+    try {
+        await updateDoc(
+            doc(db, "usuarios", user.uid),
+            {
+                ultimoAcesso: serverTimestamp()
+            }
+        );
+
+        console.log("Último acesso atualizado com sucesso.");
+    } catch (erro) {
+        console.error("Erro ao registrar último acesso:", erro);
+    }
+});
