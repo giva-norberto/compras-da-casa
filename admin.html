@@ -88,6 +88,7 @@
         <div class="section-title">
           <div>
             <h2>📊 Visão geral</h2>
+
             <p>
               Informações gerais da plataforma ListaLar.
             </p>
@@ -104,7 +105,9 @@
 
         <div class="stats-grid">
           <article class="stat-card">
-            <div class="stat-icon blue">👨‍👩‍👧‍👦</div>
+            <div class="stat-icon blue">
+              👨‍👩‍👧‍👦
+            </div>
 
             <div>
               <span>Famílias</span>
@@ -113,7 +116,9 @@
           </article>
 
           <article class="stat-card">
-            <div class="stat-icon cyan">👤</div>
+            <div class="stat-icon cyan">
+              👤
+            </div>
 
             <div>
               <span>Usuários</span>
@@ -122,20 +127,28 @@
           </article>
 
           <article class="stat-card">
-            <div class="stat-icon green">📢</div>
+            <div class="stat-icon green">
+              📢
+            </div>
 
             <div>
               <span>Comunicado</span>
-              <strong id="statusComunicado">Inativo</strong>
+              <strong id="statusComunicado">
+                Inativo
+              </strong>
             </div>
           </article>
 
           <article class="stat-card">
-            <div class="stat-icon orange">🛠️</div>
+            <div class="stat-icon orange">
+              🛠️
+            </div>
 
             <div>
               <span>Manutenção</span>
-              <strong id="statusManutencao">Desativada</strong>
+              <strong id="statusManutencao">
+                Desativada
+              </strong>
             </div>
           </article>
         </div>
@@ -174,6 +187,7 @@
         <div class="section-title">
           <div>
             <h2>👨‍👩‍👧‍👦 Famílias</h2>
+
             <p>
               Consulte todas as famílias cadastradas.
             </p>
@@ -216,6 +230,7 @@
         <div class="section-title">
           <div>
             <h2>👤 Usuários</h2>
+
             <p>
               Consulte os usuários cadastrados no ListaLar.
             </p>
@@ -258,6 +273,7 @@
         <div class="section-title">
           <div>
             <h2>📢 Comunicado geral</h2>
+
             <p>
               Prepare mensagens para todos os usuários.
             </p>
@@ -266,6 +282,7 @@
 
         <div class="admin-card">
           <div class="form-grid">
+
             <div class="form-group full">
               <label for="comunicadoTitulo">
                 Título
@@ -331,7 +348,9 @@
 
             <div class="form-group full">
               <label class="switch-row">
-                <span>Exigir confirmação de leitura</span>
+                <span>
+                  Exigir confirmação de leitura
+                </span>
 
                 <input
                   id="comunicadoObrigatorio"
@@ -341,6 +360,7 @@
                 <span class="switch"></span>
               </label>
             </div>
+
           </div>
 
           <div class="form-actions">
@@ -366,6 +386,7 @@
           <div class="card-title">
             <div>
               <h3>Pré-visualização</h3>
+
               <p>
                 Exemplo de como a mensagem poderá aparecer.
               </p>
@@ -376,10 +397,15 @@
             id="previewComunicado"
             class="announcement-preview"
           >
-            <div class="announcement-icon">📢</div>
+            <div class="announcement-icon">
+              📢
+            </div>
 
             <div>
-              <strong>Comunicado ListaLar</strong>
+              <strong>
+                Comunicado ListaLar
+              </strong>
+
               <p>
                 Preencha os campos acima para visualizar.
               </p>
@@ -395,9 +421,53 @@
         <div class="section-title">
           <div>
             <h2>⚙️ Configurações gerais</h2>
+
             <p>
               Controle recursos globais do aplicativo.
             </p>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="card-title">
+            <div>
+              <h3>
+                🔔 Notificações administrativas
+              </h3>
+
+              <p>
+                Receba um aviso quando uma nova família
+                for criada no ListaLar.
+              </p>
+            </div>
+          </div>
+
+          <div class="setting-list">
+            <div class="setting-item">
+              <div>
+                <strong>
+                  Notificação de nova família
+                </strong>
+
+                <p
+                  id="statusNotificacoesAdmin"
+                  aria-live="polite"
+                >
+                  Clique no botão para autorizar as
+                  notificações neste dispositivo.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button
+              id="btnAtivarNotificacoesAdmin"
+              type="button"
+              class="btn btn-primary"
+            >
+              🔔 Ativar notificações
+            </button>
           </div>
         </div>
 
@@ -409,8 +479,8 @@
                 <strong>Modo manutenção</strong>
 
                 <p>
-                  Informa aos usuários que o aplicativo está
-                  temporariamente em manutenção.
+                  Informa aos usuários que o aplicativo
+                  está temporariamente em manutenção.
                 </p>
               </div>
 
@@ -439,7 +509,9 @@
 
             <label class="setting-item">
               <div>
-                <strong>Permitir novas famílias</strong>
+                <strong>
+                  Permitir novas famílias
+                </strong>
 
                 <p>
                   Autoriza novos usuários a criarem famílias.
@@ -459,10 +531,13 @@
 
             <label class="setting-item">
               <div>
-                <strong>Atualização obrigatória</strong>
+                <strong>
+                  Atualização obrigatória
+                </strong>
 
                 <p>
-                  Obriga o usuário a instalar a versão mais recente.
+                  Obriga o usuário a instalar a versão
+                  mais recente.
                 </p>
               </div>
 
@@ -607,6 +682,11 @@
   <script
     type="module"
     src="./admin-exclusoes.js"
+  ></script>
+
+  <script
+    type="module"
+    src="./notificacoes-admin.js?v=1.0.0"
   ></script>
 
 </body>
