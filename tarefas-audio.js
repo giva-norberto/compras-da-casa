@@ -1,9 +1,8 @@
 // ==========================================
 // ListaLar - Áudio para Tarefas
 // Arquivo: tarefas-audio.js
-// Versão: 1.1.0
+// Versão: 1.2.0
 // ==========================================
-
 
 // ==========================================
 // Estado do módulo
@@ -17,7 +16,6 @@ const SpeechRecognition =
   window.SpeechRecognition ||
   window.webkitSpeechRecognition;
 
-
 // ==========================================
 // Utilidades
 // ==========================================
@@ -25,7 +23,6 @@ const SpeechRecognition =
 function audioTarefasElemento(id) {
   return document.getElementById(id);
 }
-
 
 function audioTarefasNormalizar(texto) {
   return String(texto || "")
@@ -37,7 +34,6 @@ function audioTarefasNormalizar(texto) {
     .trim();
 }
 
-
 function audioTarefasCapitalizar(texto) {
   const valor = String(texto || "").trim();
 
@@ -45,78 +41,57 @@ function audioTarefasCapitalizar(texto) {
     return "";
   }
 
-  return (
-    valor.charAt(0).toUpperCase() +
-    valor.slice(1)
-  );
+  return valor.charAt(0).toUpperCase() + valor.slice(1);
 }
-
 
 function audioTarefasDataIso(data) {
   const ano = data.getFullYear();
-
-  const mes = String(
-    data.getMonth() + 1
-  ).padStart(2, "0");
-
-  const dia = String(
-    data.getDate()
-  ).padStart(2, "0");
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const dia = String(data.getDate()).padStart(2, "0");
 
   return `${ano}-${mes}-${dia}`;
 }
 
-
-function audioTarefasAdicionarDias(
-  data,
-  quantidade
-) {
+function audioTarefasAdicionarDias(data, quantidade) {
   const novaData = new Date(data);
 
   novaData.setHours(0, 0, 0, 0);
-
-  novaData.setDate(
-    novaData.getDate() +
-    quantidade
-  );
+  novaData.setDate(novaData.getDate() + quantidade);
 
   return novaData;
 }
 
-
-function audioTarefasProximoDiaSemana(
-  diaSemana
-) {
+function audioTarefasProximoDiaSemana(diaSemana) {
   const hoje = new Date();
 
   hoje.setHours(0, 0, 0, 0);
 
-  const diaAtual =
-    hoje.getDay();
-
-  let diferenca =
-    diaSemana - diaAtual;
+  let diferenca = diaSemana - hoje.getDay();
 
   if (diferenca <= 0) {
     diferenca += 7;
   }
 
-  return audioTarefasAdicionarDias(
-    hoje,
-    diferenca
-  );
+  return audioTarefasAdicionarDias(hoje, diferenca);
 }
 
+function audioTarefasCriarDataValida(dia, mes, ano) {
+  const data = new Date(ano, mes - 1, dia);
+
+  const valida =
+    data.getFullYear() === ano &&
+    data.getMonth() === mes - 1 &&
+    data.getDate() === dia;
+
+  return valida ? data : null;
+}
 
 async function audioTarefasAvisar(
   titulo,
   texto,
   tipo = "info"
 ) {
-  if (
-    typeof window.mostrarMensagem ===
-    "function"
-  ) {
+  if (typeof window.mostrarMensagem === "function") {
     await window.mostrarMensagem({
       titulo,
       texto,
@@ -126,233 +101,176 @@ async function audioTarefasAvisar(
     return;
   }
 
-  window.alert(
-    `${titulo}\n\n${texto}`
-  );
+  window.alert(`${titulo}\n\n${texto}`);
 }
-
 
 // ==========================================
 // Leitura de prioridade
 // ==========================================
 
-function audioTarefasExtrairPrioridade(
-  texto
-) {
-  const normalizado =
-    audioTarefasNormalizar(texto);
+function audioTarefasExtrairPrioridade(texto) {
+  const normalizado = audioTarefasNormalizar(texto);
 
   if (
-    normalizado.includes(
-      "prioridade alta"
-    ) ||
-    normalizado.includes(
-      "urgente"
-    )
+    normalizado.includes("prioridade alta") ||
+    normalizado.includes("urgente")
   ) {
     return "alta";
   }
 
-  if (
-    normalizado.includes(
-      "prioridade baixa"
-    )
-  ) {
+  if (normalizado.includes("prioridade baixa")) {
     return "baixa";
-  }
-
-  if (
-    normalizado.includes(
-      "prioridade media"
-    )
-  ) {
-    return "media";
   }
 
   return "media";
 }
 
-
 // ==========================================
 // Leitura de prazo
 // ==========================================
 
-function audioTarefasExtrairPrazo(
-  texto
-) {
-  const normalizado =
-    audioTarefasNormalizar(texto);
-
+function audioTarefasExtrairPrazo(texto) {
+  const normalizado = audioTarefasNormalizar(texto);
   const hoje = new Date();
 
   hoje.setHours(0, 0, 0, 0);
 
-
-  /*
-   * A verificação de "depois de amanhã"
-   * precisa acontecer antes de "amanhã",
-   * porque a frase também contém a palavra
-   * "amanhã".
-   */
-  if (
-    normalizado.includes(
-      "depois de amanha"
-    )
-  ) {
+  // A expressão maior precisa vir antes de "amanhã".
+  if (normalizado.includes("depois de amanha")) {
     return audioTarefasDataIso(
-      audioTarefasAdicionarDias(
-        hoje,
-        2
-      )
+      audioTarefasAdicionarDias(hoje, 2)
     );
   }
 
-
-  if (
-    normalizado.includes(
-      "amanha"
-    )
-  ) {
+  if (normalizado.includes("amanha")) {
     return audioTarefasDataIso(
-      audioTarefasAdicionarDias(
-        hoje,
-        1
-      )
+      audioTarefasAdicionarDias(hoje, 1)
     );
   }
 
-
-  if (
-    normalizado.includes(
-      "hoje"
-    )
-  ) {
-    return audioTarefasDataIso(
-      hoje
-    );
+  if (normalizado.includes("hoje")) {
+    return audioTarefasDataIso(hoje);
   }
-
 
   const diasSemana = [
     {
-      nomes: [
-        "domingo"
-      ],
+      nomes: ["domingo"],
       numero: 0
     },
     {
-      nomes: [
-        "segunda feira",
-        "segunda"
-      ],
+      nomes: ["segunda feira", "segunda"],
       numero: 1
     },
     {
-      nomes: [
-        "terca feira",
-        "terca"
-      ],
+      nomes: ["terca feira", "terca"],
       numero: 2
     },
     {
-      nomes: [
-        "quarta feira",
-        "quarta"
-      ],
+      nomes: ["quarta feira", "quarta"],
       numero: 3
     },
     {
-      nomes: [
-        "quinta feira",
-        "quinta"
-      ],
+      nomes: ["quinta feira", "quinta"],
       numero: 4
     },
     {
-      nomes: [
-        "sexta feira",
-        "sexta"
-      ],
+      nomes: ["sexta feira", "sexta"],
       numero: 5
     },
     {
-      nomes: [
-        "sabado"
-      ],
+      nomes: ["sabado"],
       numero: 6
     }
   ];
 
-
-  for (
-    const dia of diasSemana
-  ) {
-    const encontrou =
-      dia.nomes.some((nome) => {
-        return normalizado.includes(
-          nome
-        );
-      });
+  for (const diaSemana of diasSemana) {
+    const encontrou = diaSemana.nomes.some((nome) =>
+      normalizado.includes(nome)
+    );
 
     if (encontrou) {
       return audioTarefasDataIso(
         audioTarefasProximoDiaSemana(
-          dia.numero
+          diaSemana.numero
         )
       );
     }
   }
 
+  // Datas numéricas: 5/10, 05-10-2026 ou 5 de 10.
+  const padraoDataNumerica = normalizado.match(
+    /\b(\d{1,2})\s*(?:de|\/|-)\s*(\d{1,2})(?:\s*(?:de|\/|-)\s*(\d{2,4}))?\b/
+  );
 
-  const padraoData =
-    normalizado.match(
-      /\b(\d{1,2})\s*(?:de|\/|-)\s*(\d{1,2})(?:\s*(?:de|\/|-)\s*(\d{2,4}))?\b/
-    );
+  if (padraoDataNumerica) {
+    const dia = Number(padraoDataNumerica[1]);
+    const mes = Number(padraoDataNumerica[2]);
 
-
-  if (padraoData) {
-    const dia =
-      Number(padraoData[1]);
-
-    const mes =
-      Number(padraoData[2]);
-
-    let ano =
-      padraoData[3]
-        ? Number(padraoData[3])
-        : hoje.getFullYear();
-
+    let ano = padraoDataNumerica[3]
+      ? Number(padraoDataNumerica[3])
+      : hoje.getFullYear();
 
     if (ano < 100) {
       ano += 2000;
     }
 
+    const data = audioTarefasCriarDataValida(
+      dia,
+      mes,
+      ano
+    );
 
-    const data =
-      new Date(
-        ano,
-        mes - 1,
-        dia
-      );
-
-
-    const dataValida =
-      data.getFullYear() === ano &&
-      data.getMonth() === mes - 1 &&
-      data.getDate() === dia;
-
-
-    if (dataValida) {
-      return audioTarefasDataIso(
-        data
-      );
+    if (data) {
+      return audioTarefasDataIso(data);
     }
   }
 
+  // Datas por extenso: 5 de outubro ou 5 de outubro de 2026.
+  const mesesPorNome = {
+    janeiro: 1,
+    fevereiro: 2,
+    marco: 3,
+    abril: 4,
+    maio: 5,
+    junho: 6,
+    julho: 7,
+    agosto: 8,
+    setembro: 9,
+    outubro: 10,
+    novembro: 11,
+    dezembro: 12
+  };
+
+  const padraoDataPorExtenso = normalizado.match(
+    /\b(\d{1,2})\s+de\s+(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+(\d{2,4}))?\b/
+  );
+
+  if (padraoDataPorExtenso) {
+    const dia = Number(padraoDataPorExtenso[1]);
+    const mes =
+      mesesPorNome[padraoDataPorExtenso[2]];
+
+    let ano = padraoDataPorExtenso[3]
+      ? Number(padraoDataPorExtenso[3])
+      : hoje.getFullYear();
+
+    if (ano < 100) {
+      ano += 2000;
+    }
+
+    const data = audioTarefasCriarDataValida(
+      dia,
+      mes,
+      ano
+    );
+
+    if (data) {
+      return audioTarefasDataIso(data);
+    }
+  }
 
   return "";
 }
-
 
 // ==========================================
 // Leitura do responsável
@@ -375,35 +293,26 @@ function audioTarefasExtrairResponsavel(
     };
   }
 
-
   const membrosOrdenados =
     [...membros].sort((a, b) => {
-      const nomeA =
-        String(
-          a.nome ||
-          a.displayName ||
-          a.email ||
-          ""
-        );
-
-      const nomeB =
-        String(
-          b.nome ||
-          b.displayName ||
-          b.email ||
-          ""
-        );
-
-      return (
-        nomeB.length -
-        nomeA.length
+      const nomeA = String(
+        a.nome ||
+        a.displayName ||
+        a.email ||
+        ""
       );
+
+      const nomeB = String(
+        b.nome ||
+        b.displayName ||
+        b.email ||
+        ""
+      );
+
+      return nomeB.length - nomeA.length;
     });
 
-
-  for (
-    const membro of membrosOrdenados
-  ) {
+  for (const membro of membrosOrdenados) {
     const nome =
       membro.nome ||
       membro.displayName ||
@@ -413,24 +322,17 @@ function audioTarefasExtrairResponsavel(
     const nomeNormalizado =
       audioTarefasNormalizar(nome);
 
-    if (
-      !nomeNormalizado
-    ) {
+    if (!nomeNormalizado) {
       continue;
     }
-
 
     const primeiroNome =
       nomeNormalizado
         .split(" ")
         .filter(Boolean)[0] || "";
 
-
     const encontrouNomeCompleto =
-      normalizado.includes(
-        nomeNormalizado
-      );
-
+      normalizado.includes(nomeNormalizado);
 
     const encontrouPrimeiroNome =
       primeiroNome.length >= 3 &&
@@ -438,7 +340,6 @@ function audioTarefasExtrairResponsavel(
         `\\b${primeiroNome}\\b`,
         "i"
       ).test(normalizado);
-
 
     if (
       encontrouNomeCompleto ||
@@ -449,19 +350,16 @@ function audioTarefasExtrairResponsavel(
           membro.uid ||
           membro.id ||
           "",
-
         nome
       };
     }
   }
-
 
   return {
     uid: "",
     nome: ""
   };
 }
-
 
 // ==========================================
 // Limpeza do título
@@ -474,7 +372,6 @@ function audioTarefasLimparTitulo(
   let titulo =
     audioTarefasNormalizar(texto);
 
-
   const iniciosRemovidos = [
     "criar uma tarefa",
     "criar tarefa",
@@ -486,13 +383,8 @@ function audioTarefasLimparTitulo(
     "cadastrar tarefa"
   ];
 
-
-  for (
-    const inicio of iniciosRemovidos
-  ) {
-    if (
-      titulo.startsWith(inicio)
-    ) {
+  for (const inicio of iniciosRemovidos) {
+    if (titulo.startsWith(inicio)) {
       titulo =
         titulo
           .slice(inicio.length)
@@ -502,12 +394,11 @@ function audioTarefasLimparTitulo(
     }
   }
 
-
+  // Expressões maiores devem ficar antes das menores.
   const trechosRemovidos = [
     "prioridade alta",
     "prioridade media",
     "prioridade baixa",
-    "urgente",
     "para depois de amanha",
     "depois de amanha",
     "para amanha",
@@ -515,45 +406,61 @@ function audioTarefasLimparTitulo(
     "para hoje",
     "hoje",
     "na segunda feira",
-    "na segunda",
     "para segunda feira",
+    "na segunda",
     "para segunda",
     "na terca feira",
-    "na terca",
     "para terca feira",
+    "na terca",
     "para terca",
     "na quarta feira",
-    "na quarta",
     "para quarta feira",
+    "na quarta",
     "para quarta",
     "na quinta feira",
-    "na quinta",
     "para quinta feira",
+    "na quinta",
     "para quinta",
     "na sexta feira",
-    "na sexta",
     "para sexta feira",
+    "na sexta",
     "para sexta",
     "no sabado",
     "para sabado",
     "no domingo",
-    "para domingo"
+    "para domingo",
+    "urgente"
   ];
 
-
-  for (
-    const trecho of trechosRemovidos
-  ) {
-    titulo =
-      titulo.replace(
-        new RegExp(
-          `\\b${trecho}\\b`,
-          "gi"
-        ),
-        " "
-      );
+  for (const trecho of trechosRemovidos) {
+    titulo = titulo.replace(
+      new RegExp(
+        `\\b${trecho}\\b`,
+        "gi"
+      ),
+      " "
+    );
   }
 
+  /*
+   * Remove datas numéricas do título depois de o prazo
+   * já ter sido separado. Exemplos aceitos:
+   * "até dia 5/10", "para 05/10/2026",
+   * "no dia 5-10" e "com prazo para dia 5/10".
+   */
+  titulo = titulo.replace(
+    /\b(?:(?:com\s+)?prazo\s+(?:(?:para|ate)\s+)?(?:o\s+)?(?:dia\s+)?|ate\s+(?:o\s+)?(?:dia\s+)?|para\s+(?:o\s+)?(?:dia\s+)?|no\s+dia\s+|em\s+|dia\s+)?\d{1,2}\s*(?:\/|-|de)\s*\d{1,2}(?:\s*(?:\/|-|de)\s*\d{2,4})?\b/gi,
+    " "
+  );
+
+  /*
+   * Remove datas faladas por extenso.
+   * Exemplo: "até dia 5 de outubro de 2026".
+   */
+  titulo = titulo.replace(
+    /\b(?:(?:com\s+)?prazo\s+(?:(?:para|ate)\s+)?(?:o\s+)?(?:dia\s+)?|ate\s+(?:o\s+)?(?:dia\s+)?|para\s+(?:o\s+)?(?:dia\s+)?|no\s+dia\s+|em\s+|dia\s+)?\d{1,2}\s+de\s+(?:janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+\d{2,4})?\b/gi,
+    " "
+  );
 
   if (responsavelNome) {
     const nomeNormalizado =
@@ -566,88 +473,66 @@ function audioTarefasLimparTitulo(
         .split(" ")
         .filter(Boolean)[0] || "";
 
-
     if (nomeNormalizado) {
-      titulo =
-        titulo.replace(
-          new RegExp(
-            `\\bpara\\s+${nomeNormalizado}\\b`,
-            "gi"
-          ),
-          " "
-        );
+      titulo = titulo.replace(
+        new RegExp(
+          `\\bpara\\s+${nomeNormalizado}\\b`,
+          "gi"
+        ),
+        " "
+      );
 
-      titulo =
-        titulo.replace(
-          new RegExp(
-            `\\bresponsavel\\s+${nomeNormalizado}\\b`,
-            "gi"
-          ),
-          " "
-        );
+      titulo = titulo.replace(
+        new RegExp(
+          `\\bresponsavel\\s+${nomeNormalizado}\\b`,
+          "gi"
+        ),
+        " "
+      );
     }
 
+    if (primeiroNome.length >= 3) {
+      titulo = titulo.replace(
+        new RegExp(
+          `\\bpara\\s+${primeiroNome}\\b`,
+          "gi"
+        ),
+        " "
+      );
 
-    if (
-      primeiroNome.length >= 3
-    ) {
-      titulo =
-        titulo.replace(
-          new RegExp(
-            `\\bpara\\s+${primeiroNome}\\b`,
-            "gi"
-          ),
-          " "
-        );
-
-      titulo =
-        titulo.replace(
-          new RegExp(
-            `\\bresponsavel\\s+${primeiroNome}\\b`,
-            "gi"
-          ),
-          " "
-        );
+      titulo = titulo.replace(
+        new RegExp(
+          `\\bresponsavel\\s+${primeiroNome}\\b`,
+          "gi"
+        ),
+        " "
+      );
     }
   }
 
+  titulo = titulo
+    .replace(
+      /\b(?:para|ate|no dia|em|com prazo|prazo|responsavel)\b\s*$/gi,
+      ""
+    )
+    .replace(/\s+/g, " ")
+    .trim();
 
-  titulo =
-    titulo
-      .replace(
-        /\b(?:para|com prazo|prazo|responsavel)\b\s*$/gi,
-        ""
-      )
-      .replace(
-        /\s+/g,
-        " "
-      )
-      .trim();
-
-
-  return audioTarefasCapitalizar(
-    titulo
-  );
+  return audioTarefasCapitalizar(titulo);
 }
-
 
 // ==========================================
 // Interpretação do comando
 // ==========================================
 
-function audioTarefasInterpretar(
-  texto
-) {
+function audioTarefasInterpretar(texto) {
   const api =
     window.ListaLarTarefas;
 
-
   const membros =
-    typeof api?.obterMembros ===
-      "function"
+    typeof api?.obterMembros === "function"
       ? api.obterMembros()
       : [];
-
 
   const responsavel =
     audioTarefasExtrairResponsavel(
@@ -655,25 +540,21 @@ function audioTarefasInterpretar(
       membros
     );
 
-
   const prioridade =
     audioTarefasExtrairPrioridade(
       texto
     );
-
 
   const prazo =
     audioTarefasExtrairPrazo(
       texto
     );
 
-
   const titulo =
     audioTarefasLimparTitulo(
       texto,
       responsavel.nome
     );
-
 
   return {
     titulo,
@@ -685,7 +566,6 @@ function audioTarefasInterpretar(
   };
 }
 
-
 // ==========================================
 // Resultado do reconhecimento
 // ==========================================
@@ -695,7 +575,6 @@ async function audioTarefasProcessarResultado(
 ) {
   const api =
     window.ListaLarTarefas;
-
 
   if (
     !api ||
@@ -711,7 +590,6 @@ async function audioTarefasProcessarResultado(
     return;
   }
 
-
   if (
     typeof api.estaLiberado ===
       "function" &&
@@ -726,29 +604,21 @@ async function audioTarefasProcessarResultado(
     return;
   }
 
-
   const dados =
-    audioTarefasInterpretar(
-      texto
-    );
-
+    audioTarefasInterpretar(texto);
 
   if (!dados.titulo) {
     await audioTarefasAvisar(
       "Não entendi a tarefa",
-      `Fale, por exemplo: "Criar tarefa comprar pão para amanhã".`,
+      'Fale, por exemplo: "Criar tarefa comprar pão para amanhã".',
       "warning"
     );
 
     return;
   }
 
-
-  api.abrirNovaTarefa(
-    dados
-  );
+  api.abrirNovaTarefa(dados);
 }
-
 
 // ==========================================
 // Botão de áudio
@@ -760,7 +630,6 @@ function audioTarefasCriarBotao() {
       "btnAudioTarefas"
     );
 
-
   if (botaoExistente) {
     botaoAudioTarefas =
       botaoExistente;
@@ -768,66 +637,45 @@ function audioTarefasCriarBotao() {
     return true;
   }
 
-
   const botaoNova =
     audioTarefasElemento(
       "btnNovaTarefa"
     );
 
-
-  if (!botaoNova) {
+  if (
+    !botaoNova ||
+    !botaoNova.parentElement
+  ) {
     return false;
   }
-
-
-  const paiBotaoNova =
-    botaoNova.parentElement;
-
-
-  if (!paiBotaoNova) {
-    return false;
-  }
-
 
   const areaBotoes =
-    document.createElement(
-      "div"
-    );
-
+    document.createElement("div");
 
   areaBotoes.id =
     "tarefasAcoesCabecalho";
 
-
   const botaoAudio =
-    document.createElement(
-      "button"
-    );
-
+    document.createElement("button");
 
   botaoAudio.id =
     "btnAudioTarefas";
 
-
   botaoAudio.type =
     "button";
 
-
   botaoAudio.className =
     "btn btn-primary tarefas-btn-audio";
-
 
   botaoAudio.setAttribute(
     "aria-label",
     "Criar tarefa por áudio"
   );
 
-
   botaoAudio.setAttribute(
     "title",
     "Criar tarefa por áudio"
   );
-
 
   botaoAudio.innerHTML = `
     <span
@@ -842,36 +690,29 @@ function audioTarefasCriarBotao() {
     </span>
   `;
 
-
-  paiBotaoNova.insertBefore(
+  botaoNova.parentElement.insertBefore(
     areaBotoes,
     botaoNova
   );
-
 
   areaBotoes.appendChild(
     botaoAudio
   );
 
-
   areaBotoes.appendChild(
     botaoNova
   );
-
 
   botaoAudio.addEventListener(
     "click",
     audioTarefasAlternar
   );
 
-
   botaoAudioTarefas =
     botaoAudio;
 
-
   return true;
 }
-
 
 // ==========================================
 // Janela "Ouvindo..."
@@ -886,26 +727,19 @@ function audioTarefasCriarModalOuvindo() {
     return;
   }
 
-
   const overlay =
-    document.createElement(
-      "div"
-    );
-
+    document.createElement("div");
 
   overlay.id =
     "audioTarefasOverlay";
 
-
   overlay.className =
     "audio-tarefas-overlay";
-
 
   overlay.setAttribute(
     "aria-hidden",
     "true"
   );
-
 
   overlay.innerHTML = `
     <div
@@ -945,17 +779,14 @@ function audioTarefasCriarModalOuvindo() {
     </div>
   `;
 
-
   document.body.appendChild(
     overlay
   );
-
 
   const botaoParar =
     audioTarefasElemento(
       "btnPararAudioTarefas"
     );
-
 
   botaoParar?.addEventListener(
     "click",
@@ -965,7 +796,6 @@ function audioTarefasCriarModalOuvindo() {
         ouvindoTarefas
       ) {
         reconhecimentoTarefas.abort();
-
         return;
       }
 
@@ -974,37 +804,30 @@ function audioTarefasCriarModalOuvindo() {
   );
 }
 
-
 function audioTarefasMostrarModal() {
   audioTarefasCriarModalOuvindo();
-
 
   const overlay =
     audioTarefasElemento(
       "audioTarefasOverlay"
     );
 
-
   if (!overlay) {
     return;
   }
 
-
   overlay.classList.add(
     "visivel"
   );
-
 
   overlay.setAttribute(
     "aria-hidden",
     "false"
   );
 
-
   document.body.classList.add(
     "audio-tarefas-modal-aberto"
   );
-
 
   window.setTimeout(() => {
     audioTarefasElemento(
@@ -1013,35 +836,29 @@ function audioTarefasMostrarModal() {
   }, 50);
 }
 
-
 function audioTarefasOcultarModal() {
   const overlay =
     audioTarefasElemento(
       "audioTarefasOverlay"
     );
 
-
   if (!overlay) {
     return;
   }
 
-
   overlay.classList.remove(
     "visivel"
   );
-
 
   overlay.setAttribute(
     "aria-hidden",
     "true"
   );
 
-
   document.body.classList.remove(
     "audio-tarefas-modal-aberto"
   );
 }
-
 
 // ==========================================
 // Aparência do botão
@@ -1052,16 +869,13 @@ function audioTarefasAtualizarBotao() {
     return;
   }
 
-
   botaoAudioTarefas.disabled =
     false;
-
 
   botaoAudioTarefas.classList.toggle(
     "ouvindo",
     ouvindoTarefas
   );
-
 
   botaoAudioTarefas.innerHTML = `
     <span
@@ -1077,7 +891,6 @@ function audioTarefasAtualizarBotao() {
   `;
 }
 
-
 // ==========================================
 // Reconhecimento de voz
 // ==========================================
@@ -1087,61 +900,48 @@ function audioTarefasPrepararReconhecimento() {
     return false;
   }
 
-
   reconhecimentoTarefas =
     new SpeechRecognition();
-
 
   reconhecimentoTarefas.lang =
     "pt-BR";
 
-
   reconhecimentoTarefas.continuous =
     false;
-
 
   reconhecimentoTarefas.interimResults =
     false;
 
-
   reconhecimentoTarefas.maxAlternatives =
     3;
-
 
   reconhecimentoTarefas.onstart =
     () => {
       ouvindoTarefas = true;
 
       audioTarefasAtualizarBotao();
-
       audioTarefasMostrarModal();
     };
-
 
   reconhecimentoTarefas.onend =
     () => {
       ouvindoTarefas = false;
 
       audioTarefasAtualizarBotao();
-
       audioTarefasOcultarModal();
     };
-
 
   reconhecimentoTarefas.onerror =
     async (evento) => {
       ouvindoTarefas = false;
 
       audioTarefasAtualizarBotao();
-
       audioTarefasOcultarModal();
-
 
       const errosIgnorados = [
         "aborted",
         "no-speech"
       ];
-
 
       if (
         errosIgnorados.includes(
@@ -1151,10 +951,8 @@ function audioTarefasPrepararReconhecimento() {
         return;
       }
 
-
       let mensagem =
         "Não foi possível usar o microfone.";
-
 
       if (
         evento.error ===
@@ -1164,7 +962,6 @@ function audioTarefasPrepararReconhecimento() {
           "A permissão do microfone foi negada. Autorize o microfone nas configurações do navegador.";
       }
 
-
       if (
         evento.error ===
         "audio-capture"
@@ -1172,7 +969,6 @@ function audioTarefasPrepararReconhecimento() {
         mensagem =
           "Nenhum microfone foi encontrado neste aparelho.";
       }
-
 
       if (
         evento.error ===
@@ -1182,7 +978,6 @@ function audioTarefasPrepararReconhecimento() {
           "O reconhecimento de voz precisa de conexão com a internet.";
       }
 
-
       await audioTarefasAvisar(
         "Áudio indisponível",
         mensagem,
@@ -1190,30 +985,20 @@ function audioTarefasPrepararReconhecimento() {
       );
     };
 
-
   reconhecimentoTarefas.onresult =
     async (evento) => {
       const resultados =
         evento.results?.[0];
 
-
       if (!resultados) {
-        audioTarefasOcultarModal();
-
         return;
       }
 
-
-      const alternativas =
-        Array.from(resultados);
-
-
       const alternativa =
-        alternativas
+        Array.from(resultados)
           .map((item) => ({
             texto:
               item.transcript || "",
-
             confianca:
               Number(
                 item.confidence || 0
@@ -1226,11 +1011,9 @@ function audioTarefasPrepararReconhecimento() {
             );
           })[0];
 
-
       const texto =
         alternativa?.texto?.trim() ||
         "";
-
 
       if (!texto) {
         audioTarefasOcultarModal();
@@ -1244,23 +1027,16 @@ function audioTarefasPrepararReconhecimento() {
         return;
       }
 
-
-      /*
-       * A janela é fechada antes da abertura
-       * do formulário da nova tarefa.
-       */
+      // Fecha a janela antes de abrir o formulário.
       audioTarefasOcultarModal();
-
 
       await audioTarefasProcessarResultado(
         texto
       );
     };
 
-
   return true;
 }
-
 
 async function audioTarefasAlternar() {
   if (!SpeechRecognition) {
@@ -1273,7 +1049,6 @@ async function audioTarefasAlternar() {
     return;
   }
 
-
   if (
     !reconhecimentoTarefas &&
     !audioTarefasPrepararReconhecimento()
@@ -1281,11 +1056,9 @@ async function audioTarefasAlternar() {
     return;
   }
 
-
   if (ouvindoTarefas) {
     try {
       reconhecimentoTarefas.abort();
-
     } catch (erro) {
       console.warn(
         "ListaLar Tarefas Áudio:",
@@ -1295,17 +1068,14 @@ async function audioTarefasAlternar() {
       ouvindoTarefas = false;
 
       audioTarefasAtualizarBotao();
-
       audioTarefasOcultarModal();
     }
 
     return;
   }
 
-
   try {
     reconhecimentoTarefas.start();
-
   } catch (erro) {
     console.warn(
       "ListaLar Tarefas Áudio:",
@@ -1315,11 +1085,9 @@ async function audioTarefasAlternar() {
     ouvindoTarefas = false;
 
     audioTarefasAtualizarBotao();
-
     audioTarefasOcultarModal();
   }
 }
-
 
 // ==========================================
 // Estilos complementares
@@ -1334,16 +1102,11 @@ function audioTarefasCriarEstilos() {
     return;
   }
 
-
   const estilo =
-    document.createElement(
-      "style"
-    );
-
+    document.createElement("style");
 
   estilo.id =
     "tarefasAudioEstilos";
-
 
   estilo.textContent = `
     #tarefasAcoesCabecalho {
@@ -1373,10 +1136,10 @@ function audioTarefasCriarEstilos() {
     }
 
     #btnAudioTarefas.ouvindo {
-      animation: tarefasAudioBotaoPulsar 1s infinite;
+      animation: tarefasAudioPulsar 1s infinite;
     }
 
-    @keyframes tarefasAudioBotaoPulsar {
+    @keyframes tarefasAudioPulsar {
       0% {
         transform: scale(1);
       }
@@ -1424,10 +1187,10 @@ function audioTarefasCriarEstilos() {
 
     .audio-tarefas-modal {
       width: min(100%, 440px);
+      box-sizing: border-box;
       border-radius: 28px;
       background: #ffffff;
       padding: 30px 24px 26px;
-      box-sizing: border-box;
       box-shadow:
         0 24px 70px rgba(10, 24, 45, 0.28);
       text-align: center;
@@ -1450,7 +1213,7 @@ function audioTarefasCriarEstilos() {
       justify-content: center;
       background: rgba(255, 116, 116, 0.10);
       animation:
-        audioTarefasModalPulsar
+        audioTarefasPulso
         1.35s
         infinite
         ease-in-out;
@@ -1518,7 +1281,7 @@ function audioTarefasCriarEstilos() {
       outline-offset: 3px;
     }
 
-    @keyframes audioTarefasModalPulsar {
+    @keyframes audioTarefasPulso {
       0%,
       100% {
         transform: scale(1);
@@ -1568,12 +1331,10 @@ function audioTarefasCriarEstilos() {
     }
   `;
 
-
   document.head.appendChild(
     estilo
   );
 }
-
 
 // ==========================================
 // Inicialização
@@ -1581,21 +1342,16 @@ function audioTarefasCriarEstilos() {
 
 function audioTarefasInstalar() {
   audioTarefasCriarEstilos();
-
   audioTarefasCriarModalOuvindo();
 
-
   let tentativas = 0;
-
 
   const intervalo =
     window.setInterval(() => {
       tentativas += 1;
 
-
       const instalado =
         audioTarefasCriarBotao();
-
 
       if (
         instalado ||
@@ -1608,7 +1364,6 @@ function audioTarefasInstalar() {
     }, 100);
 }
 
-
 if (
   document.readyState ===
   "loading"
@@ -1620,7 +1375,6 @@ if (
       once: true
     }
   );
-
 } else {
   audioTarefasInstalar();
 }
