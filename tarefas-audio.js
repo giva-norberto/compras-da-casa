@@ -1,7 +1,7 @@
 // ==========================================
 // ListaLar - Áudio para Tarefas
 // Arquivo: tarefas-audio.js
-// Versão: 1.0.0
+// Versão: 1.1.0
 // ==========================================
 
 
@@ -188,13 +188,22 @@ function audioTarefasExtrairPrazo(
   hoje.setHours(0, 0, 0, 0);
 
 
+  /*
+   * A verificação de "depois de amanhã"
+   * precisa acontecer antes de "amanhã",
+   * porque a frase também contém a palavra
+   * "amanhã".
+   */
   if (
     normalizado.includes(
-      "hoje"
+      "depois de amanha"
     )
   ) {
     return audioTarefasDataIso(
-      hoje
+      audioTarefasAdicionarDias(
+        hoje,
+        2
+      )
     );
   }
 
@@ -215,14 +224,11 @@ function audioTarefasExtrairPrazo(
 
   if (
     normalizado.includes(
-      "depois de amanha"
+      "hoje"
     )
   ) {
     return audioTarefasDataIso(
-      audioTarefasAdicionarDias(
-        hoje,
-        2
-      )
+      hoje
     );
   }
 
@@ -236,36 +242,36 @@ function audioTarefasExtrairPrazo(
     },
     {
       nomes: [
-        "segunda",
-        "segunda feira"
+        "segunda feira",
+        "segunda"
       ],
       numero: 1
     },
     {
       nomes: [
-        "terca",
-        "terca feira"
+        "terca feira",
+        "terca"
       ],
       numero: 2
     },
     {
       nomes: [
-        "quarta",
-        "quarta feira"
+        "quarta feira",
+        "quarta"
       ],
       numero: 3
     },
     {
       nomes: [
-        "quinta",
-        "quinta feira"
+        "quinta feira",
+        "quinta"
       ],
       numero: 4
     },
     {
       nomes: [
-        "sexta",
-        "sexta feira"
+        "sexta feira",
+        "sexta"
       ],
       numero: 5
     },
@@ -502,12 +508,12 @@ function audioTarefasLimparTitulo(
     "prioridade media",
     "prioridade baixa",
     "urgente",
-    "para hoje",
-    "hoje",
-    "para amanha",
-    "amanha",
     "para depois de amanha",
     "depois de amanha",
+    "para amanha",
+    "amanha",
+    "para hoje",
+    "hoje",
     "na segunda feira",
     "na segunda",
     "para segunda feira",
@@ -749,15 +755,15 @@ async function audioTarefasProcessarResultado(
 // ==========================================
 
 function audioTarefasCriarBotao() {
-  if (
+  const botaoExistente =
     audioTarefasElemento(
       "btnAudioTarefas"
-    )
-  ) {
+    );
+
+
+  if (botaoExistente) {
     botaoAudioTarefas =
-      audioTarefasElemento(
-        "btnAudioTarefas"
-      );
+      botaoExistente;
 
     return true;
   }
@@ -774,6 +780,15 @@ function audioTarefasCriarBotao() {
   }
 
 
+  const paiBotaoNova =
+    botaoNova.parentElement;
+
+
+  if (!paiBotaoNova) {
+    return false;
+  }
+
+
   const areaBotoes =
     document.createElement(
       "div"
@@ -782,18 +797,6 @@ function audioTarefasCriarBotao() {
 
   areaBotoes.id =
     "tarefasAcoesCabecalho";
-
-
-  areaBotoes.style.display =
-    "flex";
-
-
-  areaBotoes.style.alignItems =
-    "center";
-
-
-  areaBotoes.style.gap =
-    "8px";
 
 
   const botaoAudio =
@@ -828,13 +831,10 @@ function audioTarefasCriarBotao() {
 
   botaoAudio.innerHTML = `
     <span
+      class="tarefas-audio-icone"
       aria-hidden="true"
-      style="
-        font-size: 20px;
-        line-height: 1;
-      "
     >
-      🎙️
+      🎤
     </span>
 
     <span class="tarefas-audio-texto">
@@ -843,7 +843,7 @@ function audioTarefasCriarBotao() {
   `;
 
 
-  botaoNova.parentElement.insertBefore(
+  paiBotaoNova.insertBefore(
     areaBotoes,
     botaoNova
   );
@@ -874,6 +874,176 @@ function audioTarefasCriarBotao() {
 
 
 // ==========================================
+// Janela "Ouvindo..."
+// ==========================================
+
+function audioTarefasCriarModalOuvindo() {
+  if (
+    audioTarefasElemento(
+      "audioTarefasOverlay"
+    )
+  ) {
+    return;
+  }
+
+
+  const overlay =
+    document.createElement(
+      "div"
+    );
+
+
+  overlay.id =
+    "audioTarefasOverlay";
+
+
+  overlay.className =
+    "audio-tarefas-overlay";
+
+
+  overlay.setAttribute(
+    "aria-hidden",
+    "true"
+  );
+
+
+  overlay.innerHTML = `
+    <div
+      class="audio-tarefas-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="audioTarefasTitulo"
+      aria-describedby="audioTarefasDescricao"
+    >
+      <div class="audio-tarefas-pulso">
+        <div class="audio-tarefas-circulo">
+          <span
+            class="audio-tarefas-modal-icone"
+            aria-hidden="true"
+          >
+            🎤
+          </span>
+        </div>
+      </div>
+
+      <h2 id="audioTarefasTitulo">
+        Ouvindo...
+      </h2>
+
+      <p id="audioTarefasDescricao">
+        Fale naturalmente a tarefa, o responsável,
+        o prazo e a prioridade.
+      </p>
+
+      <button
+        id="btnPararAudioTarefas"
+        type="button"
+        class="audio-tarefas-parar"
+      >
+        Parar
+      </button>
+    </div>
+  `;
+
+
+  document.body.appendChild(
+    overlay
+  );
+
+
+  const botaoParar =
+    audioTarefasElemento(
+      "btnPararAudioTarefas"
+    );
+
+
+  botaoParar?.addEventListener(
+    "click",
+    () => {
+      if (
+        reconhecimentoTarefas &&
+        ouvindoTarefas
+      ) {
+        reconhecimentoTarefas.abort();
+
+        return;
+      }
+
+      audioTarefasOcultarModal();
+    }
+  );
+}
+
+
+function audioTarefasMostrarModal() {
+  audioTarefasCriarModalOuvindo();
+
+
+  const overlay =
+    audioTarefasElemento(
+      "audioTarefasOverlay"
+    );
+
+
+  if (!overlay) {
+    return;
+  }
+
+
+  overlay.classList.add(
+    "visivel"
+  );
+
+
+  overlay.setAttribute(
+    "aria-hidden",
+    "false"
+  );
+
+
+  document.body.classList.add(
+    "audio-tarefas-modal-aberto"
+  );
+
+
+  window.setTimeout(() => {
+    audioTarefasElemento(
+      "btnPararAudioTarefas"
+    )?.focus();
+  }, 50);
+}
+
+
+function audioTarefasOcultarModal() {
+  const overlay =
+    audioTarefasElemento(
+      "audioTarefasOverlay"
+    );
+
+
+  if (!overlay) {
+    return;
+  }
+
+
+  overlay.classList.remove(
+    "visivel"
+  );
+
+
+  overlay.setAttribute(
+    "aria-hidden",
+    "true"
+  );
+
+
+  document.body.classList.remove(
+    "audio-tarefas-modal-aberto"
+  );
+}
+
+
+// ==========================================
 // Aparência do botão
 // ==========================================
 
@@ -883,56 +1053,26 @@ function audioTarefasAtualizarBotao() {
   }
 
 
-  if (ouvindoTarefas) {
-    botaoAudioTarefas.disabled =
-      false;
-
-    botaoAudioTarefas.classList.add(
-      "ouvindo"
-    );
-
-    botaoAudioTarefas.innerHTML = `
-      <span
-        aria-hidden="true"
-        style="
-          font-size: 20px;
-          line-height: 1;
-        "
-      >
-        ⏹️
-      </span>
-
-      <span class="tarefas-audio-texto">
-        Parar
-      </span>
-    `;
-
-    return;
-  }
-
-
   botaoAudioTarefas.disabled =
     false;
 
 
-  botaoAudioTarefas.classList.remove(
-    "ouvindo"
+  botaoAudioTarefas.classList.toggle(
+    "ouvindo",
+    ouvindoTarefas
   );
 
 
   botaoAudioTarefas.innerHTML = `
     <span
+      class="tarefas-audio-icone"
       aria-hidden="true"
-      style="
-        font-size: 20px;
-        line-height: 1;
-      "
     >
-      🎙️
+      🎤
     </span>
 
     <span class="tarefas-audio-texto">
-      Áudio
+      ${ouvindoTarefas ? "Ouvindo" : "Áudio"}
     </span>
   `;
 }
@@ -973,6 +1113,8 @@ function audioTarefasPrepararReconhecimento() {
       ouvindoTarefas = true;
 
       audioTarefasAtualizarBotao();
+
+      audioTarefasMostrarModal();
     };
 
 
@@ -981,6 +1123,8 @@ function audioTarefasPrepararReconhecimento() {
       ouvindoTarefas = false;
 
       audioTarefasAtualizarBotao();
+
+      audioTarefasOcultarModal();
     };
 
 
@@ -989,6 +1133,8 @@ function audioTarefasPrepararReconhecimento() {
       ouvindoTarefas = false;
 
       audioTarefasAtualizarBotao();
+
+      audioTarefasOcultarModal();
 
 
       const errosIgnorados = [
@@ -1052,6 +1198,8 @@ function audioTarefasPrepararReconhecimento() {
 
 
       if (!resultados) {
+        audioTarefasOcultarModal();
+
         return;
       }
 
@@ -1085,6 +1233,8 @@ function audioTarefasPrepararReconhecimento() {
 
 
       if (!texto) {
+        audioTarefasOcultarModal();
+
         await audioTarefasAvisar(
           "Não entendi",
           "Fale novamente de forma mais próxima ao celular.",
@@ -1093,6 +1243,13 @@ function audioTarefasPrepararReconhecimento() {
 
         return;
       }
+
+
+      /*
+       * A janela é fechada antes da abertura
+       * do formulário da nova tarefa.
+       */
+      audioTarefasOcultarModal();
 
 
       await audioTarefasProcessarResultado(
@@ -1126,7 +1283,21 @@ async function audioTarefasAlternar() {
 
 
   if (ouvindoTarefas) {
-    reconhecimentoTarefas.abort();
+    try {
+      reconhecimentoTarefas.abort();
+
+    } catch (erro) {
+      console.warn(
+        "ListaLar Tarefas Áudio:",
+        erro
+      );
+
+      ouvindoTarefas = false;
+
+      audioTarefasAtualizarBotao();
+
+      audioTarefasOcultarModal();
+    }
 
     return;
   }
@@ -1140,6 +1311,12 @@ async function audioTarefasAlternar() {
       "ListaLar Tarefas Áudio:",
       erro
     );
+
+    ouvindoTarefas = false;
+
+    audioTarefasAtualizarBotao();
+
+    audioTarefasOcultarModal();
   }
 }
 
@@ -1178,6 +1355,7 @@ function audioTarefasCriarEstilos() {
     }
 
     #btnAudioTarefas {
+      min-width: 72px;
       min-height: 44px;
       display: inline-flex;
       align-items: center;
@@ -1186,11 +1364,19 @@ function audioTarefasCriarEstilos() {
       white-space: nowrap;
     }
 
-    #btnAudioTarefas.ouvindo {
-      animation: tarefasAudioPulsar 1s infinite;
+    #btnAudioTarefas .tarefas-audio-icone {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      line-height: 1;
     }
 
-    @keyframes tarefasAudioPulsar {
+    #btnAudioTarefas.ouvindo {
+      animation: tarefasAudioBotaoPulsar 1s infinite;
+    }
+
+    @keyframes tarefasAudioBotaoPulsar {
       0% {
         transform: scale(1);
       }
@@ -1204,12 +1390,156 @@ function audioTarefasCriarEstilos() {
       }
     }
 
+    body.audio-tarefas-modal-aberto {
+      overflow: hidden;
+    }
+
+    .audio-tarefas-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding:
+        max(20px, env(safe-area-inset-top))
+        20px
+        max(20px, env(safe-area-inset-bottom));
+      background: rgba(22, 35, 54, 0.66);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition:
+        opacity 0.18s ease,
+        visibility 0.18s ease;
+    }
+
+    .audio-tarefas-overlay.visivel {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .audio-tarefas-modal {
+      width: min(100%, 440px);
+      border-radius: 28px;
+      background: #ffffff;
+      padding: 30px 24px 26px;
+      box-sizing: border-box;
+      box-shadow:
+        0 24px 70px rgba(10, 24, 45, 0.28);
+      text-align: center;
+      transform: translateY(12px) scale(0.98);
+      transition: transform 0.18s ease;
+    }
+
+    .audio-tarefas-overlay.visivel
+    .audio-tarefas-modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .audio-tarefas-pulso {
+      width: 132px;
+      height: 132px;
+      margin: 0 auto 8px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 116, 116, 0.10);
+      animation:
+        audioTarefasModalPulsar
+        1.35s
+        infinite
+        ease-in-out;
+    }
+
+    .audio-tarefas-circulo {
+      width: 102px;
+      height: 102px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 116, 116, 0.14);
+    }
+
+    .audio-tarefas-modal-icone {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 54px;
+      line-height: 1;
+    }
+
+    .audio-tarefas-modal h2 {
+      margin: 4px 0 12px;
+      color: #172235;
+      font-size: clamp(32px, 8vw, 42px);
+      font-weight: 800;
+      line-height: 1.08;
+    }
+
+    .audio-tarefas-modal p {
+      max-width: 340px;
+      margin: 0 auto 24px;
+      color: #63728a;
+      font-size: clamp(18px, 4.8vw, 22px);
+      font-weight: 650;
+      line-height: 1.42;
+    }
+
+    .audio-tarefas-parar {
+      width: 100%;
+      min-height: 58px;
+      border: 0;
+      border-radius: 18px;
+      background: #ffe1e1;
+      color: #b32323;
+      font: inherit;
+      font-size: 20px;
+      font-weight: 800;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .audio-tarefas-parar:hover {
+      background: #ffd7d7;
+    }
+
+    .audio-tarefas-parar:active {
+      transform: scale(0.99);
+    }
+
+    .audio-tarefas-parar:focus-visible {
+      outline: 3px solid rgba(35, 119, 255, 0.35);
+      outline-offset: 3px;
+    }
+
+    @keyframes audioTarefasModalPulsar {
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
     @media (max-width: 520px) {
       #tarefasAcoesCabecalho {
         gap: 6px;
       }
 
-      #btnAudioTarefas,
+      #btnAudioTarefas {
+        min-width: 64px;
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
       #btnNovaTarefa {
         padding-left: 12px;
         padding-right: 12px;
@@ -1217,6 +1547,23 @@ function audioTarefasCriarEstilos() {
 
       .tarefas-audio-texto {
         display: none;
+      }
+
+      .audio-tarefas-modal {
+        border-radius: 26px;
+        padding: 28px 22px 24px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #btnAudioTarefas.ouvindo,
+      .audio-tarefas-pulso {
+        animation: none;
+      }
+
+      .audio-tarefas-overlay,
+      .audio-tarefas-modal {
+        transition: none;
       }
     }
   `;
@@ -1234,6 +1581,8 @@ function audioTarefasCriarEstilos() {
 
 function audioTarefasInstalar() {
   audioTarefasCriarEstilos();
+
+  audioTarefasCriarModalOuvindo();
 
 
   let tentativas = 0;
