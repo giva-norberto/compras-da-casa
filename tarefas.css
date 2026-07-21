@@ -1,6 +1,7 @@
 /* ==========================================
    ListaLar - Módulo Tarefas
    Arquivo: tarefas.css
+   Visual: cartões compactos no padrão das listas
    ========================================== */
 
 
@@ -54,7 +55,7 @@
 #tarefas {
   width: 100%;
   max-width: 100%;
-  padding-bottom: 20px;
+  padding-bottom: 14px;
 }
 
 #tarefas[hidden] {
@@ -65,7 +66,7 @@
   width: 100%;
   max-width: 100%;
   margin: 0;
-  padding: 18px;
+  padding: 14px;
   overflow: visible;
   box-sizing: border-box;
 }
@@ -74,8 +75,8 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 #tarefas .tarefas-cabecalho > div:first-child {
@@ -89,7 +90,7 @@
 }
 
 #tarefas .tarefas-cabecalho .subtitle {
-  margin-top: 5px;
+  margin-top: 3px;
   margin-bottom: 0;
   color: var(--tarefas-cor-cinza-500);
   line-height: 1.4;
@@ -97,11 +98,34 @@
 
 #tarefas .tarefas-btn-nova {
   flex-shrink: 0;
-  min-height: 42px;
-  padding: 10px 17px;
+  min-height: 38px;
+  padding: 8px 13px;
   border-radius: var(--tarefas-raio-medio);
   white-space: nowrap;
   font-weight: 700;
+}
+
+
+/* Agrupa os botões Nova tarefa e Áudio sem alterar o HTML. */
+
+#tarefas #tarefasAcoesCabecalho {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+#tarefas .tarefas-btn-audio {
+  min-height: 38px;
+  padding: 8px 11px;
+  border-radius: var(--tarefas-raio-medio);
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+#tarefas .tarefas-btn-audio .tarefas-audio-icone {
+  line-height: 1;
 }
 
 
@@ -112,13 +136,13 @@
 #tarefas .summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 18px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 #tarefas .mini-card {
   min-width: 0;
-  padding: 13px 8px;
+  padding: 9px 6px;
   border: 1px solid var(--tarefas-cor-cinza-200);
   border-radius: var(--tarefas-raio-medio);
   background: var(--tarefas-cor-cinza-50);
@@ -128,9 +152,9 @@
 
 #tarefas .mini-card strong {
   display: block;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   color: var(--tarefas-cor-cinza-800);
-  font-size: 1.35rem;
+  font-size: 1.18rem;
   line-height: 1.1;
 }
 
@@ -138,7 +162,7 @@
   display: block;
   overflow: hidden;
   color: var(--tarefas-cor-cinza-500);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -169,8 +193,8 @@
 
 #tarefas .tarefas-formulario {
   width: 100%;
-  margin-bottom: 20px;
-  padding: 16px;
+  margin-bottom: 12px;
+  padding: 13px;
   border: 1px solid #bfdbfe;
   border-radius: var(--tarefas-raio-grande);
   background: #eff6ff;
@@ -183,7 +207,7 @@
 }
 
 #tarefas .tarefas-formulario-titulo {
-  margin-bottom: 15px;
+  margin-bottom: 11px;
   color: var(--tarefas-cor-cinza-800);
   font-size: 1.05rem;
 }
@@ -194,7 +218,7 @@
 
 #tarefas .tarefas-campo {
   width: 100%;
-  margin-bottom: 14px;
+  margin-bottom: 11px;
 }
 
 #tarefas .tarefas-campo:last-child {
@@ -203,7 +227,7 @@
 
 #tarefas .tarefas-campo label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
   color: var(--tarefas-cor-cinza-700);
   font-size: 0.88rem;
   font-weight: 700;
@@ -231,13 +255,13 @@
 
 #tarefas .tarefas-campo input,
 #tarefas .tarefas-campo select {
-  min-height: 44px;
-  padding: 10px 12px;
+  min-height: 42px;
+  padding: 9px 11px;
 }
 
 #tarefas .tarefas-campo textarea {
-  min-height: 88px;
-  padding: 11px 12px;
+  min-height: 76px;
+  padding: 9px 11px;
   line-height: 1.45;
   resize: vertical;
 }
@@ -263,27 +287,49 @@
   opacity: 0.75;
 }
 
+
+/* Duas colunas */
+
 #tarefas .tarefas-grid-duas-colunas {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+  gap: 10px;
 }
 
 #tarefas .tarefas-grid-duas-colunas .tarefas-campo {
   min-width: 0;
 }
 
+
+/* Três colunas para compromisso, horário e prazo */
+
+#tarefas .tarefas-grid-tres-colunas {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+#tarefas .tarefas-grid-tres-colunas .tarefas-campo {
+  min-width: 0;
+}
+
+
+/* Botões do formulário */
+
 #tarefas .tarefas-formulario-acoes {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 4px;
+  gap: 8px;
+  margin-top: 2px;
 }
 
 #tarefas .tarefas-formulario-acoes .btn {
-  min-height: 42px;
-  padding: 10px 16px;
+  min-height: 38px;
+  padding: 8px 13px;
   border-radius: var(--tarefas-raio-pequeno);
   font-weight: 700;
 }
@@ -302,11 +348,11 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  gap: 12px;
+  gap: 8px;
 }
 
 #tarefas .tarefas-lista .empty {
-  padding: 30px 16px;
+  padding: 22px 14px;
   border: 1px dashed var(--tarefas-cor-cinza-300);
   border-radius: var(--tarefas-raio-medio);
   background: var(--tarefas-cor-cinza-50);
@@ -323,12 +369,13 @@
 #tarefas .tarefa-item {
   position: relative;
   width: 100%;
-  padding: 15px;
+  padding: 11px;
   border: 1px solid var(--tarefas-cor-cinza-200);
-  border-left: 5px solid var(--tarefas-cor-cinza-300);
-  border-radius: var(--tarefas-raio-medio);
+  border-left: 4px solid var(--tarefas-cor-cinza-300);
+  border-radius: 10px;
   background: var(--tarefas-cor-branca);
-  box-shadow: var(--tarefas-sombra-suave);
+  box-shadow:
+    0 2px 8px rgba(15, 23, 42, 0.07);
   box-sizing: border-box;
   transition:
     transform 0.18s ease,
@@ -339,7 +386,8 @@
 
 #tarefas .tarefa-item:hover {
   transform: translateY(-1px);
-  box-shadow: var(--tarefas-sombra-card);
+  box-shadow:
+    0 5px 14px rgba(15, 23, 42, 0.10);
 }
 
 #tarefas .tarefa-item.prioridade-alta {
@@ -375,7 +423,7 @@
   display: flex;
   align-items: flex-start;
   width: 100%;
-  gap: 12px;
+  gap: 9px;
 }
 
 #tarefas .tarefa-conteudo {
@@ -385,11 +433,11 @@
 
 #tarefas .tarefa-titulo {
   display: block;
-  margin-top: 1px;
+  margin-top: 0;
   color: var(--tarefas-cor-cinza-800);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 800;
-  line-height: 1.35;
+  line-height: 1.25;
   overflow-wrap: anywhere;
 }
 
@@ -405,11 +453,11 @@
 
 #tarefas .tarefa-check {
   display: inline-flex;
-  flex: 0 0 30px;
+  flex: 0 0 27px;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 27px;
+  height: 27px;
   margin: 0;
   padding: 0;
   border: 2px solid var(--tarefas-cor-cinza-300);
@@ -418,7 +466,7 @@
   color: var(--tarefas-cor-branca);
   cursor: pointer;
   font-family: inherit;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 900;
   line-height: 1;
   box-sizing: border-box;
@@ -441,7 +489,8 @@
 }
 
 #tarefas .tarefa-check:focus-visible {
-  outline: 3px solid rgba(37, 99, 235, 0.25);
+  outline:
+    3px solid rgba(37, 99, 235, 0.25);
   outline-offset: 2px;
 }
 
@@ -460,38 +509,78 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 10px;
-  margin-top: 8px;
+  gap: 4px 8px;
+  margin-top: 6px;
   color: var(--tarefas-cor-cinza-500);
-  font-size: 0.79rem;
-  line-height: 1.35;
+  font-size: 0.76rem;
+  line-height: 1.25;
 }
 
 #tarefas .tarefa-detalhes span {
   display: inline-flex;
   align-items: center;
   min-width: 0;
-  gap: 3px;
+  gap: 2px;
   overflow-wrap: anywhere;
 }
 
-#tarefas .tarefa-detalhes .tarefa-prazo-vencido {
+
+/*
+  Compatibilidade com a versão nova do tarefas.js:
+  compromisso, horário e prazo continuam separados,
+  porém permanecem compactos no cartão.
+*/
+
+#tarefas .tarefa-compromisso,
+#tarefas .tarefa-data-compromisso,
+#tarefas .tarefa-horario,
+#tarefas .tarefa-horario-compromisso,
+#tarefas .tarefa-prazo,
+#tarefas .tarefa-prioridade,
+#tarefas .tarefa-responsavel {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 2px;
+}
+
+#tarefas .tarefa-linha-datas,
+#tarefas .tarefa-datas,
+#tarefas .tarefa-informacoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 5px;
+  color: var(--tarefas-cor-cinza-500);
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+#tarefas .tarefa-detalhes .tarefa-prazo-vencido,
+#tarefas .tarefa-prazo-vencido {
   color: var(--tarefas-cor-vermelha);
   font-weight: 800;
 }
 
-#tarefas .tarefa-item.concluida .tarefa-detalhes {
+#tarefas .tarefa-item.concluida .tarefa-detalhes,
+#tarefas .tarefa-item.concluida .tarefa-linha-datas,
+#tarefas .tarefa-item.concluida .tarefa-datas,
+#tarefas .tarefa-item.concluida .tarefa-informacoes {
   color: #94a3b8;
 }
 
+
+/* Observação */
+
 #tarefas .tarefa-observacao {
-  margin: 10px 0 0;
-  padding: 9px 11px;
+  margin: 7px 0 0;
+  padding: 7px 9px;
   border-radius: var(--tarefas-raio-pequeno);
   background: var(--tarefas-cor-cinza-50);
   color: var(--tarefas-cor-cinza-600);
-  font-size: 0.86rem;
-  line-height: 1.45;
+  font-size: 0.81rem;
+  line-height: 1.35;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -510,25 +599,26 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 13px;
-  padding-top: 11px;
-  border-top: 1px solid var(--tarefas-cor-cinza-100);
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top:
+    1px solid var(--tarefas-cor-cinza-100);
 }
 
 #tarefas .tarefa-acao {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
+  min-height: 30px;
   margin: 0;
-  padding: 7px 11px;
+  padding: 5px 9px;
   border: 1px solid transparent;
   border-radius: var(--tarefas-raio-pequeno);
   background: transparent;
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 700;
   line-height: 1;
   transition:
@@ -546,7 +636,8 @@
 }
 
 #tarefas .tarefa-acao:focus-visible {
-  outline: 3px solid rgba(37, 99, 235, 0.22);
+  outline:
+    3px solid rgba(37, 99, 235, 0.22);
   outline-offset: 1px;
 }
 
@@ -623,7 +714,6 @@
 
 /* ==========================================
    Modo escuro
-   Compatível caso o ListaLar use tema escuro
    ========================================== */
 
 @media (prefers-color-scheme: dark) {
@@ -684,11 +774,11 @@
 
 @media (max-width: 768px) {
   #tarefas .tarefas-card-principal {
-    padding: 15px;
+    padding: 12px;
   }
 
   #tarefas .tarefas-cabecalho {
-    margin-bottom: 15px;
+    margin-bottom: 11px;
   }
 
   #tarefas .summary {
@@ -696,15 +786,15 @@
   }
 
   #tarefas .mini-card {
-    padding: 12px 6px;
+    padding: 8px 5px;
   }
 
   #tarefas .tarefas-formulario {
-    padding: 14px;
+    padding: 12px;
   }
 
   #tarefas .tarefa-item {
-    padding: 14px;
+    padding: 10px;
   }
 }
 
@@ -719,13 +809,14 @@
   }
 
   #tarefas .tarefas-card-principal {
-    padding: 12px;
+    padding: 10px;
     border-radius: 12px;
   }
 
   #tarefas .tarefas-cabecalho {
+    flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 
   #tarefas .tarefas-cabecalho .title {
@@ -737,36 +828,49 @@
   }
 
   #tarefas .tarefas-btn-nova {
-    min-height: 40px;
-    padding: 9px 13px;
-    font-size: 0.86rem;
+    min-height: 36px;
+    padding: 7px 11px;
+    font-size: 0.82rem;
   }
 
   #tarefas .summary {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    margin-bottom: 15px;
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+    margin-bottom: 11px;
   }
 
   #tarefas .mini-card {
-    min-height: 66px;
-    padding: 10px 4px;
+    min-height: 52px;
+    padding: 7px 4px;
   }
 
   #tarefas .mini-card strong {
-    font-size: 1.2rem;
+    font-size: 1.08rem;
   }
 
   #tarefas .mini-card span {
-    font-size: 0.7rem;
+    font-size: 0.66rem;
   }
 
-  #tarefas .tarefas-grid-duas-colunas {
+  #tarefas .tarefas-grid-duas-colunas,
+  #tarefas .tarefas-grid-tres-colunas {
     grid-template-columns: 1fr;
     gap: 0;
   }
 
+  #tarefas #tarefasAcoesCabecalho {
+    gap: 5px;
+    margin-left: auto;
+  }
+
+  #tarefas .tarefas-btn-audio {
+    min-height: 36px;
+    padding: 7px 9px;
+    font-size: 0.82rem;
+  }
+
   #tarefas .tarefas-formulario {
-    padding: 13px;
+    padding: 11px;
     border-radius: var(--tarefas-raio-medio);
   }
 
@@ -784,42 +888,45 @@
   }
 
   #tarefas .tarefa-item {
-    padding: 13px;
+    padding: 10px;
   }
 
   #tarefas .tarefa-topo {
-    gap: 10px;
+    gap: 8px;
   }
 
   #tarefas .tarefa-check {
-    flex-basis: 29px;
-    width: 29px;
-    height: 29px;
+    flex-basis: 26px;
+    width: 26px;
+    height: 26px;
   }
 
   #tarefas .tarefa-titulo {
-    font-size: 0.96rem;
+    font-size: 0.92rem;
   }
 
-  #tarefas .tarefa-detalhes {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
-    font-size: 0.77rem;
+  #tarefas .tarefa-detalhes,
+  #tarefas .tarefa-linha-datas,
+  #tarefas .tarefa-datas,
+  #tarefas .tarefa-informacoes {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px 8px;
+    font-size: 0.73rem;
   }
 
   #tarefas .tarefa-observacao {
-    font-size: 0.82rem;
+    font-size: 0.78rem;
   }
 
   #tarefas .tarefa-acoes {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 7px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
   }
 
   #tarefas .tarefa-acao {
-    width: 100%;
+    width: auto;
     min-width: 0;
   }
 }
@@ -831,7 +938,7 @@
 
 @media (max-width: 380px) {
   #tarefas .tarefas-card-principal {
-    padding: 10px;
+    padding: 8px;
   }
 
   #tarefas .tarefas-cabecalho {
@@ -843,6 +950,19 @@
     padding-left: 10px;
   }
 
+  #tarefas #tarefasAcoesCabecalho {
+    gap: 4px;
+  }
+
+  #tarefas .tarefas-btn-audio {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  #tarefas .tarefas-btn-audio .tarefas-audio-texto {
+    display: none;
+  }
+
   #tarefas .mini-card span {
     font-size: 0.64rem;
   }
@@ -852,7 +972,7 @@
   }
 
   #tarefas .tarefa-acoes {
-    grid-template-columns: 1fr;
+    flex-wrap: wrap;
   }
 }
 
