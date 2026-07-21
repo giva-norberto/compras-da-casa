@@ -436,15 +436,50 @@ function definirVisibilidade(
   moduloLiberado =
     liberado === true;
 
-  const botao =
-    el("tab-tarefas");
+  function aplicarVisibilidadeMenu() {
+    const botao =
+      el("tab-tarefas");
 
-  if (botao) {
+    if (!botao) {
+      return false;
+    }
+
     botao.hidden =
       !moduloLiberado;
+
+    botao.style.display =
+      moduloLiberado
+        ? ""
+        : "none";
+
+    ajustarMenu();
+
+    return true;
   }
 
-  ajustarMenu();
+  // Tenta imediatamente.
+  if (!aplicarVisibilidadeMenu()) {
+
+    // O menu pode ser criado depois pelo index ou por outro arquivo.
+    let tentativas = 0;
+
+    const intervalo =
+      window.setInterval(() => {
+        tentativas += 1;
+
+        const encontrou =
+          aplicarVisibilidadeMenu();
+
+        if (
+          encontrou ||
+          tentativas >= 40
+        ) {
+          window.clearInterval(
+            intervalo
+          );
+        }
+      }, 250);
+  }
 
   if (
     !moduloLiberado &&
@@ -457,7 +492,6 @@ function definirVisibilidade(
     window.abrirTela("lista");
   }
 }
-
 
 // ==========================================
 // Estrutura visual dinâmica
