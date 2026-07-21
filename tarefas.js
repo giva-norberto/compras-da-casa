@@ -1002,16 +1002,13 @@ async function carregarContexto(
     familia.nome ||
     "Minha família";
 
-  const liberado =
-    modulos.tarefasLiberadas === true ||
-    modulos.familiaPilotoId ===
-      familiaId ||
-    (
-      ADMIN_COMO_PILOTO_SEM_CONFIG &&
-      !modulosSnap.exists() &&
-      dadosUsuario.adminSistema ===
-        true
-    );
+ const liberado =
+  modulos.tarefasLiberadas === true ||
+  modulos.familiaPilotoId === familiaId ||
+  (
+    ADMIN_COMO_PILOTO_SEM_CONFIG &&
+    dadosUsuario.adminSistema === true
+  );
 
   definirVisibilidade(liberado);
 
