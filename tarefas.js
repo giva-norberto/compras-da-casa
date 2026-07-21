@@ -986,7 +986,6 @@ function criarEstruturaNova() {
 // ==========================================
 // Contexto do usuário
 // ==========================================
-
 async function carregarContexto(
   user
 ) {
@@ -1000,6 +999,11 @@ async function carregarContexto(
     );
 
   if (!usuarioSnap.exists()) {
+    console.warn(
+      "Documento do usuário não encontrado:",
+      user.uid
+    );
+
     definirVisibilidade(false);
     return;
   }
@@ -1011,56 +1015,114 @@ async function carregarContexto(
     dadosUsuario.familiaId || "";
 
   if (!familiaId) {
+    console.warn(
+      "Usuário sem familiaId:",
+      user.uid
+    );
+
     definirVisibilidade(false);
     return;
   }
 
-  const [
-    familiaSnap,
-    modulosSnap
-  ] = await Promise.all([
-    getDoc(
-      doc(
-        db,
-        "familias",
-        familiaId
-      )
-    ),
+  let familia = {};
+  let modulos = {};
 
-    getDoc(
-      doc(
-        db,
-        "configuracoes",
-        "modulos"
-      )
-    )
-  ]);
+  // ==========================================
+  // Buscar família
+  // ==========================================
 
-  const familia =
-    familiaSnap.exists()
-      ? familiaSnap.data()
-      : {};
+  try {
+    const familiaSnap =
+      await getDoc(
+        doc(
+          db,
+          "familias",
+          familiaId
+        )
+      );
 
-  const modulos =
-    modulosSnap.exists()
-      ? modulosSnap.data()
-      : {};
+    familia =
+      familiaSnap.exists()
+        ? familiaSnap.data()
+        : {};
+  } catch (erro) {
+    console.error(
+      "Erro ao buscar família:",
+      erro
+    );
 
-  familiaIdAtual = familiaId;
+    // Não bloqueia o menu apenas porque
+    // o nome da família não carregou.
+    familia = {};
+  }
+
+  // ==========================================
+  // Buscar configuração dos módulos
+  // ==========================================
+
+  try {
+    const modulosSnap =
+      await getDoc(
+        doc(
+          db,
+          "configuracoes",
+          "modulos"
+        )
+      );
+
+    modulos =
+      modulosSnap.exists()
+        ? modulosSnap.data()
+        : {};
+  } catch (erro) {
+    console.error(
+      "Erro ao buscar configurações dos módulos:",
+      erro
+    );
+
+    // Se a configuração não puder ser lida,
+    // o administrador continua sendo liberado.
+    modulos = {};
+  }
+
+  familiaIdAtual =
+    familiaId;
 
   familiaNomeAtual =
     familia.nome ||
     "Minha família";
 
- const liberado =
-  modulos.tarefasLiberadas === true ||
-  modulos.familiaPilotoId === familiaId ||
-  (
-    ADMIN_COMO_PILOTO_SEM_CONFIG &&
-    dadosUsuario.adminSistema === true
+  const ehAdministrador =
+    dadosUsuario.adminSistema === true ||
+    dadosUsuario.adminSistema === "true";
+
+  const liberado =
+    modulos.tarefasLiberadas === true ||
+    modulos.tarefasLiberadas === "true" ||
+    modulos.familiaPilotoId === familiaId ||
+    (
+      ADMIN_COMO_PILOTO_SEM_CONFIG &&
+      ehAdministrador
+    );
+
+  console.log(
+    "Diagnóstico módulo Tarefas:",
+    {
+      uid: user.uid,
+      familiaId,
+      adminSistema:
+        dadosUsuario.adminSistema,
+      familiaPilotoId:
+        modulos.familiaPilotoId,
+      tarefasLiberadas:
+        modulos.tarefasLiberadas,
+      liberado
+    }
   );
 
-  definirVisibilidade(liberado);
+  definirVisibilidade(
+    liberado
+  );
 
   if (!liberado) {
     pararListeners();
@@ -1069,11 +1131,20 @@ async function carregarContexto(
 
   criarEstruturaNova();
 
-  await carregarMembros();
+  try {
+    await carregarMembros();
+  } catch (erro) {
+    console.error(
+      "Erro ao carregar membros:",
+      erro
+    );
+
+    membros = [];
+    preencherResponsaveis();
+  }
 
   iniciarListeners();
 }
-
 
 // ==========================================
 // Membros da família
