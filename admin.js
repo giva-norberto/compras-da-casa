@@ -1,6 +1,7 @@
 // ==========================================
 // ListaLar - Painel Administrativo
 // Arquivo: admin.js
+// Versão: 2.1.0
 // ==========================================
 
 import {
@@ -66,12 +67,20 @@ const REFERENCIA_CONFIGURACOES = doc(
   "geral"
 );
 
+const REFERENCIA_MODULOS = doc(
+  db,
+  "configuracoes",
+  "modulos"
+);
+
 
 // ==========================================
 // Estado do painel
 // ==========================================
 
 let usuarioAdminAtual = null;
+let dadosUsuarioAdminAtual = null;
+let configuracaoModulosAtual = {};
 
 let familiasCarregadas = [];
 let usuariosCarregados = [];
@@ -419,7 +428,17 @@ async function validarAdministrador(usuario) {
 
   const dados = snapshot.data();
 
-  return dados.adminSistema === true;
+  if (dados.adminSistema !== true) {
+    dadosUsuarioAdminAtual = null;
+    return false;
+  }
+
+  dadosUsuarioAdminAtual = {
+    id: snapshot.id,
+    ...dados
+  };
+
+  return true;
 }
 
 
@@ -468,6 +487,10 @@ window.abrirSecao = async function(nomeSecao) {
 
   if (nomeSecao === "usuarios") {
     await carregarUsuarios();
+  }
+
+  if (nomeSecao === "configuracoes") {
+    await carregarConfiguracaoTarefas();
   }
 };
 
@@ -620,6 +643,7 @@ window.carregarDashboard = async function() {
         : "Desativada";
 
     renderizarFamiliasRecentes();
+    atualizarStatusModuloTarefas();
   } catch (erro) {
     console.error(
       "Erro ao carregar dashboard:",
@@ -1362,6 +1386,581 @@ window.salvarConfiguracoesGerais =
   };
 
 
+
+// ==========================================
+// Controle do módulo Tarefas
+// ==========================================
+
+function criarEstilosControleTarefas() {
+  if (elemento("adminTarefasEstilos")) {
+    return;
+  }
+
+  const estilo = document.createElement("style");
+
+  estilo.id = "adminTarefasEstilos";
+
+  estilo.textContent = `
+    .admin-modulo-tarefas {
+      margin-bottom: 24px;
+      padding: 20px;
+      border: 1px solid rgba(15, 23, 42, 0.10);
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .admin-modulo-tarefas-topo {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .admin-modulo-tarefas-titulo {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #0f172a;
+    }
+
+    .admin-modulo-tarefas-descricao {
+      margin: 6px 0 0;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    .admin-modulo-tarefas-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .admin-modulo-tarefas-status.ativo {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .admin-modulo-tarefas-status.piloto {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .admin-modulo-tarefas-caixa {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border-radius: 14px;
+      background: #f8fafc;
+    }
+
+    .admin-modulo-tarefas-linha {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .admin-modulo-tarefas-info strong,
+    .admin-modulo-tarefas-info span {
+      display: block;
+    }
+
+    .admin-modulo-tarefas-info span {
+      margin-top: 4px;
+      color: #64748b;
+      font-size: 0.9rem;
+      overflow-wrap: anywhere;
+    }
+
+    .admin-switch-tarefas {
+      position: relative;
+      display: inline-flex;
+      flex: 0 0 auto;
+      width: 52px;
+      height: 30px;
+    }
+
+    .admin-switch-tarefas input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .admin-switch-tarefas-trilho {
+      width: 100%;
+      height: 100%;
+      border-radius: 999px;
+      background: #cbd5e1;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .admin-switch-tarefas-trilho::after {
+      content: "";
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 2px 7px rgba(15, 23, 42, 0.24);
+      transition: 0.2s ease;
+    }
+
+    .admin-switch-tarefas input:checked +
+    .admin-switch-tarefas-trilho {
+      background: #16a34a;
+    }
+
+    .admin-switch-tarefas input:checked +
+    .admin-switch-tarefas-trilho::after {
+      transform: translateX(22px);
+    }
+
+    .admin-modulo-tarefas-acoes {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    .admin-modulo-tarefas-botao {
+      min-height: 42px;
+      padding: 10px 18px;
+      border: 0;
+      border-radius: 12px;
+      background: #2563eb;
+      color: #ffffff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .admin-modulo-tarefas-botao:disabled {
+      opacity: 0.65;
+      cursor: wait;
+    }
+
+    @media (max-width: 640px) {
+      .admin-modulo-tarefas-topo,
+      .admin-modulo-tarefas-linha {
+        align-items: flex-start;
+      }
+
+      .admin-modulo-tarefas-topo {
+        flex-direction: column;
+      }
+
+      .admin-modulo-tarefas-status {
+        align-self: flex-start;
+      }
+    }
+  `;
+
+  document.head.appendChild(estilo);
+}
+
+
+function criarControleModuloTarefas() {
+  if (elemento("adminModuloTarefas")) {
+    return true;
+  }
+
+  const secao =
+    elemento("secao-configuracoes") ||
+    document.querySelector(
+      '.admin-section[data-section="configuracoes"]'
+    );
+
+  if (!secao) {
+    console.warn(
+      "Admin: seção de configurações não encontrada para inserir o controle de Tarefas."
+    );
+
+    return false;
+  }
+
+  criarEstilosControleTarefas();
+
+  const bloco = document.createElement("div");
+
+  bloco.id = "adminModuloTarefas";
+  bloco.className = "admin-modulo-tarefas";
+
+  bloco.innerHTML = `
+    <div class="admin-modulo-tarefas-topo">
+      <div>
+        <h3 class="admin-modulo-tarefas-titulo">
+          ✅ Módulo Tarefas
+        </h3>
+
+        <p class="admin-modulo-tarefas-descricao">
+          Sua família permanece como família piloto.
+          Ative a opção abaixo para liberar o menu Tarefas
+          para todas as famílias do ListaLar.
+        </p>
+      </div>
+
+      <span
+        id="statusModuloTarefas"
+        class="admin-modulo-tarefas-status"
+      >
+        Carregando...
+      </span>
+    </div>
+
+    <div class="admin-modulo-tarefas-caixa">
+      <div class="admin-modulo-tarefas-linha">
+        <div class="admin-modulo-tarefas-info">
+          <strong>Liberar para todas as famílias</strong>
+
+          <span>
+            Desativado: somente a família piloto terá acesso.
+          </span>
+        </div>
+
+        <label
+          class="admin-switch-tarefas"
+          title="Liberar Tarefas para todas as famílias"
+        >
+          <input
+            id="tarefasLiberadas"
+            type="checkbox"
+          >
+
+          <span
+            class="admin-switch-tarefas-trilho"
+          ></span>
+        </label>
+      </div>
+
+      <div class="admin-modulo-tarefas-info">
+        <strong>Família piloto</strong>
+
+        <span id="familiaPilotoTarefas">
+          Identificando sua família...
+        </span>
+      </div>
+    </div>
+
+    <div class="admin-modulo-tarefas-acoes">
+      <button
+        id="btnSalvarModuloTarefas"
+        type="button"
+        class="admin-modulo-tarefas-botao"
+      >
+        Salvar liberação
+      </button>
+    </div>
+  `;
+
+  secao.prepend(bloco);
+
+  elemento("btnSalvarModuloTarefas")
+    ?.addEventListener(
+      "click",
+      window.salvarConfiguracaoTarefas
+    );
+
+  elemento("tarefasLiberadas")
+    ?.addEventListener(
+      "change",
+      atualizarStatusModuloTarefas
+    );
+
+  return true;
+}
+
+
+function obterFamiliaPilotoId() {
+  return (
+    configuracaoModulosAtual.familiaPilotoId ||
+    dadosUsuarioAdminAtual?.familiaId ||
+    ""
+  );
+}
+
+
+function obterNomeFamiliaPiloto(familiaId) {
+  if (!familiaId) {
+    return "Família não identificada";
+  }
+
+  const familia = familiasCarregadas.find(
+    (registro) => registro.id === familiaId
+  );
+
+  if (!familia) {
+    return familiaId;
+  }
+
+  return `${obterNomeFamilia(familia)} · ${familiaId}`;
+}
+
+
+function atualizarStatusModuloTarefas() {
+  const campoLiberacao =
+    elemento("tarefasLiberadas");
+
+  const status =
+    elemento("statusModuloTarefas");
+
+  const familiaPiloto =
+    elemento("familiaPilotoTarefas");
+
+  const liberadoParaTodas =
+    campoLiberacao?.checked === true;
+
+  const familiaPilotoId =
+    obterFamiliaPilotoId();
+
+  if (status) {
+    status.classList.remove(
+      "ativo",
+      "piloto"
+    );
+
+    if (liberadoParaTodas) {
+      status.textContent =
+        "Liberado para todos";
+
+      status.classList.add("ativo");
+    } else {
+      status.textContent =
+        "Somente família piloto";
+
+      status.classList.add("piloto");
+    }
+  }
+
+  if (familiaPiloto) {
+    familiaPiloto.textContent =
+      obterNomeFamiliaPiloto(
+        familiaPilotoId
+      );
+  }
+}
+
+
+async function garantirFamiliaPilotoTarefas() {
+  const familiaAdminId =
+    dadosUsuarioAdminAtual?.familiaId || "";
+
+  const snapshot = await getDoc(
+    REFERENCIA_MODULOS
+  );
+
+  configuracaoModulosAtual =
+    snapshot.exists()
+      ? snapshot.data()
+      : {};
+
+  if (
+    !configuracaoModulosAtual.familiaPilotoId &&
+    familiaAdminId
+  ) {
+    await setDoc(
+      REFERENCIA_MODULOS,
+      {
+        familiaPilotoId:
+          familiaAdminId,
+
+        tarefasLiberadas:
+          configuracaoModulosAtual
+            .tarefasLiberadas === true,
+
+        atualizadoEm:
+          serverTimestamp(),
+
+        atualizadoPorUid:
+          usuarioAdminAtual?.uid || "",
+
+        atualizadoPorEmail:
+          usuarioAdminAtual?.email || ""
+      },
+      {
+        merge: true
+      }
+    );
+
+    configuracaoModulosAtual = {
+      ...configuracaoModulosAtual,
+      familiaPilotoId:
+        familiaAdminId,
+
+      tarefasLiberadas:
+        configuracaoModulosAtual
+          .tarefasLiberadas === true
+    };
+  }
+}
+
+
+async function carregarConfiguracaoTarefas() {
+  criarControleModuloTarefas();
+
+  const campoLiberacao =
+    elemento("tarefasLiberadas");
+
+  const status =
+    elemento("statusModuloTarefas");
+
+  try {
+    if (status) {
+      status.textContent =
+        "Carregando...";
+    }
+
+    await garantirFamiliaPilotoTarefas();
+
+    if (campoLiberacao) {
+      campoLiberacao.checked =
+        configuracaoModulosAtual
+          .tarefasLiberadas === true;
+    }
+
+    atualizarStatusModuloTarefas();
+
+  } catch (erro) {
+    console.error(
+      "Erro ao carregar configuração de Tarefas:",
+      erro
+    );
+
+    if (status) {
+      status.textContent =
+        "Erro ao carregar";
+    }
+
+    abrirAdminModal({
+      titulo:
+        "Erro no módulo Tarefas",
+
+      texto:
+        mensagemErro(erro),
+
+      icone: "⚠️"
+    });
+  }
+}
+
+
+window.salvarConfiguracaoTarefas =
+  async function() {
+    const familiaAdminId =
+      dadosUsuarioAdminAtual?.familiaId || "";
+
+    const familiaPilotoId =
+      configuracaoModulosAtual
+        .familiaPilotoId ||
+      familiaAdminId;
+
+    const campoLiberacao =
+      elemento("tarefasLiberadas");
+
+    const botao =
+      elemento("btnSalvarModuloTarefas");
+
+    const tarefasLiberadas =
+      campoLiberacao?.checked === true;
+
+    if (!familiaPilotoId) {
+      abrirAdminModal({
+        titulo:
+          "Família piloto não identificada",
+
+        texto:
+          "Seu usuário administrador não possui familiaId. Verifique o documento do seu usuário no Firestore.",
+
+        icone: "⚠️"
+      });
+
+      return;
+    }
+
+    try {
+      if (botao) {
+        botao.disabled = true;
+        botao.textContent =
+          "Salvando...";
+      }
+
+      await setDoc(
+        REFERENCIA_MODULOS,
+        {
+          tarefasLiberadas,
+
+          familiaPilotoId,
+
+          atualizadoEm:
+            serverTimestamp(),
+
+          atualizadoPorUid:
+            usuarioAdminAtual?.uid || "",
+
+          atualizadoPorEmail:
+            usuarioAdminAtual?.email || ""
+        },
+        {
+          merge: true
+        }
+      );
+
+      configuracaoModulosAtual = {
+        ...configuracaoModulosAtual,
+        tarefasLiberadas,
+        familiaPilotoId
+      };
+
+      atualizarStatusModuloTarefas();
+
+      abrirAdminModal({
+        titulo:
+          "Liberação atualizada",
+
+        texto:
+          tarefasLiberadas
+            ? "O módulo Tarefas foi liberado para todas as famílias."
+            : "O módulo Tarefas ficou disponível somente para sua família piloto.",
+
+        icone: "✅"
+      });
+
+    } catch (erro) {
+      console.error(
+        "Erro ao salvar configuração de Tarefas:",
+        erro
+      );
+
+      abrirAdminModal({
+        titulo:
+          "Erro ao salvar liberação",
+
+        texto:
+          mensagemErro(erro),
+
+        icone: "⚠️"
+      });
+
+    } finally {
+      if (botao) {
+        botao.disabled = false;
+        botao.textContent =
+          "Salvar liberação";
+      }
+    }
+  };
+
+
 // ==========================================
 // Eventos dos campos
 // ==========================================
@@ -1420,12 +2019,14 @@ async function inicializarPainel(usuario) {
   );
 
   configurarEventos();
+  criarControleModuloTarefas();
   exibirPainel();
 
   await Promise.all([
     carregarDashboard(),
     carregarComunicadoSalvo(),
-    carregarConfiguracoesGerais()
+    carregarConfiguracoesGerais(),
+    carregarConfiguracaoTarefas()
   ]);
 }
 
