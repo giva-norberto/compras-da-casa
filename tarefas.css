@@ -1,0 +1,903 @@
+/* ==========================================
+   ListaLar - Módulo Tarefas
+   Arquivo: tarefas.css
+   ========================================== */
+
+
+/* ==========================================
+   Variáveis exclusivas do módulo
+   ========================================== */
+
+#tarefas {
+  --tarefas-cor-principal: #2563eb;
+  --tarefas-cor-principal-escura: #1d4ed8;
+  --tarefas-cor-principal-clara: #dbeafe;
+
+  --tarefas-cor-verde: #16a34a;
+  --tarefas-cor-verde-clara: #dcfce7;
+
+  --tarefas-cor-amarela: #ca8a04;
+  --tarefas-cor-amarela-clara: #fef9c3;
+
+  --tarefas-cor-vermelha: #dc2626;
+  --tarefas-cor-vermelha-clara: #fee2e2;
+
+  --tarefas-cor-laranja: #ea580c;
+  --tarefas-cor-laranja-clara: #ffedd5;
+
+  --tarefas-cor-cinza-50: #f8fafc;
+  --tarefas-cor-cinza-100: #f1f5f9;
+  --tarefas-cor-cinza-200: #e2e8f0;
+  --tarefas-cor-cinza-300: #cbd5e1;
+  --tarefas-cor-cinza-500: #64748b;
+  --tarefas-cor-cinza-600: #475569;
+  --tarefas-cor-cinza-700: #334155;
+  --tarefas-cor-cinza-800: #1e293b;
+  --tarefas-cor-branca: #ffffff;
+
+  --tarefas-sombra-suave:
+    0 4px 14px rgba(15, 23, 42, 0.08);
+
+  --tarefas-sombra-card:
+    0 8px 24px rgba(15, 23, 42, 0.10);
+
+  --tarefas-raio-pequeno: 8px;
+  --tarefas-raio-medio: 12px;
+  --tarefas-raio-grande: 16px;
+}
+
+
+/* ==========================================
+   Tela principal
+   ========================================== */
+
+#tarefas {
+  width: 100%;
+  max-width: 100%;
+  padding-bottom: 20px;
+}
+
+#tarefas[hidden] {
+  display: none !important;
+}
+
+#tarefas .tarefas-card-principal {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 18px;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+#tarefas .tarefas-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+#tarefas .tarefas-cabecalho > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+#tarefas .tarefas-cabecalho .title {
+  margin: 0;
+  line-height: 1.2;
+}
+
+#tarefas .tarefas-cabecalho .subtitle {
+  margin-top: 5px;
+  margin-bottom: 0;
+  color: var(--tarefas-cor-cinza-500);
+  line-height: 1.4;
+}
+
+#tarefas .tarefas-btn-nova {
+  flex-shrink: 0;
+  min-height: 42px;
+  padding: 10px 17px;
+  border-radius: var(--tarefas-raio-medio);
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+
+/* ==========================================
+   Resumo das tarefas
+   ========================================== */
+
+#tarefas .summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+#tarefas .mini-card {
+  min-width: 0;
+  padding: 13px 8px;
+  border: 1px solid var(--tarefas-cor-cinza-200);
+  border-radius: var(--tarefas-raio-medio);
+  background: var(--tarefas-cor-cinza-50);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+#tarefas .mini-card strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--tarefas-cor-cinza-800);
+  font-size: 1.35rem;
+  line-height: 1.1;
+}
+
+#tarefas .mini-card span {
+  display: block;
+  overflow: hidden;
+  color: var(--tarefas-cor-cinza-500);
+  font-size: 0.78rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#tarefas .mini-card:nth-child(2) {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+#tarefas .mini-card:nth-child(2) strong {
+  color: #b45309;
+}
+
+#tarefas .mini-card:nth-child(3) {
+  border-color: #bbf7d0;
+  background: var(--tarefas-cor-verde-clara);
+}
+
+#tarefas .mini-card:nth-child(3) strong {
+  color: var(--tarefas-cor-verde);
+}
+
+
+/* ==========================================
+   Formulário
+   ========================================== */
+
+#tarefas .tarefas-formulario {
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--tarefas-raio-grande);
+  background: #eff6ff;
+  box-shadow: var(--tarefas-sombra-suave);
+  box-sizing: border-box;
+}
+
+#tarefas .tarefas-formulario[hidden] {
+  display: none !important;
+}
+
+#tarefas .tarefas-formulario-titulo {
+  margin-bottom: 15px;
+  color: var(--tarefas-cor-cinza-800);
+  font-size: 1.05rem;
+}
+
+#tarefas .tarefas-formulario-titulo strong {
+  font-weight: 800;
+}
+
+#tarefas .tarefas-campo {
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+#tarefas .tarefas-campo:last-child {
+  margin-bottom: 0;
+}
+
+#tarefas .tarefas-campo label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--tarefas-cor-cinza-700);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+#tarefas .tarefas-campo input,
+#tarefas .tarefas-campo select,
+#tarefas .tarefas-campo textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--tarefas-cor-cinza-300);
+  border-radius: var(--tarefas-raio-pequeno);
+  background: var(--tarefas-cor-branca);
+  color: var(--tarefas-cor-cinza-800);
+  font-family: inherit;
+  font-size: 16px;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+#tarefas .tarefas-campo input,
+#tarefas .tarefas-campo select {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+#tarefas .tarefas-campo textarea {
+  min-height: 88px;
+  padding: 11px 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+#tarefas .tarefas-campo input::placeholder,
+#tarefas .tarefas-campo textarea::placeholder {
+  color: #94a3b8;
+}
+
+#tarefas .tarefas-campo input:focus,
+#tarefas .tarefas-campo select:focus,
+#tarefas .tarefas-campo textarea:focus {
+  border-color: var(--tarefas-cor-principal);
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+#tarefas .tarefas-campo input:disabled,
+#tarefas .tarefas-campo select:disabled,
+#tarefas .tarefas-campo textarea:disabled {
+  cursor: not-allowed;
+  background: var(--tarefas-cor-cinza-100);
+  opacity: 0.75;
+}
+
+#tarefas .tarefas-grid-duas-colunas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+#tarefas .tarefas-grid-duas-colunas .tarefas-campo {
+  min-width: 0;
+}
+
+#tarefas .tarefas-formulario-acoes {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+#tarefas .tarefas-formulario-acoes .btn {
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: var(--tarefas-raio-pequeno);
+  font-weight: 700;
+}
+
+#tarefas .tarefas-formulario-acoes .btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+
+/* ==========================================
+   Lista
+   ========================================== */
+
+#tarefas .tarefas-lista {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 12px;
+}
+
+#tarefas .tarefas-lista .empty {
+  padding: 30px 16px;
+  border: 1px dashed var(--tarefas-cor-cinza-300);
+  border-radius: var(--tarefas-raio-medio);
+  background: var(--tarefas-cor-cinza-50);
+  color: var(--tarefas-cor-cinza-500);
+  text-align: center;
+  line-height: 1.55;
+}
+
+
+/* ==========================================
+   Card de cada tarefa
+   ========================================== */
+
+#tarefas .tarefa-item {
+  position: relative;
+  width: 100%;
+  padding: 15px;
+  border: 1px solid var(--tarefas-cor-cinza-200);
+  border-left: 5px solid var(--tarefas-cor-cinza-300);
+  border-radius: var(--tarefas-raio-medio);
+  background: var(--tarefas-cor-branca);
+  box-shadow: var(--tarefas-sombra-suave);
+  box-sizing: border-box;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.18s ease;
+}
+
+#tarefas .tarefa-item:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--tarefas-sombra-card);
+}
+
+#tarefas .tarefa-item.prioridade-alta {
+  border-left-color: var(--tarefas-cor-vermelha);
+}
+
+#tarefas .tarefa-item.prioridade-media {
+  border-left-color: var(--tarefas-cor-amarela);
+}
+
+#tarefas .tarefa-item.prioridade-baixa {
+  border-left-color: var(--tarefas-cor-verde);
+}
+
+#tarefas .tarefa-item.vencida {
+  border-color: #fecaca;
+  border-left-color: var(--tarefas-cor-vermelha);
+  background: #fffafa;
+}
+
+#tarefas .tarefa-item.concluida {
+  border-color: #bbf7d0;
+  border-left-color: var(--tarefas-cor-verde);
+  background: #f8fff9;
+  opacity: 0.82;
+}
+
+#tarefas .tarefa-item.concluida:hover {
+  opacity: 1;
+}
+
+#tarefas .tarefa-topo {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  gap: 12px;
+}
+
+#tarefas .tarefa-conteudo {
+  flex: 1;
+  min-width: 0;
+}
+
+#tarefas .tarefa-titulo {
+  display: block;
+  margin-top: 1px;
+  color: var(--tarefas-cor-cinza-800);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+#tarefas .tarefa-item.concluida .tarefa-titulo {
+  color: var(--tarefas-cor-cinza-500);
+  text-decoration: line-through;
+}
+
+
+/* ==========================================
+   Botão de conclusão
+   ========================================== */
+
+#tarefas .tarefa-check {
+  display: inline-flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 2px solid var(--tarefas-cor-cinza-300);
+  border-radius: 50%;
+  background: var(--tarefas-cor-branca);
+  color: var(--tarefas-cor-branca);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+  box-sizing: border-box;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+#tarefas .tarefa-check:hover {
+  border-color: var(--tarefas-cor-verde);
+  transform: scale(1.05);
+  box-shadow:
+    0 0 0 3px rgba(22, 163, 74, 0.12);
+}
+
+#tarefas .tarefa-check:active {
+  transform: scale(0.96);
+}
+
+#tarefas .tarefa-check:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.25);
+  outline-offset: 2px;
+}
+
+#tarefas .tarefa-item.concluida .tarefa-check {
+  border-color: var(--tarefas-cor-verde);
+  background: var(--tarefas-cor-verde);
+  color: var(--tarefas-cor-branca);
+}
+
+
+/* ==========================================
+   Informações da tarefa
+   ========================================== */
+
+#tarefas .tarefa-detalhes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 8px;
+  color: var(--tarefas-cor-cinza-500);
+  font-size: 0.79rem;
+  line-height: 1.35;
+}
+
+#tarefas .tarefa-detalhes span {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 3px;
+  overflow-wrap: anywhere;
+}
+
+#tarefas .tarefa-detalhes .tarefa-prazo-vencido {
+  color: var(--tarefas-cor-vermelha);
+  font-weight: 800;
+}
+
+#tarefas .tarefa-item.concluida .tarefa-detalhes {
+  color: #94a3b8;
+}
+
+#tarefas .tarefa-observacao {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: var(--tarefas-raio-pequeno);
+  background: var(--tarefas-cor-cinza-50);
+  color: var(--tarefas-cor-cinza-600);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+#tarefas .tarefa-item.concluida .tarefa-observacao {
+  background: #f0fdf4;
+  color: var(--tarefas-cor-cinza-500);
+}
+
+
+/* ==========================================
+   Botões Editar e Excluir
+   ========================================== */
+
+#tarefas .tarefa-acoes {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid var(--tarefas-cor-cinza-100);
+}
+
+#tarefas .tarefa-acao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  margin: 0;
+  padding: 7px 11px;
+  border: 1px solid transparent;
+  border-radius: var(--tarefas-raio-pequeno);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+#tarefas .tarefa-acao:hover {
+  transform: translateY(-1px);
+}
+
+#tarefas .tarefa-acao:active {
+  transform: translateY(0);
+}
+
+#tarefas .tarefa-acao:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.22);
+  outline-offset: 1px;
+}
+
+#tarefas .tarefa-acao.editar {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: var(--tarefas-cor-principal-escura);
+}
+
+#tarefas .tarefa-acao.editar:hover {
+  border-color: #93c5fd;
+  background: var(--tarefas-cor-principal-clara);
+}
+
+#tarefas .tarefa-acao.excluir {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: var(--tarefas-cor-vermelha);
+}
+
+#tarefas .tarefa-acao.excluir:hover {
+  border-color: #fca5a5;
+  background: var(--tarefas-cor-vermelha-clara);
+}
+
+
+/* ==========================================
+   Botão Tarefas no menu inferior
+   ========================================== */
+
+#tab-tarefas[hidden] {
+  display: none !important;
+}
+
+#tab-tarefas {
+  min-width: 0;
+}
+
+#tab-tarefas .ico {
+  line-height: 1;
+}
+
+#tab-tarefas.active {
+  color: var(--tarefas-cor-principal, #2563eb);
+}
+
+
+/* ==========================================
+   Animações leves
+   ========================================== */
+
+@keyframes tarefas-aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#tarefas.active .tarefas-card-principal {
+  animation:
+    tarefas-aparecer 0.22s ease-out;
+}
+
+#tarefas .tarefa-item {
+  animation:
+    tarefas-aparecer 0.18s ease-out;
+}
+
+
+/* ==========================================
+   Modo escuro
+   Compatível caso o ListaLar use tema escuro
+   ========================================== */
+
+@media (prefers-color-scheme: dark) {
+  body.tema-escuro #tarefas,
+  html[data-theme="dark"] #tarefas {
+    --tarefas-cor-cinza-50: #0f172a;
+    --tarefas-cor-cinza-100: #1e293b;
+    --tarefas-cor-cinza-200: #334155;
+    --tarefas-cor-cinza-300: #475569;
+    --tarefas-cor-cinza-500: #94a3b8;
+    --tarefas-cor-cinza-600: #cbd5e1;
+    --tarefas-cor-cinza-700: #e2e8f0;
+    --tarefas-cor-cinza-800: #f1f5f9;
+    --tarefas-cor-branca: #111827;
+  }
+
+  body.tema-escuro #tarefas .tarefas-formulario,
+  html[data-theme="dark"] #tarefas .tarefas-formulario {
+    border-color: #1e40af;
+    background: #172554;
+  }
+
+  body.tema-escuro #tarefas .tarefas-campo input,
+  body.tema-escuro #tarefas .tarefas-campo select,
+  body.tema-escuro #tarefas .tarefas-campo textarea,
+  html[data-theme="dark"] #tarefas .tarefas-campo input,
+  html[data-theme="dark"] #tarefas .tarefas-campo select,
+  html[data-theme="dark"] #tarefas .tarefas-campo textarea {
+    border-color: #475569;
+    background: #0f172a;
+    color: #f8fafc;
+  }
+
+  body.tema-escuro #tarefas .tarefa-item.vencida,
+  html[data-theme="dark"] #tarefas .tarefa-item.vencida {
+    border-color: #7f1d1d;
+    border-left-color: #ef4444;
+    background: #2a1115;
+  }
+
+  body.tema-escuro #tarefas .tarefa-item.concluida,
+  html[data-theme="dark"] #tarefas .tarefa-item.concluida {
+    border-color: #166534;
+    border-left-color: #22c55e;
+    background: #102419;
+  }
+
+  body.tema-escuro #tarefas .tarefa-observacao,
+  html[data-theme="dark"] #tarefas .tarefa-observacao {
+    background: #0f172a;
+  }
+}
+
+
+/* ==========================================
+   Tablets
+   ========================================== */
+
+@media (max-width: 768px) {
+  #tarefas .tarefas-card-principal {
+    padding: 15px;
+  }
+
+  #tarefas .tarefas-cabecalho {
+    margin-bottom: 15px;
+  }
+
+  #tarefas .summary {
+    gap: 8px;
+  }
+
+  #tarefas .mini-card {
+    padding: 12px 6px;
+  }
+
+  #tarefas .tarefas-formulario {
+    padding: 14px;
+  }
+
+  #tarefas .tarefa-item {
+    padding: 14px;
+  }
+}
+
+
+/* ==========================================
+   Celulares
+   ========================================== */
+
+@media (max-width: 600px) {
+  #tarefas {
+    padding-bottom: 10px;
+  }
+
+  #tarefas .tarefas-card-principal {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  #tarefas .tarefas-cabecalho {
+    align-items: center;
+    gap: 10px;
+  }
+
+  #tarefas .tarefas-cabecalho .title {
+    font-size: 1.25rem;
+  }
+
+  #tarefas .tarefas-cabecalho .subtitle {
+    font-size: 0.83rem;
+  }
+
+  #tarefas .tarefas-btn-nova {
+    min-height: 40px;
+    padding: 9px 13px;
+    font-size: 0.86rem;
+  }
+
+  #tarefas .summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 15px;
+  }
+
+  #tarefas .mini-card {
+    min-height: 66px;
+    padding: 10px 4px;
+  }
+
+  #tarefas .mini-card strong {
+    font-size: 1.2rem;
+  }
+
+  #tarefas .mini-card span {
+    font-size: 0.7rem;
+  }
+
+  #tarefas .tarefas-grid-duas-colunas {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  #tarefas .tarefas-formulario {
+    padding: 13px;
+    border-radius: var(--tarefas-raio-medio);
+  }
+
+  #tarefas .tarefas-formulario-acoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  #tarefas .tarefas-formulario-acoes .btn {
+    width: 100%;
+    min-width: 0;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  #tarefas .tarefa-item {
+    padding: 13px;
+  }
+
+  #tarefas .tarefa-topo {
+    gap: 10px;
+  }
+
+  #tarefas .tarefa-check {
+    flex-basis: 29px;
+    width: 29px;
+    height: 29px;
+  }
+
+  #tarefas .tarefa-titulo {
+    font-size: 0.96rem;
+  }
+
+  #tarefas .tarefa-detalhes {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    font-size: 0.77rem;
+  }
+
+  #tarefas .tarefa-observacao {
+    font-size: 0.82rem;
+  }
+
+  #tarefas .tarefa-acoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+
+  #tarefas .tarefa-acao {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+
+/* ==========================================
+   Celulares pequenos
+   ========================================== */
+
+@media (max-width: 380px) {
+  #tarefas .tarefas-card-principal {
+    padding: 10px;
+  }
+
+  #tarefas .tarefas-cabecalho {
+    align-items: flex-start;
+  }
+
+  #tarefas .tarefas-btn-nova {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  #tarefas .mini-card span {
+    font-size: 0.64rem;
+  }
+
+  #tarefas .tarefas-formulario-acoes {
+    grid-template-columns: 1fr;
+  }
+
+  #tarefas .tarefa-acoes {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ==========================================
+   Acessibilidade
+   ========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  #tarefas *,
+  #tarefas *::before,
+  #tarefas *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* ==========================================
+   Impressão
+   ========================================== */
+
+@media print {
+  #tab-tarefas,
+  #tarefas .tarefas-btn-nova,
+  #tarefas .tarefas-formulario,
+  #tarefas .tarefa-check,
+  #tarefas .tarefa-acoes {
+    display: none !important;
+  }
+
+  #tarefas {
+    display: block !important;
+  }
+
+  #tarefas .tarefas-card-principal {
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+  }
+
+  #tarefas .tarefa-item {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+}
