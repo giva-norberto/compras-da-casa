@@ -1,7 +1,7 @@
 // ==========================================
 // ListaLar - Módulo Tarefas
 // Arquivo: tarefas.js
-// Versão: 2.0.0
+// Versão: 2.1.0
 // ==========================================
 
 import {
@@ -50,13 +50,13 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 
-// Enquanto o painel de módulos ainda não estiver configurado,
-// o usuário com adminSistema == true poderá testar as tarefas.
+// Enquanto configuracoes/modulos ainda não estiver definido,
+// o administrador do sistema pode testar o módulo.
 const ADMIN_COMO_PILOTO_SEM_CONFIG = true;
 
 
 // ==========================================
-// Estado do módulo
+// Estado
 // ==========================================
 
 let usuarioAtual = null;
@@ -85,7 +85,6 @@ function esperar(tempo) {
   });
 }
 
-
 function escaparHtml(valor) {
   return String(valor ?? "")
     .replaceAll("&", "&amp;")
@@ -95,60 +94,89 @@ function escaparHtml(valor) {
     .replaceAll("'", "&#039;");
 }
 
-
-function formatarPrazo(prazo) {
-  if (!prazo) {
-    return "Sem prazo";
+function formatarDataIso(dataIso) {
+  if (!dataIso) {
+    return "";
   }
 
-  const partes = String(prazo).split("-");
+  const partes = String(dataIso).split("-");
 
   if (partes.length !== 3) {
-    return prazo;
+    return String(dataIso);
   }
 
   return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
+function formatarCompromisso(
+  dataAgendada,
+  horario
+) {
+  if (!dataAgendada) {
+    return "";
+  }
 
-function prazoVencido(prazo, concluida) {
-  if (!prazo || concluida === true) {
+  const dataFormatada =
+    formatarDataIso(dataAgendada);
+
+  return horario
+    ? `${dataFormatada} às ${horario}`
+    : dataFormatada;
+}
+
+function prazoVencido(
+  prazo,
+  concluida
+) {
+  if (
+    !prazo ||
+    concluida === true
+  ) {
     return false;
   }
 
   const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
 
-  const dataPrazo = new Date(`${prazo}T00:00:00`);
+  hoje.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
+  const dataPrazo =
+    new Date(
+      `${prazo}T00:00:00`
+    );
 
   return (
-    !Number.isNaN(dataPrazo.getTime()) &&
-    dataPrazo.getTime() < hoje.getTime()
+    !Number.isNaN(
+      dataPrazo.getTime()
+    ) &&
+    dataPrazo.getTime() <
+      hoje.getTime()
   );
 }
 
-
-function pesoPrioridade(prioridade) {
-  const pesos = {
+function pesoPrioridade(
+  prioridade
+) {
+  return {
     alta: 1,
     media: 2,
     baixa: 3
-  };
-
-  return pesos[prioridade] || 4;
+  }[prioridade] || 4;
 }
 
-
-function rotuloPrioridade(prioridade) {
-  const rotulos = {
+function rotuloPrioridade(
+  prioridade
+) {
+  return {
     alta: "Alta",
     media: "Média",
     baixa: "Baixa"
-  };
-
-  return rotulos[prioridade] || "Média";
+  }[prioridade] || "Média";
 }
-
 
 function nomeUsuarioAtual() {
   return (
@@ -158,9 +186,24 @@ function nomeUsuarioAtual() {
   );
 }
 
+function nomeMembro(membro) {
+  return (
+    membro?.nome ||
+    membro?.displayName ||
+    membro?.email ||
+    "Membro da família"
+  );
+}
 
-async function avisar(titulo, texto, tipo = "info") {
-  if (typeof window.mostrarMensagem === "function") {
+async function avisar(
+  titulo,
+  texto,
+  tipo = "info"
+) {
+  if (
+    typeof window.mostrarMensagem ===
+    "function"
+  ) {
     await window.mostrarMensagem({
       titulo,
       texto,
@@ -170,12 +213,19 @@ async function avisar(titulo, texto, tipo = "info") {
     return;
   }
 
-  window.alert(`${titulo}\n\n${texto}`);
+  window.alert(
+    `${titulo}\n\n${texto}`
+  );
 }
 
-
-async function confirmarExclusao(titulo, texto) {
-  if (typeof window.confirmarAcao === "function") {
+async function confirmarExclusao(
+  titulo,
+  texto
+) {
+  if (
+    typeof window.confirmarAcao ===
+    "function"
+  ) {
     return window.confirmarAcao({
       titulo,
       texto,
@@ -186,46 +236,89 @@ async function confirmarExclusao(titulo, texto) {
     });
   }
 
-  return window.confirm(`${titulo}\n\n${texto}`);
+  return window.confirm(
+    `${titulo}\n\n${texto}`
+  );
 }
 
-
 function ordenarTarefas(lista) {
-  return [...lista].sort((a, b) => {
-    const conclusaoA = a.concluida === true ? 1 : 0;
-    const conclusaoB = b.concluida === true ? 1 : 0;
+  return [...lista].sort(
+    (a, b) => {
+      const conclusaoA =
+        a.concluida === true
+          ? 1
+          : 0;
 
-    if (conclusaoA !== conclusaoB) {
-      return conclusaoA - conclusaoB;
+      const conclusaoB =
+        b.concluida === true
+          ? 1
+          : 0;
+
+      if (
+        conclusaoA !==
+        conclusaoB
+      ) {
+        return (
+          conclusaoA -
+          conclusaoB
+        );
+      }
+
+      const dataA = String(
+        a.dataAgendada ||
+        a.data ||
+        a.prazo ||
+        "9999-12-31"
+      );
+
+      const dataB = String(
+        b.dataAgendada ||
+        b.data ||
+        b.prazo ||
+        "9999-12-31"
+      );
+
+      if (dataA !== dataB) {
+        return dataA.localeCompare(
+          dataB
+        );
+      }
+
+      const prioridadeA =
+        pesoPrioridade(
+          a.prioridade
+        );
+
+      const prioridadeB =
+        pesoPrioridade(
+          b.prioridade
+        );
+
+      if (
+        prioridadeA !==
+        prioridadeB
+      ) {
+        return (
+          prioridadeA -
+          prioridadeB
+        );
+      }
+
+      return String(
+        a.titulo || ""
+      ).localeCompare(
+        String(
+          b.titulo || ""
+        ),
+        "pt-BR"
+      );
     }
-
-    const prioridadeA = pesoPrioridade(a.prioridade);
-    const prioridadeB = pesoPrioridade(b.prioridade);
-
-    if (prioridadeA !== prioridadeB) {
-      return prioridadeA - prioridadeB;
-    }
-
-    const prazoA = String(a.prazo || "9999-12-31");
-    const prazoB = String(b.prazo || "9999-12-31");
-
-    if (prazoA !== prazoB) {
-      return prazoA.localeCompare(prazoB);
-    }
-
-    const tituloA = String(a.titulo || "");
-    const tituloB = String(b.titulo || "");
-
-    return tituloA.localeCompare(
-      tituloB,
-      "pt-BR"
-    );
-  });
+  );
 }
 
 
 // ==========================================
-// Criação automática da tela e do botão
+// Criação automática da tela
 // ==========================================
 
 function criarTelaTarefas() {
@@ -233,15 +326,19 @@ function criarTelaTarefas() {
     return true;
   }
 
-  const areaPrincipal = document.querySelector(
-    "main.app"
-  );
+  const areaPrincipal =
+    document.querySelector(
+      "main.app"
+    );
 
   if (!areaPrincipal) {
     return false;
   }
 
-  const secao = document.createElement("section");
+  const secao =
+    document.createElement(
+      "section"
+    );
 
   secao.id = "tarefas";
   secao.className = "screen";
@@ -321,9 +418,11 @@ function criarTelaTarefas() {
       >
 
         <div class="tarefas-formulario-titulo">
+
           <strong id="tituloFormularioTarefa">
             Nova tarefa
           </strong>
+
         </div>
 
 
@@ -338,7 +437,7 @@ function criarTelaTarefas() {
             name="tarefaTitulo"
             type="text"
             maxlength="120"
-            placeholder="Ex.: Organizar o quarto"
+            placeholder="Ex.: Levar filho ao médico"
             required
           >
 
@@ -357,9 +456,11 @@ function criarTelaTarefas() {
               id="tarefaResponsavel"
               name="tarefaResponsavel"
             >
+
               <option value="">
                 Sem responsável
               </option>
+
             </select>
 
           </div>
@@ -367,14 +468,64 @@ function criarTelaTarefas() {
 
           <div class="tarefas-campo">
 
-            <label for="tarefaPrazo">
-              Prazo
+            <label for="tarefaPrioridade">
+              Prioridade
+            </label>
+
+            <select
+              id="tarefaPrioridade"
+              name="tarefaPrioridade"
+            >
+
+              <option value="baixa">
+                Baixa
+              </option>
+
+              <option
+                value="media"
+                selected
+              >
+                Média
+              </option>
+
+              <option value="alta">
+                Alta
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+
+        <div class="tarefas-grid-data-hora">
+
+          <div class="tarefas-campo">
+
+            <label for="tarefaData">
+              Data do compromisso
             </label>
 
             <input
-              id="tarefaPrazo"
-              name="tarefaPrazo"
+              id="tarefaData"
+              name="tarefaData"
               type="date"
+            >
+
+          </div>
+
+
+          <div class="tarefas-campo">
+
+            <label for="tarefaHorario">
+              Horário
+            </label>
+
+            <input
+              id="tarefaHorario"
+              name="tarefaHorario"
+              type="time"
             >
 
           </div>
@@ -384,31 +535,15 @@ function criarTelaTarefas() {
 
         <div class="tarefas-campo">
 
-          <label for="tarefaPrioridade">
-            Prioridade
+          <label for="tarefaPrazo">
+            Prazo da tarefa
           </label>
 
-          <select
-            id="tarefaPrioridade"
-            name="tarefaPrioridade"
+          <input
+            id="tarefaPrazo"
+            name="tarefaPrazo"
+            type="date"
           >
-
-            <option value="baixa">
-              Baixa
-            </option>
-
-            <option
-              value="media"
-              selected
-            >
-              Média
-            </option>
-
-            <option value="alta">
-              Alta
-            </option>
-
-          </select>
 
         </div>
 
@@ -422,9 +557,9 @@ function criarTelaTarefas() {
           <textarea
             id="tarefaObservacao"
             name="tarefaObservacao"
-            rows="3"
+            rows="2"
             maxlength="500"
-            placeholder="Informações adicionais"
+            placeholder="Informação adicional, se necessário"
           ></textarea>
 
         </div>
@@ -468,10 +603,10 @@ function criarTelaTarefas() {
     </div>
   `;
 
-
-  const rodape = areaPrincipal.querySelector(
-    ".footer"
-  );
+  const rodape =
+    areaPrincipal.querySelector(
+      ".footer"
+    );
 
   if (rodape) {
     areaPrincipal.insertBefore(
@@ -479,27 +614,32 @@ function criarTelaTarefas() {
       rodape
     );
   } else {
-    areaPrincipal.appendChild(secao);
+    areaPrincipal.appendChild(
+      secao
+    );
   }
 
   return true;
 }
-
 
 function criarBotaoTarefas() {
   if (el("tab-tarefas")) {
     return true;
   }
 
-  const menuInferior = document.querySelector(
-    ".bottom-nav"
-  );
+  const menuInferior =
+    document.querySelector(
+      ".bottom-nav"
+    );
 
   if (!menuInferior) {
     return false;
   }
 
-  const botao = document.createElement("button");
+  const botao =
+    document.createElement(
+      "button"
+    );
 
   botao.id = "tab-tarefas";
   botao.className = "tab";
@@ -521,28 +661,33 @@ function criarBotaoTarefas() {
     </span>
   `;
 
-
-  const botaoAdmin = el("tab-admin");
+  const botaoAdmin =
+    el("tab-admin");
 
   if (
     botaoAdmin &&
-    botaoAdmin.parentElement === menuInferior
+    botaoAdmin.parentElement ===
+      menuInferior
   ) {
     menuInferior.insertBefore(
       botao,
       botaoAdmin
     );
   } else {
-    menuInferior.appendChild(botao);
+    menuInferior.appendChild(
+      botao
+    );
   }
 
   return true;
 }
 
-
 function criarEstruturaModulo() {
-  const telaCriada = criarTelaTarefas();
-  const botaoCriado = criarBotaoTarefas();
+  const telaCriada =
+    criarTelaTarefas();
+
+  const botaoCriado =
+    criarBotaoTarefas();
 
   estruturaCriada =
     telaCriada &&
@@ -556,8 +701,7 @@ function criarEstruturaModulo() {
   return estruturaCriada;
 }
 
-
-async function aguardarEstruturaDoListaLar() {
+async function aguardarEstruturaListaLar() {
   for (
     let tentativa = 1;
     tentativa <= 30;
@@ -571,7 +715,7 @@ async function aguardarEstruturaDoListaLar() {
   }
 
   console.error(
-    "Módulo Tarefas: não foi possível localizar main.app ou .bottom-nav."
+    "Módulo Tarefas: main.app ou .bottom-nav não encontrado."
   );
 
   return false;
@@ -583,19 +727,22 @@ async function aguardarEstruturaDoListaLar() {
 // ==========================================
 
 function ajustarMenu() {
-  const menu = document.querySelector(
-    ".bottom-nav"
-  );
+  const menu =
+    document.querySelector(
+      ".bottom-nav"
+    );
 
   if (!menu) {
     return;
   }
 
   const quantidade = [
-    ...menu.querySelectorAll(".tab")
-  ]
-    .filter((botao) => !botao.hidden)
-    .length;
+    ...menu.querySelectorAll(
+      ".tab"
+    )
+  ].filter((botao) => {
+    return !botao.hidden;
+  }).length;
 
   menu.style.gridTemplateColumns =
     `repeat(${Math.max(
@@ -604,38 +751,51 @@ function ajustarMenu() {
     )}, minmax(0, 1fr))`;
 }
 
-
 function abrirTelaTarefas() {
   if (!moduloLiberado) {
     return;
   }
 
   if (
-    typeof window.abrirTela === "function"
+    typeof window.abrirTela ===
+    "function"
   ) {
-    window.abrirTela("tarefas");
+    window.abrirTela(
+      "tarefas"
+    );
+
     return;
   }
 
   document
-    .querySelectorAll(".screen")
+    .querySelectorAll(
+      ".screen"
+    )
     .forEach((tela) => {
-      tela.classList.remove("active");
+      tela.classList.remove(
+        "active"
+      );
     });
 
   document
-    .querySelectorAll(".tab")
+    .querySelectorAll(
+      ".tab"
+    )
     .forEach((aba) => {
-      aba.classList.remove("active");
+      aba.classList.remove(
+        "active"
+      );
     });
 
-  el("tarefas")?.classList.add(
-    "active"
-  );
+  el("tarefas")
+    ?.classList.add(
+      "active"
+    );
 
-  el("tab-tarefas")?.classList.add(
-    "active"
-  );
+  el("tab-tarefas")
+    ?.classList.add(
+      "active"
+    );
 
   window.scrollTo({
     top: 0,
@@ -643,12 +803,14 @@ function abrirTelaTarefas() {
   });
 }
 
-
-function definirVisibilidade(liberado) {
+function definirVisibilidade(
+  liberado
+) {
   moduloLiberado =
     liberado === true;
 
-  const botao = el("tab-tarefas");
+  const botao =
+    el("tab-tarefas");
 
   if (botao) {
     botao.hidden =
@@ -664,9 +826,12 @@ function definirVisibilidade(liberado) {
       .contains("active")
   ) {
     if (
-      typeof window.abrirTela === "function"
+      typeof window.abrirTela ===
+      "function"
     ) {
-      window.abrirTela("lista");
+      window.abrirTela(
+        "lista"
+      );
     } else {
       el("tarefas")
         ?.classList
@@ -689,7 +854,7 @@ function definirVisibilidade(liberado) {
 
 
 // ==========================================
-// Contexto da família e liberação do módulo
+// Contexto da família e liberação
 // ==========================================
 
 async function lerConfiguracaoModulos() {
@@ -711,43 +876,50 @@ async function lerConfiguracaoModulos() {
   }
 }
 
-
-async function carregarContexto(user) {
-  const usuarioSnap = await getDoc(
-    doc(
-      db,
-      "usuarios",
-      user.uid
-    )
-  );
+async function carregarContexto(
+  user
+) {
+  const usuarioSnap =
+    await getDoc(
+      doc(
+        db,
+        "usuarios",
+        user.uid
+      )
+    );
 
   if (!usuarioSnap.exists()) {
     familiaIdAtual = null;
     familiaNomeAtual = "";
 
-    definirVisibilidade(false);
+    definirVisibilidade(
+      false
+    );
+
     pararListener();
 
     return;
   }
-
 
   const dadosUsuario =
     usuarioSnap.data();
 
   const familiaId =
-    dadosUsuario.familiaId || "";
+    dadosUsuario.familiaId ||
+    "";
 
   if (!familiaId) {
     familiaIdAtual = null;
     familiaNomeAtual = "";
 
-    definirVisibilidade(false);
+    definirVisibilidade(
+      false
+    );
+
     pararListener();
 
     return;
   }
-
 
   const [
     familiaSnap,
@@ -766,62 +938,58 @@ async function carregarContexto(user) {
 
   ]);
 
-
   const familia =
     familiaSnap.exists()
       ? familiaSnap.data()
       : {};
-
 
   const modulos =
     modulosSnap?.exists()
       ? modulosSnap.data()
       : {};
 
-
-  familiaIdAtual = familiaId;
+  familiaIdAtual =
+    familiaId;
 
   familiaNomeAtual =
     familia.nome ||
     "Minha família";
 
-
-  const configuracaoSemDefinicaoTarefas =
+  const configuracaoSemDefinicao =
     !modulosSnap ||
     !modulosSnap.exists() ||
     (
-      typeof modulos.tarefasLiberadas !==
+      typeof modulos
+        .tarefasLiberadas !==
         "boolean" &&
       !modulos.familiaPilotoId
     );
 
+  const liberadoParaTodos =
+    modulos.tarefasLiberadas ===
+    true;
 
-  const liberadoParaTodas =
-    modulos.tarefasLiberadas === true;
-
-
-  const liberadoParaFamiliaPiloto =
+  const liberadoParaPiloto =
     Boolean(
       modulos.familiaPilotoId
     ) &&
     modulos.familiaPilotoId ===
       familiaId;
 
-
   const adminComoPiloto =
     ADMIN_COMO_PILOTO_SEM_CONFIG &&
-    configuracaoSemDefinicaoTarefas &&
-    dadosUsuario.adminSistema === true;
-
+    configuracaoSemDefinicao &&
+    dadosUsuario.adminSistema ===
+      true;
 
   const liberado =
-    liberadoParaTodas ||
-    liberadoParaFamiliaPiloto ||
+    liberadoParaTodos ||
+    liberadoParaPiloto ||
     adminComoPiloto;
 
-
-  definirVisibilidade(liberado);
-
+  definirVisibilidade(
+    liberado
+  );
 
   const subtitulo =
     el("tarefasSubtitulo");
@@ -830,7 +998,6 @@ async function carregarContexto(user) {
     subtitulo.textContent =
       `Organize as atividades da ${familiaNomeAtual}.`;
   }
-
 
   if (!liberado) {
     membros = [];
@@ -841,7 +1008,6 @@ async function carregarContexto(user) {
     return;
   }
 
-
   await carregarMembros();
   iniciarListener();
 }
@@ -851,28 +1017,19 @@ async function carregarContexto(user) {
 // Membros da família
 // ==========================================
 
-function obterNomeMembro(membro) {
-  return (
-    membro.nome ||
-    membro.displayName ||
-    membro.email ||
-    "Membro da família"
-  );
-}
-
-
 async function carregarMembros() {
   membros = [];
 
   try {
-    const snap = await getDocs(
-      collection(
-        db,
-        "familias",
-        familiaIdAtual,
-        "membros"
-      )
-    );
+    const snap =
+      await getDocs(
+        collection(
+          db,
+          "familias",
+          familiaIdAtual,
+          "membros"
+        )
+      );
 
     membros = snap.docs
       .map((registro) => ({
@@ -880,7 +1037,10 @@ async function carregarMembros() {
         ...registro.data()
       }))
       .filter((membro) => {
-        return membro.ativo !== false;
+        return (
+          membro.ativo !==
+          false
+        );
       });
 
   } catch (erro) {
@@ -890,44 +1050,54 @@ async function carregarMembros() {
     );
   }
 
-
   const usuarioJaIncluido =
     membros.some((membro) => {
       return (
-        (membro.uid || membro.id) ===
+        (
+          membro.uid ||
+          membro.id
+        ) ===
         usuarioAtual?.uid
       );
     });
-
 
   if (
     usuarioAtual &&
     !usuarioJaIncluido
   ) {
     membros.push({
-      id: usuarioAtual.uid,
-      uid: usuarioAtual.uid,
+      id:
+        usuarioAtual.uid,
+
+      uid:
+        usuarioAtual.uid,
+
       nome:
-        usuarioAtual.displayName || "",
+        usuarioAtual
+          .displayName ||
+        "",
+
       email:
-        usuarioAtual.email || "",
+        usuarioAtual
+          .email ||
+        "",
+
       ativo: true
     });
   }
 
-
-  membros.sort((a, b) => {
-    return obterNomeMembro(a)
-      .localeCompare(
-        obterNomeMembro(b),
-        "pt-BR"
-      );
-  });
-
+  membros.sort(
+    (a, b) => {
+      return nomeMembro(a)
+        .localeCompare(
+          nomeMembro(b),
+          "pt-BR"
+        );
+    }
+  );
 
   preencherResponsaveis();
 }
-
 
 function preencherResponsaveis() {
   const campo =
@@ -946,33 +1116,38 @@ function preencherResponsaveis() {
     </option>
   `;
 
+  membros.forEach(
+    (membro) => {
+      const option =
+        document.createElement(
+          "option"
+        );
 
-  membros.forEach((membro) => {
-    const option =
-      document.createElement(
-        "option"
+      option.value =
+        membro.uid ||
+        membro.id;
+
+      option.textContent =
+        nomeMembro(membro);
+
+      campo.appendChild(
+        option
       );
-
-    option.value =
-      membro.uid ||
-      membro.id;
-
-    option.textContent =
-      obterNomeMembro(membro);
-
-    campo.appendChild(option);
-  });
-
+    }
+  );
 
   const valorAindaExiste = [
     ...campo.options
   ].some((opcao) => {
-    return opcao.value === valorAtual;
+    return (
+      opcao.value ===
+      valorAtual
+    );
   });
 
-
   if (valorAindaExiste) {
-    campo.value = valorAtual;
+    campo.value =
+      valorAtual;
   }
 }
 
@@ -995,7 +1170,6 @@ function pararListener() {
   renderizarTarefas();
 }
 
-
 function iniciarListener() {
   pararListener();
 
@@ -1006,53 +1180,56 @@ function iniciarListener() {
     return;
   }
 
+  const tarefasRef =
+    collection(
+      db,
+      "familias",
+      familiaIdAtual,
+      "tarefas"
+    );
 
-  const tarefasRef = collection(
-    db,
-    "familias",
-    familiaIdAtual,
-    "tarefas"
-  );
+  unsubscribeTarefas =
+    onSnapshot(
+      tarefasRef,
 
+      (snap) => {
+        tarefas =
+          snap.docs.map(
+            (registro) => ({
+              id:
+                registro.id,
 
-  unsubscribeTarefas = onSnapshot(
-    tarefasRef,
+              ...registro.data()
+            })
+          );
 
-    (snap) => {
-      tarefas = snap.docs.map(
-        (registro) => ({
-          id: registro.id,
-          ...registro.data()
-        })
-      );
+        renderizarTarefas();
+      },
 
-      renderizarTarefas();
-    },
+      async (erro) => {
+        console.error(
+          "Erro ao carregar tarefas:",
+          erro
+        );
 
-    async (erro) => {
-      console.error(
-        "Erro ao carregar tarefas:",
-        erro
-      );
+        const area =
+          el("listaTarefas");
 
-      const area =
-        el("listaTarefas");
+        if (area) {
+          area.innerHTML = `
+            <div class="empty">
+              Não foi possível carregar as tarefas.
+            </div>
+          `;
+        }
 
-      if (area) {
-        area.innerHTML = `
-          <div class="empty">
-            Não foi possível carregar as tarefas.
-          </div>
-        `;
+        await avisar(
+          "Erro ao carregar tarefas",
+          "Verifique a conexão e as regras do Firestore.",
+          "warning"
+        );
       }
-
-      await avisar(
-        "Erro ao carregar tarefas",
-        "Verifique a conexão e as regras do Firestore.",
-        "warning"
-      );
-    }
-  );
+    );
 }
 
 
@@ -1065,30 +1242,41 @@ function atualizarResumo() {
     tarefas.length;
 
   const concluidas =
-    tarefas.filter((tarefa) => {
-      return tarefa.concluida === true;
-    }).length;
+    tarefas.filter(
+      (tarefa) => {
+        return (
+          tarefa.concluida ===
+          true
+        );
+      }
+    ).length;
 
   const pendentes =
-    total - concluidas;
-
+    total -
+    concluidas;
 
   if (el("tarefasTotal")) {
-    el("tarefasTotal").textContent =
-      String(total);
+    el("tarefasTotal")
+      .textContent =
+        String(total);
   }
 
-  if (el("tarefasPendentes")) {
-    el("tarefasPendentes").textContent =
-      String(pendentes);
+  if (
+    el("tarefasPendentes")
+  ) {
+    el("tarefasPendentes")
+      .textContent =
+        String(pendentes);
   }
 
-  if (el("tarefasConcluidas")) {
-    el("tarefasConcluidas").textContent =
-      String(concluidas);
+  if (
+    el("tarefasConcluidas")
+  ) {
+    el("tarefasConcluidas")
+      .textContent =
+        String(concluidas);
   }
 }
-
 
 function renderizarTarefas() {
   atualizarResumo();
@@ -1100,7 +1288,6 @@ function renderizarTarefas() {
     return;
   }
 
-
   if (!moduloLiberado) {
     area.innerHTML = `
       <div class="empty">
@@ -1111,8 +1298,10 @@ function renderizarTarefas() {
     return;
   }
 
-
-  if (tarefas.length === 0) {
+  if (
+    tarefas.length ===
+    0
+  ) {
     area.innerHTML = `
       <div class="empty">
         Nenhuma tarefa cadastrada.<br>
@@ -1123,14 +1312,12 @@ function renderizarTarefas() {
     return;
   }
 
-
   area.innerHTML =
     ordenarTarefas(tarefas)
       .map((tarefa) => {
-
         const concluida =
-          tarefa.concluida === true;
-
+          tarefa.concluida ===
+          true;
 
         const vencida =
           prazoVencido(
@@ -1138,11 +1325,29 @@ function renderizarTarefas() {
             concluida
           );
 
-
         const prioridade =
           tarefa.prioridade ||
           "media";
 
+        const dataAgendada =
+          tarefa.dataAgendada ||
+          tarefa.data ||
+          "";
+
+        const horario =
+          tarefa.horario ||
+          "";
+
+        const compromisso =
+          formatarCompromisso(
+            dataAgendada,
+            horario
+          );
+
+        const prazoFormatado =
+          formatarDataIso(
+            tarefa.prazo
+          );
 
         const titulo =
           escaparHtml(
@@ -1150,20 +1355,18 @@ function renderizarTarefas() {
             "Tarefa sem título"
           );
 
-
         const responsavel =
           escaparHtml(
-            tarefa.responsavelNome ||
+            tarefa
+              .responsavelNome ||
             "Sem responsável"
           );
-
 
         const observacao =
           escaparHtml(
             tarefa.observacao ||
             ""
           );
-
 
         const classes = [
           "tarefa-item",
@@ -1180,7 +1383,6 @@ function renderizarTarefas() {
         ]
           .filter(Boolean)
           .join(" ");
-
 
         return `
           <article
@@ -1225,17 +1427,36 @@ function renderizarTarefas() {
                   </span>
 
 
-                  <span
-                    class="${
-                      vencida
-                        ? "tarefa-prazo-vencido"
-                        : ""
-                    }"
-                  >
-                    📅 ${formatarPrazo(
-                      tarefa.prazo
-                    )}
-                  </span>
+                  ${
+                    compromisso
+                      ? `
+                        <span class="tarefa-data-compromisso">
+                          📅 ${escaparHtml(
+                            compromisso
+                          )}
+                        </span>
+                      `
+                      : ""
+                  }
+
+
+                  ${
+                    prazoFormatado
+                      ? `
+                        <span
+                          class="tarefa-prazo ${
+                            vencida
+                              ? "tarefa-prazo-vencido"
+                              : ""
+                          }"
+                        >
+                          ⏳ Até ${escaparHtml(
+                            prazoFormatado
+                          )}
+                        </span>
+                      `
+                      : ""
+                  }
 
 
                   <span>
@@ -1294,11 +1515,12 @@ function renderizarTarefas() {
 // Formulário
 // ==========================================
 
-function abrirFormulario(tarefa = null) {
+function abrirFormulario(
+  tarefa = null
+) {
   if (!moduloLiberado) {
     return;
   }
-
 
   const formulario =
     el("formularioTarefa");
@@ -1307,10 +1529,9 @@ function abrirFormulario(tarefa = null) {
     return;
   }
 
-
   tarefaEdicaoId =
-    tarefa?.id || null;
-
+    tarefa?.id ||
+    null;
 
   el("tituloFormularioTarefa")
     .textContent =
@@ -1318,75 +1539,105 @@ function abrirFormulario(tarefa = null) {
         ? "Editar tarefa"
         : "Nova tarefa";
 
-
   el("tarefaTitulo").value =
-    tarefa?.titulo || "";
+    tarefa?.titulo ||
+    "";
 
+  el("tarefaResponsavel")
+    .value =
+      tarefa
+        ?.responsavelUid ||
+      "";
 
-  el("tarefaResponsavel").value =
-    tarefa?.responsavelUid || "";
+  el("tarefaPrioridade")
+    .value =
+      tarefa?.prioridade ||
+      "media";
 
+  el("tarefaData").value =
+    tarefa?.dataAgendada ||
+    tarefa?.data ||
+    "";
+
+  el("tarefaHorario").value =
+    tarefa?.horario ||
+    "";
 
   el("tarefaPrazo").value =
-    tarefa?.prazo || "";
+    tarefa?.prazo ||
+    "";
 
+  el("tarefaObservacao")
+    .value =
+      tarefa?.observacao ||
+      "";
 
-  el("tarefaPrioridade").value =
-    tarefa?.prioridade ||
-    "media";
+  el("btnSalvarTarefa")
+    .textContent =
+      tarefa
+        ? "Salvar alterações"
+        : "Salvar tarefa";
 
+  formulario.hidden =
+    false;
 
-  el("tarefaObservacao").value =
-    tarefa?.observacao || "";
+  window.setTimeout(
+    () => {
+      el("tarefaTitulo")
+        ?.focus();
 
-
-  el("btnSalvarTarefa").textContent =
-    tarefa
-      ? "Salvar alterações"
-      : "Salvar tarefa";
-
-
-  formulario.hidden = false;
-
-
-  window.setTimeout(() => {
-
-    el("tarefaTitulo")
-      ?.focus();
-
-
-    formulario.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
-
-  }, 50);
+      formulario.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    },
+    50
+  );
 }
-
 
 function limparFormulario() {
   if (el("tarefaTitulo")) {
-    el("tarefaTitulo").value = "";
+    el("tarefaTitulo")
+      .value = "";
   }
 
-  if (el("tarefaResponsavel")) {
-    el("tarefaResponsavel").value = "";
+  if (
+    el("tarefaResponsavel")
+  ) {
+    el("tarefaResponsavel")
+      .value = "";
+  }
+
+  if (
+    el("tarefaPrioridade")
+  ) {
+    el("tarefaPrioridade")
+      .value =
+        "media";
+  }
+
+  if (el("tarefaData")) {
+    el("tarefaData")
+      .value = "";
+  }
+
+  if (el("tarefaHorario")) {
+    el("tarefaHorario")
+      .value = "";
   }
 
   if (el("tarefaPrazo")) {
-    el("tarefaPrazo").value = "";
+    el("tarefaPrazo")
+      .value = "";
   }
 
-  if (el("tarefaPrioridade")) {
-    el("tarefaPrioridade").value =
-      "media";
-  }
-
-  if (el("tarefaObservacao")) {
-    el("tarefaObservacao").value = "";
+  if (
+    el("tarefaObservacao")
+  ) {
+    el("tarefaObservacao")
+      .value = "";
   }
 }
-
 
 function fecharFormulario() {
   const formulario =
@@ -1401,13 +1652,13 @@ function fecharFormulario() {
 
   limparFormulario();
 
-
-  if (el("tituloFormularioTarefa")) {
+  if (
+    el("tituloFormularioTarefa")
+  ) {
     el("tituloFormularioTarefa")
       .textContent =
         "Nova tarefa";
   }
-
 
   if (el("btnSalvarTarefa")) {
     el("btnSalvarTarefa")
@@ -1416,15 +1667,14 @@ function fecharFormulario() {
   }
 }
 
-
-async function salvarTarefa(evento) {
+async function salvarTarefa(
+  evento
+) {
   evento?.preventDefault();
-
 
   if (salvandoTarefa) {
     return;
   }
-
 
   if (
     !usuarioAtual ||
@@ -1440,33 +1690,42 @@ async function salvarTarefa(evento) {
     return;
   }
 
-
   const titulo =
     el("tarefaTitulo")
       ?.value
-      .trim() || "";
-
+      .trim() ||
+    "";
 
   const responsavelUid =
     el("tarefaResponsavel")
-      ?.value || "";
-
-
-  const prazo =
-    el("tarefaPrazo")
-      ?.value || "";
-
+      ?.value ||
+    "";
 
   const prioridade =
     el("tarefaPrioridade")
-      ?.value || "media";
+      ?.value ||
+    "media";
 
+  const dataAgendada =
+    el("tarefaData")
+      ?.value ||
+    "";
+
+  const horario =
+    el("tarefaHorario")
+      ?.value ||
+    "";
+
+  const prazo =
+    el("tarefaPrazo")
+      ?.value ||
+    "";
 
   const observacao =
     el("tarefaObservacao")
       ?.value
-      .trim() || "";
-
+      .trim() ||
+    "";
 
   if (!titulo) {
     await avisar(
@@ -1481,15 +1740,32 @@ async function salvarTarefa(evento) {
     return;
   }
 
+  if (
+    horario &&
+    !dataAgendada
+  ) {
+    await avisar(
+      "Informe a data",
+      "Para usar um horário, informe também a data do compromisso.",
+      "warning"
+    );
+
+    el("tarefaData")
+      ?.focus();
+
+    return;
+  }
 
   const responsavel =
     membros.find((membro) => {
       return (
-        (membro.uid || membro.id) ===
+        (
+          membro.uid ||
+          membro.id
+        ) ===
         responsavelUid
       );
     });
-
 
   const dados = {
     titulo,
@@ -1498,12 +1774,18 @@ async function salvarTarefa(evento) {
 
     responsavelNome:
       responsavel
-        ? obterNomeMembro(responsavel)
+        ? nomeMembro(
+            responsavel
+          )
         : "",
 
-    prazo,
-
     prioridade,
+
+    dataAgendada,
+
+    horario,
+
+    prazo,
 
     observacao,
 
@@ -1517,31 +1799,32 @@ async function salvarTarefa(evento) {
       nomeUsuarioAtual(),
 
     atualizadoPorEmail:
-      usuarioAtual.email || ""
+      usuarioAtual.email ||
+      ""
   };
-
 
   const botao =
     el("btnSalvarTarefa");
 
   const editando =
-    Boolean(tarefaEdicaoId);
+    Boolean(
+      tarefaEdicaoId
+    );
 
   const tarefaIdAtual =
     tarefaEdicaoId;
 
-
   try {
-    salvandoTarefa = true;
-
+    salvandoTarefa =
+      true;
 
     if (botao) {
-      botao.disabled = true;
+      botao.disabled =
+        true;
 
       botao.textContent =
         "Salvando...";
     }
-
 
     if (
       editando &&
@@ -1569,7 +1852,8 @@ async function salvarTarefa(evento) {
         {
           ...dados,
 
-          concluida: false,
+          concluida:
+            false,
 
           criadaEm:
             serverTimestamp(),
@@ -1581,11 +1865,11 @@ async function salvarTarefa(evento) {
             nomeUsuarioAtual(),
 
           criadoPorEmail:
-            usuarioAtual.email || ""
+            usuarioAtual.email ||
+            ""
         }
       );
     }
-
 
     fecharFormulario();
 
@@ -1602,11 +1886,12 @@ async function salvarTarefa(evento) {
     );
 
   } finally {
-    salvandoTarefa = false;
-
+    salvandoTarefa =
+      false;
 
     if (botao) {
-      botao.disabled = false;
+      botao.disabled =
+        false;
 
       botao.textContent =
         editando
@@ -1618,10 +1903,12 @@ async function salvarTarefa(evento) {
 
 
 // ==========================================
-// Ações das tarefas
+// Ações
 // ==========================================
 
-async function alternarConclusao(tarefa) {
+async function alternarConclusao(
+  tarefa
+) {
   if (
     !familiaIdAtual ||
     !usuarioAtual
@@ -1629,10 +1916,9 @@ async function alternarConclusao(tarefa) {
     return;
   }
 
-
   const concluir =
-    tarefa.concluida !== true;
-
+    tarefa.concluida !==
+    true;
 
   try {
     await updateDoc(
@@ -1672,7 +1958,8 @@ async function alternarConclusao(tarefa) {
           nomeUsuarioAtual(),
 
         atualizadoPorEmail:
-          usuarioAtual.email || ""
+          usuarioAtual.email ||
+          ""
       }
     );
 
@@ -1690,14 +1977,14 @@ async function alternarConclusao(tarefa) {
   }
 }
 
-
-async function excluirTarefa(tarefa) {
+async function excluirTarefa(
+  tarefa
+) {
   const aceitou =
     await confirmarExclusao(
       "Excluir tarefa",
       `Deseja excluir a tarefa "${tarefa.titulo || "Tarefa"}"?`
     );
-
 
   if (
     !aceitou ||
@@ -1705,7 +1992,6 @@ async function excluirTarefa(tarefa) {
   ) {
     return;
   }
-
 
   try {
     await deleteDoc(
@@ -1718,9 +2004,9 @@ async function excluirTarefa(tarefa) {
       )
     );
 
-
     if (
-      tarefaEdicaoId === tarefa.id
+      tarefaEdicaoId ===
+      tarefa.id
     ) {
       fecharFormulario();
     }
@@ -1739,58 +2025,62 @@ async function excluirTarefa(tarefa) {
   }
 }
 
-
-async function tratarCliqueLista(evento) {
+async function tratarCliqueLista(
+  evento
+) {
   const botao =
     evento.target.closest(
       "[data-acao]"
     );
 
-
   if (!botao) {
     return;
   }
-
 
   const item =
     botao.closest(
       "[data-tarefa-id]"
     );
 
-
   const tarefaId =
-    item?.dataset.tarefaId || "";
-
+    item?.dataset.tarefaId ||
+    "";
 
   const tarefa =
     tarefas.find((registro) => {
-      return registro.id === tarefaId;
+      return (
+        registro.id ===
+        tarefaId
+      );
     });
-
 
   if (!tarefa) {
     return;
   }
 
-
   const acao =
     botao.dataset.acao;
 
-
   if (acao === "editar") {
-    abrirFormulario(tarefa);
+    abrirFormulario(
+      tarefa
+    );
+
     return;
   }
-
 
   if (acao === "concluir") {
-    await alternarConclusao(tarefa);
+    await alternarConclusao(
+      tarefa
+    );
+
     return;
   }
 
-
   if (acao === "excluir") {
-    await excluirTarefa(tarefa);
+    await excluirTarefa(
+      tarefa
+    );
   }
 }
 
@@ -1803,7 +2093,6 @@ function configurarEventos() {
   if (eventosConfigurados) {
     return;
   }
-
 
   const botaoMenu =
     el("tab-tarefas");
@@ -1820,7 +2109,6 @@ function configurarEventos() {
   const lista =
     el("listaTarefas");
 
-
   if (
     !botaoMenu ||
     !botaoNova ||
@@ -1831,43 +2119,40 @@ function configurarEventos() {
     return;
   }
 
-
   botaoMenu.addEventListener(
     "click",
     abrirTelaTarefas
   );
 
-
   botaoNova.addEventListener(
     "click",
-    () => abrirFormulario()
+    () => {
+      abrirFormulario();
+    }
   );
-
 
   botaoCancelar.addEventListener(
     "click",
     fecharFormulario
   );
 
-
   formulario.addEventListener(
     "submit",
     salvarTarefa
   );
-
 
   lista.addEventListener(
     "click",
     tratarCliqueLista
   );
 
-
-  eventosConfigurados = true;
+  eventosConfigurados =
+    true;
 }
 
 
 // ==========================================
-// Integração futura com tarefas-audio.js
+// Integração com tarefas-audio.js
 // ==========================================
 
 window.ListaLarTarefas = {
@@ -1876,60 +2161,70 @@ window.ListaLarTarefas = {
     abrirTelaTarefas();
   },
 
-
-  abrirNovaTarefa(dados = {}) {
+  abrirNovaTarefa(
+    dados = {}
+  ) {
     if (!moduloLiberado) {
       return false;
     }
 
-
     abrirTelaTarefas();
-
 
     abrirFormulario({
       id: null,
 
       titulo:
-        dados.titulo || "",
+        dados.titulo ||
+        "",
 
       responsavelUid:
-        dados.responsavelUid || "",
-
-      prazo:
-        dados.prazo || "",
+        dados.responsavelUid ||
+        "",
 
       prioridade:
         dados.prioridade ||
         "media",
 
-      observacao:
-        dados.observacao || ""
-    });
+      dataAgendada:
+        dados.dataAgendada ||
+        dados.data ||
+        "",
 
+      horario:
+        dados.horario ||
+        "",
+
+      prazo:
+        dados.prazo ||
+        "",
+
+      observacao:
+        dados.observacao ||
+        ""
+    });
 
     return true;
   },
-
 
   obterFamiliaId() {
     return familiaIdAtual;
   },
 
-
   obterNomeFamilia() {
     return familiaNomeAtual;
   },
 
-
   obterMembros() {
-    return [...membros];
+    return [
+      ...membros
+    ];
   },
-
 
   obterTarefas() {
-    return [...tarefas];
+    return [
+      ...tarefas
+    ];
   },
-
 
   estaLiberado() {
     return moduloLiberado;
@@ -1944,25 +2239,25 @@ window.ListaLarTarefas = {
 
 async function iniciar() {
   const estruturaDisponivel =
-    await aguardarEstruturaDoListaLar();
-
+    await aguardarEstruturaListaLar();
 
   if (!estruturaDisponivel) {
     return;
   }
 
+  definirVisibilidade(
+    false
+  );
 
-  definirVisibilidade(false);
   renderizarTarefas();
-
 
   onAuthStateChanged(
     auth,
 
     async (user) => {
       usuarioAtual =
-        user || null;
-
+        user ||
+        null;
 
       if (!user) {
         familiaIdAtual = null;
@@ -1973,15 +2268,18 @@ async function iniciar() {
         fecharFormulario();
         pararListener();
         preencherResponsaveis();
-        definirVisibilidade(false);
+
+        definirVisibilidade(
+          false
+        );
 
         return;
       }
 
-
       try {
-        await carregarContexto(user);
-
+        await carregarContexto(
+          user
+        );
 
         window.dispatchEvent(
           new CustomEvent(
@@ -2008,15 +2306,18 @@ async function iniciar() {
         );
 
         pararListener();
-        definirVisibilidade(false);
+
+        definirVisibilidade(
+          false
+        );
       }
     }
   );
 }
 
-
 if (
-  document.readyState === "loading"
+  document.readyState ===
+  "loading"
 ) {
   document.addEventListener(
     "DOMContentLoaded",
