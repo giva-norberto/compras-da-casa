@@ -950,7 +950,22 @@ function criarCamposCompromisso() {
 
 function criarEstruturaNova() {
   if (estruturaNovaCriada) {
-    return;
+    return true;
+  }
+
+  const telaTarefas =
+    el("tarefas");
+
+  const listaTarefas =
+    el("listaTarefas");
+
+  // A tela ainda não foi inserida no HTML.
+  // Não marca como criada para permitir nova tentativa.
+  if (
+    !telaTarefas ||
+    !listaTarefas
+  ) {
+    return false;
   }
 
   criarBarraPrincipal();
@@ -964,8 +979,9 @@ function criarEstruturaNova() {
   configurarEventosNovos();
   atualizarModoPrincipal();
   atualizarBotoesAtivos();
-}
 
+  return true;
+}
 
 // ==========================================
 // Contexto do usuário
@@ -3240,7 +3256,33 @@ window.ListaLarTarefas = {
 
 function iniciar() {
   configurarEventos();
-  criarEstruturaNova();
+
+  function garantirEstruturaTarefas() {
+    if (criarEstruturaNova()) {
+      return;
+    }
+
+    let tentativas = 0;
+
+    const intervalo =
+      window.setInterval(() => {
+        tentativas += 1;
+
+        const criada =
+          criarEstruturaNova();
+
+        if (
+          criada ||
+          tentativas >= 40
+        ) {
+          window.clearInterval(
+            intervalo
+          );
+        }
+      }, 250);
+  }
+
+  garantirEstruturaTarefas();
 
   onAuthStateChanged(
     auth,
@@ -3262,8 +3304,17 @@ function iniciar() {
       }
 
       try {
+        // Garante novamente porque o menu e a tela
+        // podem ter sido inseridos depois do login.
+        garantirEstruturaTarefas();
+
         await carregarContexto(
           user
+        );
+
+        // Reaplica depois que todo o contexto foi carregado.
+        definirVisibilidade(
+          moduloLiberado
         );
 
         window.dispatchEvent(
@@ -3290,20 +3341,4 @@ function iniciar() {
       }
     }
   );
-}
-
-
-if (
-  document.readyState ===
-  "loading"
-) {
-  document.addEventListener(
-    "DOMContentLoaded",
-    iniciar,
-    {
-      once: true
-    }
-  );
-} else {
-  iniciar();
 }
