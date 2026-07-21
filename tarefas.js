@@ -3304,15 +3304,12 @@ function iniciar() {
       }
 
       try {
-        // Garante novamente porque o menu e a tela
-        // podem ter sido inseridos depois do login.
         garantirEstruturaTarefas();
 
         await carregarContexto(
           user
         );
 
-        // Reaplica depois que todo o contexto foi carregado.
         definirVisibilidade(
           moduloLiberado
         );
@@ -3341,4 +3338,19 @@ function iniciar() {
       }
     }
   );
+}
+
+
+// ==========================================
+// Executar módulo
+// ==========================================
+
+if (document.readyState === "loading") {
+  document.addEventListener(
+    "DOMContentLoaded",
+    iniciar,
+    { once: true }
+  );
+} else {
+  iniciar();
 }
