@@ -5298,7 +5298,7 @@ function criarEstilos() {
     }
 
 
-    /* ======================================
+        /* ======================================
        Celulares menores
        ====================================== */
 
@@ -5343,6 +5343,48 @@ function criarEstilos() {
       .medicamento-acoes {
         grid-template-columns:
           1fr;
+      }
+
+    }
+
+
+    /* ======================================
+       Ajuste para área estreita
+       Corrige o cabeçalho mesmo no computador
+       ====================================== */
+
+    .medicamentos-container {
+      container-type:
+        inline-size;
+    }
+
+    @container (max-width: 620px) {
+
+      .medicamentos-cabecalho-superior {
+        grid-template-columns:
+          auto
+          minmax(0, 1fr);
+
+        align-items: center;
+        gap: 10px;
+      }
+
+      .medicamentos-titulo-area {
+        min-width: 0;
+      }
+
+      .medicamentos-titulo-area h2 {
+        overflow-wrap: normal;
+        word-break: normal;
+      }
+
+      .medicamentos-btn-novo {
+        grid-column:
+          1 / -1;
+
+        width: 100%;
+        justify-self: stretch;
+        margin-top: 2px;
       }
 
     }
