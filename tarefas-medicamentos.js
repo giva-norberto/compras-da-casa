@@ -1,7 +1,7 @@
 // ==========================================
 // ListaLar - Lembretes de Medicamentos
 // Arquivo: tarefas-medicamentos.js
-// Versão: 1.1.0
+// Versão: 1.2.0
 // ==========================================
 
 import {
@@ -30,7 +30,7 @@ import {
 
 
 // ==========================================
-// Firebase
+// Configuração
 // ==========================================
 
 const firebaseConfig = {
@@ -51,12 +51,11 @@ const db = getFirestore(app);
 
 
 // ==========================================
-// Estado geral
+// Estado
 // ==========================================
 
 let usuarioAtual = null;
 let familiaIdAtual = "";
-let familiaNomeAtual = "";
 let membros = [];
 
 let lembretes = [];
@@ -76,16 +75,11 @@ let contextoEmEspera = false;
 
 
 // ==========================================
-// Atalho de elemento
-// ==========================================
-
-const el = (id) =>
-  document.getElementById(id);
-
-
-// ==========================================
 // Utilidades
 // ==========================================
+
+const el = (id) => document.getElementById(id);
+
 
 function escaparHtml(valor) {
   return String(valor ?? "")
@@ -98,24 +92,22 @@ function escaparHtml(valor) {
 
 
 function formatarNomePessoa(valor) {
-  const texto =
-    String(valor ?? "")
-      .trim()
-      .replace(/\s+/g, " ");
+  const texto = String(valor ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
 
   if (!texto) {
     return "";
   }
 
-  const conectivos =
-    new Set([
-      "da",
-      "das",
-      "de",
-      "do",
-      "dos",
-      "e"
-    ]);
+  const conectivos = new Set([
+    "da",
+    "das",
+    "de",
+    "do",
+    "dos",
+    "e"
+  ]);
 
   return texto
     .toLocaleLowerCase("pt-BR")
@@ -289,25 +281,6 @@ function formatarData(valor) {
 }
 
 
-function formatarDataLonga(valor) {
-  const data =
-    isoParaData(valor);
-
-  if (!data) {
-    return "Data não informada";
-  }
-
-  return data.toLocaleDateString(
-    "pt-BR",
-    {
-      day: "2-digit",
-      month: "long",
-      year: "numeric"
-    }
-  );
-}
-
-
 function normalizarNumero(
   valor,
   minimo,
@@ -335,10 +308,16 @@ function rotuloPrioridade(
   prioridade
 ) {
   return {
-    alta: "Alta",
-    media: "Média",
-    baixa: "Baixa"
-  }[prioridade] || "Média";
+    alta:
+      "Alta",
+
+    media:
+      "Média",
+
+    baixa:
+      "Baixa"
+  }[prioridade] ||
+  "Média";
 }
 
 
@@ -346,10 +325,16 @@ function pesoPrioridade(
   prioridade
 ) {
   return {
-    alta: 1,
-    media: 2,
-    baixa: 3
-  }[prioridade] || 4;
+    alta:
+      1,
+
+    media:
+      2,
+
+    baixa:
+      3
+  }[prioridade] ||
+  4;
 }
 
 
@@ -382,7 +367,7 @@ function obterNomePessoaPorUid(
   uid
 ) {
   if (!uid) {
-    return "Família / uso geral";
+    return "";
   }
 
   const membro =
@@ -401,12 +386,11 @@ function obterNomePessoaPorUid(
     (
       uid === usuarioAtual?.uid
         ? obterNomeUsuario()
-        : "Membro da família"
+        : ""
     );
 
-  return (
-    formatarNomePessoa(nome) ||
-    "Membro da família"
+  return formatarNomePessoa(
+    nome
   );
 }
 
@@ -470,51 +454,10 @@ async function confirmar({
 
 
 // ==========================================
-// Classificação automática
+// Situação automática
 // ==========================================
 
-function classificarLembrete(
-  lembrete
-) {
-  const proximaCompra =
-    isoParaData(
-      lembrete.proximaCompra
-    );
-
-  if (!proximaCompra) {
-    return "proximos";
-  }
-
-  const hoje =
-    hojeSemHora();
-
-  if (hoje >= proximaCompra) {
-    return "comprar-agora";
-  }
-
-  const diasAntes =
-    normalizarNumero(
-      lembrete.avisarDiasAntes,
-      0,
-      365,
-      0
-    );
-
-  const inicioAviso =
-    adicionarDias(
-      proximaCompra,
-      -diasAntes
-    );
-
-  if (hoje >= inicioAviso) {
-    return "em-breve";
-  }
-
-  return "proximos";
-}
-
-
-function obterInformacaoPrazo(
+function obterSituacaoLembrete(
   lembrete
 ) {
   const proximaCompra =
@@ -524,14 +467,17 @@ function obterInformacaoPrazo(
 
   if (!proximaCompra) {
     return {
-      texto:
-        "Sem data definida",
+      codigo:
+        "programado",
 
-      detalhe:
+      texto:
         "",
 
-      classe:
-        "proximos"
+      pendente:
+        false,
+
+      dias:
+        null
     };
   }
 
@@ -544,9 +490,12 @@ function obterInformacaoPrazo(
       proximaCompra
     );
 
-  const classe =
-    classificarLembrete(
-      lembrete
+  const diasAntes =
+    normalizarNumero(
+      lembrete.avisarDiasAntes,
+      0,
+      365,
+      5
     );
 
   if (dias < 0) {
@@ -554,91 +503,91 @@ function obterInformacaoPrazo(
       Math.abs(dias);
 
     return {
+      codigo:
+        "atrasado",
+
       texto:
         atraso === 1
-          ? "Atrasado há 1 dia"
-          : `Atrasado há ${atraso} dias`,
+          ? "Atrasado 1 dia"
+          : `Atrasado ${atraso} dias`,
 
-      detalhe:
-        formatarData(
-          lembrete.proximaCompra
-        ),
+      pendente:
+        true,
 
-      classe
+      dias
     };
   }
 
   if (dias === 0) {
     return {
+      codigo:
+        "hoje",
+
       texto:
         "Comprar hoje",
 
-      detalhe:
-        formatarData(
-          lembrete.proximaCompra
-        ),
+      pendente:
+        true,
 
-      classe
+      dias
     };
   }
 
-  if (dias === 1) {
+  if (dias <= diasAntes) {
     return {
+      codigo:
+        "pendente",
+
       texto:
-        "Comprar amanhã",
+        "Pendente",
 
-      detalhe:
-        formatarData(
-          lembrete.proximaCompra
-        ),
+      pendente:
+        true,
 
-      classe
+      dias
     };
   }
 
   return {
+    codigo:
+      "programado",
+
     texto:
-      `Faltam ${dias} dias`,
+      "",
 
-    detalhe:
-      formatarData(
-        lembrete.proximaCompra
-      ),
+    pendente:
+      false,
 
-    classe
+    dias
   };
 }
 
 
-function rotuloSituacao(
-  situacao
+function classificarLembrete(
+  lembrete
 ) {
-  return {
-    "comprar-agora":
-      "Comprar agora",
+  const situacao =
+    obterSituacaoLembrete(
+      lembrete
+    );
 
-    "em-breve":
-      "Em breve",
+  if (
+    situacao.codigo ===
+      "atrasado" ||
+    situacao.codigo ===
+      "hoje"
+  ) {
+    return "comprar-agora";
+  }
 
-    proximos:
-      "Próximos"
-  }[situacao] || "Próximos";
-}
+  if (
+    situacao.codigo ===
+    "pendente"
+  ) {
+    return "em-breve";
+  }
 
-
-function iconeSituacao(
-  situacao
-) {
-  return {
-    "comprar-agora":
-      "⚠️",
-
-    "em-breve":
-      "⏳",
-
-    proximos:
-      "📅"
-  }[situacao] || "📅";
+  return "proximos";
 }
 
 
@@ -683,12 +632,12 @@ function criarIndicadorMedicamentos() {
 
     indicador.setAttribute(
       "aria-label",
-      "Abrir lembretes de medicamentos"
+      "Abrir medicamentos"
     );
 
     indicador.setAttribute(
       "title",
-      "Abrir lembretes de medicamentos"
+      "Abrir medicamentos"
     );
 
     indicador.innerHTML = `
@@ -732,19 +681,11 @@ function atualizarIndicador() {
 
   const precisamAtencao =
     lembretes.filter(
-      (lembrete) => {
-        const situacao =
-          classificarLembrete(
-            lembrete
-          );
-
-        return (
-          situacao ===
-            "comprar-agora" ||
-          situacao ===
-            "em-breve"
-        );
-      }
+      (lembrete) =>
+        lembrete.ativo !== false &&
+        obterSituacaoLembrete(
+          lembrete
+        ).pendente
     ).length;
 
   quantidade.textContent =
@@ -757,26 +698,15 @@ function atualizarIndicador() {
     precisamAtencao > 0
   );
 
-  if (precisamAtencao === 0) {
-    indicador.setAttribute(
-      "aria-label",
-      "Abrir lembretes de medicamentos. Nenhum medicamento precisa de atenção."
-    );
-
-    return;
-  }
-
   indicador.setAttribute(
     "aria-label",
-    `Abrir lembretes de medicamentos. ${precisamAtencao} lembrete${
-      precisamAtencao === 1
-        ? ""
-        : "s"
-    } precisa${
-      precisamAtencao === 1
-        ? ""
-        : "m"
-    } de atenção.`
+    precisamAtencao > 0
+      ? `Abrir medicamentos. ${precisamAtencao} pendência${
+          precisamAtencao === 1
+            ? ""
+            : "s"
+        }.`
+      : "Abrir medicamentos. Nenhuma pendência."
   );
 }
 
@@ -807,7 +737,7 @@ function definirVisibilidadeModulo(
 
 
 // ==========================================
-// Tela de medicamentos
+// Tela
 // ==========================================
 
 function criarTelaMedicamentos() {
@@ -852,20 +782,16 @@ function criarTelaMedicamentos() {
             ‹
           </button>
 
-          <div class="medicamentos-titulo-area">
-
-            <h2>
-              Lembretes de medicamentos
-            </h2>
-
-          </div>
+          <h2>
+            Lembretes de medicamentos
+          </h2>
 
           <button
             id="btnNovoMedicamento"
             type="button"
             class="medicamentos-btn-novo"
           >
-            Adicionar Medicamento
+            Adicionar medicamento
           </button>
 
         </div>
@@ -876,7 +802,7 @@ function criarTelaMedicamentos() {
       <nav
         id="medicamentosFiltros"
         class="medicamentos-filtros"
-        aria-label="Filtros dos lembretes"
+        aria-label="Filtros dos medicamentos"
       >
 
         <button
@@ -890,25 +816,9 @@ function criarTelaMedicamentos() {
         <button
           type="button"
           class="medicamentos-filtro"
-          data-filtro-medicamento="comprar-agora"
+          data-filtro-medicamento="pendentes"
         >
-          Comprar agora
-        </button>
-
-        <button
-          type="button"
-          class="medicamentos-filtro"
-          data-filtro-medicamento="em-breve"
-        >
-          Em breve
-        </button>
-
-        <button
-          type="button"
-          class="medicamentos-filtro"
-          data-filtro-medicamento="proximos"
-        >
-          Próximos
+          Pendentes
         </button>
 
         <button
@@ -932,13 +842,11 @@ function criarTelaMedicamentos() {
 
         <div class="medicamentos-formulario-topo">
 
-          <div>
-            <strong
-              id="tituloFormularioMedicamento"
-            >
-              Novo lembrete
-            </strong>
-          </div>
+          <strong
+            id="tituloFormularioMedicamento"
+          >
+            Adicionar medicamento
+          </strong>
 
           <button
             id="btnFecharFormularioMedicamento"
@@ -985,12 +893,14 @@ function criarTelaMedicamentos() {
               type="text"
               maxlength="100"
               list="medicamentoPessoasSugestoes"
-              placeholder="Ex.: Givanildo, Gabriel ou Maria"
+              placeholder="Digite o nome da pessoa"
               autocomplete="off"
               required
             >
 
-            <datalist id="medicamentoPessoasSugestoes"></datalist>
+            <datalist
+              id="medicamentoPessoasSugestoes"
+            ></datalist>
 
           </div>
 
@@ -1099,9 +1009,9 @@ function criarTelaMedicamentos() {
           <textarea
             id="medicamentoObservacao"
             name="medicamentoObservacao"
-            rows="3"
+            rows="2"
             maxlength="500"
-            placeholder="Ex.: Comprar caixa com 30 comprimidos"
+            placeholder="Ex.: Caixa com 30 comprimidos"
           ></textarea>
 
         </div>
@@ -1122,7 +1032,7 @@ function criarTelaMedicamentos() {
             type="submit"
             class="medicamentos-btn-salvar"
           >
-            Salvar lembrete
+            Salvar medicamento
           </button>
 
         </div>
@@ -1133,12 +1043,8 @@ function criarTelaMedicamentos() {
       <div
         id="medicamentosConteudo"
         class="medicamentos-conteudo"
-      >
-        <div class="medicamentos-vazio">
-          Carregando lembretes...
-        </div>
-      </div>
-
+        aria-live="polite"
+      ></div>
 
     </div>
   `;
@@ -1171,7 +1077,7 @@ function abrirTelaMedicamentos() {
   if (!familiaIdAtual) {
     avisar(
       "Aguarde um momento",
-      "Os dados da família ainda estão sendo carregados.",
+      "Os dados ainda estão sendo carregados.",
       "warning"
     );
 
@@ -1213,8 +1119,11 @@ function abrirTelaMedicamentos() {
     );
 
   window.scrollTo({
-    top: 0,
-    behavior: "auto"
+    top:
+      0,
+
+    behavior:
+      "auto"
   });
 
   renderizarTudo();
@@ -1266,14 +1175,17 @@ function voltarParaTarefas() {
     );
 
   window.scrollTo({
-    top: 0,
-    behavior: "auto"
+    top:
+      0,
+
+    behavior:
+      "auto"
   });
 }
 
 
 // ==========================================
-// Pessoas da família
+// Pessoas
 // ==========================================
 
 function atualizarMembrosPelaApi() {
@@ -1289,7 +1201,8 @@ function atualizarMembrosPelaApi() {
       api.obterMembros();
 
     if (Array.isArray(lista)) {
-      membros = lista;
+      membros =
+        lista;
     }
   }
 
@@ -1298,20 +1211,12 @@ function atualizarMembrosPelaApi() {
 
 
 function preencherPessoas() {
-  const campo =
-    el(
-      "medicamentoParaNome"
-    );
-
   const sugestoes =
     el(
       "medicamentoPessoasSugestoes"
     );
 
-  if (
-    !campo ||
-    !sugestoes
-  ) {
+  if (!sugestoes) {
     return;
   }
 
@@ -1337,7 +1242,8 @@ function preencherPessoas() {
         obterNomeUsuario(),
 
       email:
-        usuarioAtual.email || ""
+        usuarioAtual.email ||
+        ""
     });
   }
 
@@ -1347,7 +1253,8 @@ function preencherPessoas() {
   pessoas
     .filter(
       (membro) =>
-        membro.ativo !== false
+        membro.ativo !==
+        false
     )
     .forEach((membro) => {
       const nome =
@@ -1368,7 +1275,9 @@ function preencherPessoas() {
         );
 
       if (
-        !nomesUnicos.has(chave)
+        !nomesUnicos.has(
+          chave
+        )
       ) {
         nomesUnicos.set(
           chave,
@@ -1379,16 +1288,16 @@ function preencherPessoas() {
 
   sugestoes.innerHTML =
     [...nomesUnicos.values()]
-      .sort((a, b) =>
-        a.localeCompare(
-          b,
-          "pt-BR"
-        )
+      .sort(
+        (a, b) =>
+          a.localeCompare(
+            b,
+            "pt-BR"
+          )
       )
       .map(
-        (nome) => `
-          <option value="${escaparHtml(nome)}"></option>
-        `
+        (nome) =>
+          `<option value="${escaparHtml(nome)}"></option>`
       )
       .join("");
 }
@@ -1476,12 +1385,12 @@ function limparFormulario() {
 
   if (titulo) {
     titulo.textContent =
-      "Novo lembrete";
+      "Adicionar medicamento";
   }
 
   if (botaoSalvar) {
     botaoSalvar.textContent =
-      "Salvar lembrete";
+      "Salvar medicamento";
   }
 }
 
@@ -1567,8 +1476,7 @@ function abrirFormulario(
       avisarDias.value =
         String(
           normalizarNumero(
-            lembrete
-              .avisarDiasAntes,
+            lembrete.avisarDiasAntes,
             0,
             365,
             5
@@ -1580,8 +1488,7 @@ function abrirFormulario(
       repeticaoDias.value =
         String(
           normalizarNumero(
-            lembrete
-              .repeticaoDias,
+            lembrete.repeticaoDias,
             1,
             3650,
             30
@@ -1613,7 +1520,7 @@ function abrirFormulario(
 
     if (titulo) {
       titulo.textContent =
-        "Editar lembrete";
+        "Editar medicamento";
     }
 
     if (botaoSalvar) {
@@ -1625,15 +1532,21 @@ function abrirFormulario(
   formulario.hidden =
     false;
 
-  window.setTimeout(() => {
-    formulario.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
+  window.setTimeout(
+    () => {
+      formulario.scrollIntoView({
+        behavior:
+          "smooth",
 
-    el("medicamentoNome")
-      ?.focus();
-  }, 50);
+        block:
+          "start"
+      });
+
+      el("medicamentoNome")
+        ?.focus();
+    },
+    50
+  );
 }
 
 
@@ -1721,7 +1634,9 @@ function obterDadosFormulario() {
 }
 
 
-function validarDados(dados) {
+function validarDados(
+  dados
+) {
   if (!dados.medicamento) {
     return "Informe o nome do medicamento.";
   }
@@ -1739,15 +1654,19 @@ function validarDados(dados) {
   }
 
   if (
-    dados.avisarDiasAntes < 0 ||
-    dados.avisarDiasAntes > 365
+    dados.avisarDiasAntes <
+      0 ||
+    dados.avisarDiasAntes >
+      365
   ) {
-    return "Informe quantos dias antes avisar, entre 0 e 365.";
+    return "Informe os dias de antecedência entre 0 e 365.";
   }
 
   if (
-    dados.repeticaoDias < 1 ||
-    dados.repeticaoDias > 3650
+    dados.repeticaoDias <
+      1 ||
+    dados.repeticaoDias >
+      3650
   ) {
     return "Informe a repetição entre 1 e 3650 dias.";
   }
@@ -1783,7 +1702,7 @@ async function salvarLembrete(
   ) {
     await avisar(
       "Não foi possível salvar",
-      "Aguarde o carregamento da família e tente novamente.",
+      "Aguarde o carregamento e tente novamente.",
       "warning"
     );
 
@@ -1794,7 +1713,9 @@ async function salvarLembrete(
     obterDadosFormulario();
 
   const erroValidacao =
-    validarDados(dados);
+    validarDados(
+      dados
+    );
 
   if (erroValidacao) {
     await avisar(
@@ -1814,6 +1735,11 @@ async function salvarLembrete(
       "btnSalvarMedicamento"
     );
 
+  const editando =
+    Boolean(
+      lembreteEdicaoId
+    );
+
   if (botao) {
     botao.disabled =
       true;
@@ -1823,7 +1749,7 @@ async function salvarLembrete(
   }
 
   try {
-    if (lembreteEdicaoId) {
+    if (editando) {
       await updateDoc(
         doc(
           db,
@@ -1847,8 +1773,8 @@ async function salvarLembrete(
       );
 
       await avisar(
-        "Lembrete atualizado",
-        "As alterações foram salvas.",
+        "Medicamento atualizado",
+        "As alterações foram concluídas.",
         "success"
       );
     } else {
@@ -1886,8 +1812,8 @@ async function salvarLembrete(
       );
 
       await avisar(
-        "Lembrete criado",
-        "O medicamento foi adicionado aos lembretes.",
+        "Medicamento adicionado",
+        "O medicamento foi incluído.",
         "success"
       );
     }
@@ -1895,13 +1821,13 @@ async function salvarLembrete(
     fecharFormulario();
   } catch (erro) {
     console.error(
-      "Erro ao salvar lembrete de medicamento:",
+      "Erro ao salvar medicamento:",
       erro
     );
 
     await avisar(
-      "Lembrete não salvo",
-      "Não foi possível salvar o lembrete. Verifique sua conexão e tente novamente.",
+      "Não foi possível salvar",
+      "Tente novamente em alguns instantes.",
       "warning"
     );
   } finally {
@@ -1913,16 +1839,16 @@ async function salvarLembrete(
         false;
 
       botao.textContent =
-        lembreteEdicaoId
+        editando
           ? "Salvar alterações"
-          : "Salvar lembrete";
+          : "Salvar medicamento";
     }
   }
 }
 
 
 // ==========================================
-// Referências do Firestore
+// Referências de dados
 // ==========================================
 
 function referenciaLembrete(
@@ -1949,7 +1875,7 @@ function colecaoHistorico() {
 
 
 // ==========================================
-// Excluir lembrete
+// Excluir
 // ==========================================
 
 async function excluirLembrete(
@@ -1958,13 +1884,13 @@ async function excluirLembrete(
   const aceitou =
     await confirmar({
       titulo:
-        "Excluir lembrete",
+        "Excluir medicamento",
 
       texto:
-        `Deseja excluir o lembrete de “${
+        `Deseja excluir “${
           lembrete.medicamento ||
           "Medicamento"
-        }”? O histórico de compras já registrado será mantido.`,
+        }”? O histórico existente será mantido.`,
 
       confirmarTexto:
         "Excluir",
@@ -1998,13 +1924,13 @@ async function excluirLembrete(
     }
 
     await avisar(
-      "Lembrete excluído",
-      "O lembrete foi removido.",
+      "Medicamento excluído",
+      "O medicamento foi removido.",
       "success"
     );
   } catch (erro) {
     console.error(
-      "Erro ao excluir lembrete:",
+      "Erro ao excluir medicamento:",
       erro
     );
 
@@ -2018,7 +1944,7 @@ async function excluirLembrete(
 
 
 // ==========================================
-// Marcar Já comprei
+// Já comprei
 // ==========================================
 
 async function registrarCompra(
@@ -2048,27 +1974,24 @@ async function registrarCompra(
       dataCompra
     );
 
-  const novaProximaCompra =
-    adicionarDias(
-      dataCompra,
-      repeticaoDias
-    );
-
   const novaProximaCompraIso =
     dataParaIso(
-      novaProximaCompra
+      adicionarDias(
+        dataCompra,
+        repeticaoDias
+      )
     );
 
   const aceitou =
     await confirmar({
       titulo:
-        "Marcar como comprado",
+        "Confirmar compra",
 
       texto:
         `Confirmar a compra de “${
           lembrete.medicamento ||
           "Medicamento"
-        }” hoje? A próxima compra será calculada para ${
+        }” hoje? A próxima compra será em ${
           formatarData(
             novaProximaCompraIso
           )
@@ -2098,12 +2021,24 @@ async function registrarCompra(
 
   try {
     const batch =
-      writeBatch(db);
+      writeBatch(
+        db
+      );
 
     const historicoRef =
       doc(
         colecaoHistorico()
       );
+
+    const paraNome =
+      formatarNomePessoa(
+        lembrete.paraNome ||
+        obterNomePessoaPorUid(
+          lembrete.paraUid ||
+          ""
+        )
+      ) ||
+      "Não informado";
 
     batch.set(
       historicoRef,
@@ -2119,15 +2054,7 @@ async function registrarCompra(
           lembrete.paraUid ||
           "",
 
-        paraNome:
-          formatarNomePessoa(
-            lembrete.paraNome ||
-            obterNomePessoaPorUid(
-              lembrete.paraUid ||
-              ""
-            )
-          ) ||
-          "Não informado",
+        paraNome,
 
         prioridade:
           lembrete.prioridade ||
@@ -2141,8 +2068,7 @@ async function registrarCompra(
 
         avisarDiasAntes:
           normalizarNumero(
-            lembrete
-              .avisarDiasAntes,
+            lembrete.avisarDiasAntes,
             0,
             365,
             5
@@ -2204,7 +2130,7 @@ async function registrarCompra(
 
     await avisar(
       "Compra registrada",
-      `A próxima compra foi calculada para ${
+      `Próxima compra: ${
         formatarData(
           novaProximaCompraIso
         )
@@ -2219,7 +2145,7 @@ async function registrarCompra(
 
     await avisar(
       "Compra não registrada",
-      "Não foi possível atualizar o lembrete e o histórico.",
+      "Não foi possível concluir. Tente novamente.",
       "warning"
     );
   } finally {
@@ -2240,6 +2166,25 @@ function ordenarLembretes(
 ) {
   return [...lista].sort(
     (a, b) => {
+      const situacaoA =
+        obterSituacaoLembrete(
+          a
+        );
+
+      const situacaoB =
+        obterSituacaoLembrete(
+          b
+        );
+
+      if (
+        situacaoA.pendente !==
+        situacaoB.pendente
+      ) {
+        return situacaoA.pendente
+          ? -1
+          : 1;
+      }
+
       const dataA =
         a.proximaCompra ||
         "9999-12-31";
@@ -2249,10 +2194,13 @@ function ordenarLembretes(
         "9999-12-31";
 
       const comparacaoData =
-        String(dataA)
-          .localeCompare(
-            String(dataB)
-          );
+        String(
+          dataA
+        ).localeCompare(
+          String(
+            dataB
+          )
+        );
 
       if (
         comparacaoData !== 0
@@ -2303,10 +2251,13 @@ function ordenarHistorico(
         "";
 
       const comparacaoData =
-        String(dataB)
-          .localeCompare(
-            String(dataA)
-          );
+        String(
+          dataB
+        ).localeCompare(
+          String(
+            dataA
+          )
+        );
 
       if (
         comparacaoData !== 0
@@ -2330,33 +2281,20 @@ function ordenarHistorico(
 
 
 // ==========================================
-// Cartão do medicamento
+// Linha compacta do medicamento
 // ==========================================
 
 function criarHtmlLembrete(
   lembrete
 ) {
   const situacao =
-    classificarLembrete(
-      lembrete
-    );
-
-  const prazo =
-    obterInformacaoPrazo(
+    obterSituacaoLembrete(
       lembrete
     );
 
   const prioridade =
     lembrete.prioridade ||
     "media";
-
-  const avisarDiasAntes =
-    normalizarNumero(
-      lembrete.avisarDiasAntes,
-      0,
-      365,
-      5
-    );
 
   const repeticaoDias =
     normalizarNumero(
@@ -2380,90 +2318,217 @@ function criarHtmlLembrete(
     registrandoCompraId ===
     lembrete.id;
 
-  const textoAviso =
-    avisarDiasAntes === 0
-      ? "No dia"
-      : `${avisarDiasAntes} dia${
-          avisarDiasAntes === 1
-            ? ""
-            : "s"
-        }`;
+  const statusHtml =
+    situacao.pendente
+      ? `
+          <span
+            class="
+              medicamento-status
+              status-${escaparHtml(
+                situacao.codigo
+              )}
+            "
+          >
+            ${escaparHtml(
+              situacao.texto
+            )}
+          </span>
+        `
+      : "";
 
-  const textoRepeticao =
-    `${repeticaoDias} dia${
-      repeticaoDias === 1
-        ? ""
-        : "s"
-    }`;
+  const observacaoHtml =
+    lembrete.observacao
+      ? `
+          <div class="medicamento-observacao">
+            ${escaparHtml(
+              lembrete.observacao
+            )}
+          </div>
+        `
+      : "";
 
   return `
     <article
       class="
-        medicamento-card
-        status-${escaparHtml(situacao)}
-        prioridade-${escaparHtml(prioridade)}
+        medicamento-item
+        ${
+          situacao.pendente
+            ? "tem-pendencia"
+            : ""
+        }
+        prioridade-${escaparHtml(
+          prioridade
+        )}
       "
-      data-lembrete-id="${escaparHtml(lembrete.id)}"
+      data-lembrete-id="${escaparHtml(
+        lembrete.id
+      )}"
     >
 
-      <div
-        class="
-          medicamento-card-topo
-          medicamento-card-topo-harmonico
-        "
-      >
+      <div class="medicamento-item-principal">
 
-        <div
-          class="
-            medicamento-titulo
-            medicamento-titulo-harmonico
-          "
-        >
+        <div class="medicamento-item-textos">
 
-          <h3>
-            ${escaparHtml(
-              lembrete.medicamento ||
-              "Medicamento"
-            )}
-          </h3>
+          <div class="medicamento-item-titulo">
 
-          <div class="medicamento-linha-pessoa">
+            <strong>
+              ${escaparHtml(
+                lembrete.medicamento ||
+                "Medicamento"
+              )}
+            </strong>
+
+            ${statusHtml}
+
+          </div>
+
+
+          <div class="medicamento-item-meta">
 
             <span>
               Para:
-              <strong>
-                ${escaparHtml(nomePessoa)}
-              </strong>
+              <b>
+                ${escaparHtml(
+                  nomePessoa
+                )}
+              </b>
+            </span>
+
+            <span>
+              Compra:
+              <b>
+                ${escaparHtml(
+                  formatarData(
+                    lembrete.proximaCompra
+                  )
+                )}
+              </b>
+            </span>
+
+            <span>
+              Repete:
+              <b>
+                ${repeticaoDias}
+                dia${
+                  repeticaoDias === 1
+                    ? ""
+                    : "s"
+                }
+              </b>
             </span>
 
             <span
               class="
-                medicamento-prioridade
-                prioridade-${escaparHtml(prioridade)}
+                medicamento-prioridade-texto
+                prioridade-${escaparHtml(
+                  prioridade
+                )}
               "
             >
-              Prioridade
-              ${escaparHtml(
-                rotuloPrioridade(
-                  prioridade
-                )
-              )}
+              Prioridade:
+              <b>
+                ${escaparHtml(
+                  rotuloPrioridade(
+                    prioridade
+                  )
+                )}
+              </b>
             </span>
 
           </div>
 
+
+          ${observacaoHtml}
+
         </div>
 
 
-        <span
-          class="
-            medicamento-situacao
-            medicamento-situacao-principal
-          "
-        >
+        <div class="medicamento-acoes">
+
+          <button
+            type="button"
+            class="medicamento-acao comprou"
+            data-acao-medicamento="comprou"
+            ${
+              registrando
+                ? "disabled"
+                : ""
+            }
+          >
+            ${
+              registrando
+                ? "Registrando..."
+                : "Já comprei"
+            }
+          </button>
+
+          <button
+            type="button"
+            class="medicamento-acao editar"
+            data-acao-medicamento="editar"
+            ${
+              registrando
+                ? "disabled"
+                : ""
+            }
+          >
+            Editar
+          </button>
+
+          <button
+            type="button"
+            class="medicamento-acao excluir"
+            data-acao-medicamento="excluir"
+            ${
+              registrando
+                ? "disabled"
+                : ""
+            }
+          >
+            Excluir
+          </button>
+
+        </div>
+
+      </div>
+
+    </article>
+  `;
+}
+
+
+// ==========================================
+// Linha compacta do histórico
+// ==========================================
+
+function criarHtmlHistorico(
+  item
+) {
+  const repeticaoDias =
+    normalizarNumero(
+      item.repeticaoDias,
+      1,
+      3650,
+      30
+    );
+
+  return `
+    <article class="medicamento-historico-item">
+
+      <div class="medicamento-historico-titulo">
+
+        <strong>
           ${escaparHtml(
-            rotuloSituacao(
-              situacao
+            item.medicamento ||
+            "Medicamento"
+          )}
+        </strong>
+
+        <span>
+          Comprado em
+          ${escaparHtml(
+            formatarData(
+              item.dataCompra
             )
           )}
         </span>
@@ -2471,219 +2536,42 @@ function criarHtmlLembrete(
       </div>
 
 
-      <div
-        class="
-          medicamento-detalhes
-          medicamento-detalhes-harmonicos
-        "
-      >
+      <div class="medicamento-historico-meta">
 
-        <div
-          class="
-            medicamento-detalhe
-            medicamento-detalhe-principal
-          "
-        >
-
-          <small>
-            Próxima compra
-          </small>
-
-          <strong>
+        <span>
+          Para:
+          <b>
             ${escaparHtml(
-              formatarDataLonga(
-                lembrete.proximaCompra
+              formatarNomePessoa(
+                item.paraNome ||
+                "Não informado"
               )
             )}
-          </strong>
+          </b>
+        </span>
 
-          <span
-            class="
-              medicamento-detalhe-apoio
-              status-${escaparHtml(prazo.classe)}
-            "
-          >
-            ${escaparHtml(
-              prazo.texto
-            )}
-          </span>
-
-        </div>
-
-
-        <div class="medicamento-detalhe">
-
-          <small>
-            Avisar antes
-          </small>
-
-          <strong>
-            ${escaparHtml(textoAviso)}
-          </strong>
-
-        </div>
-
-
-        <div class="medicamento-detalhe">
-
-          <small>
-            Repetição
-          </small>
-
-          <strong>
-            ${escaparHtml(textoRepeticao)}
-          </strong>
-
-        </div>
-
-      </div>
-
-
-      ${
-        lembrete.observacao
-          ? `
-              <div class="medicamento-observacao">
-
-                <strong>
-                  Observação
-                </strong>
-
-                <p>
-                  ${escaparHtml(
-                    lembrete.observacao
-                  )}
-                </p>
-
-              </div>
-            `
-          : ""
-      }
-
-
-      <div class="medicamento-acoes">
-
-        <button
-          type="button"
-          class="medicamento-acao comprou"
-          data-acao-medicamento="comprou"
-          ${registrando ? "disabled" : ""}
-        >
-          ${
-            registrando
-              ? "Registrando..."
-              : "Já comprei"
-          }
-        </button>
-
-        <button
-          type="button"
-          class="medicamento-acao editar"
-          data-acao-medicamento="editar"
-          ${registrando ? "disabled" : ""}
-        >
-          Editar
-        </button>
-
-        <button
-          type="button"
-          class="medicamento-acao excluir"
-          data-acao-medicamento="excluir"
-          ${registrando ? "disabled" : ""}
-        >
-          Excluir
-        </button>
-
-      </div>
-
-    </article>
-  `;
-}
-
-
-// ==========================================
-// Cartão do histórico
-// ==========================================
-
-function criarHtmlHistorico(
-  item
-) {
-  return `
-    <article class="medicamento-historico-card">
-
-      <div class="medicamento-historico-icone">
-        ✓
-      </div>
-
-      <div class="medicamento-historico-conteudo">
-
-        <div class="medicamento-historico-topo">
-
-          <div>
-            <h3>
-              ${escaparHtml(
-                item.medicamento ||
-                "Medicamento"
-              )}
-            </h3>
-
-            <span>
-              ${escaparHtml(
-                formatarNomePessoa(
-                  item.paraNome ||
-                  "Não informado"
-                )
-              )}
-            </span>
-          </div>
-
-          <span class="medicamento-historico-data">
-            Comprado em
-            ${escaparHtml(
-              formatarData(
-                item.dataCompra
-              )
-            )}
-          </span>
-
-        </div>
-
-
-        <div class="medicamento-historico-informacoes">
-
-          <span>
-            Repetição:
-            ${escaparHtml(
-              String(
-                item.repeticaoDias ||
-                30
-              )
-            )}
-            dias
-          </span>
-
-          <span>
-            Próxima compra calculada:
+        <span>
+          Próxima:
+          <b>
             ${escaparHtml(
               formatarData(
                 item.proximaCompraCalculada
               )
             )}
-          </span>
+          </b>
+        </span>
 
-          ${
-            item.registradoPorNome
-              ? `
-                  <span>
-                    Registrado por
-                    ${escaparHtml(
-                      item.registradoPorNome
-                    )}
-                  </span>
-                `
-              : ""
-          }
-
-        </div>
+        <span>
+          Repetição:
+          <b>
+            ${repeticaoDias}
+            dia${
+              repeticaoDias === 1
+                ? ""
+                : "s"
+            }
+          </b>
+        </span>
 
       </div>
 
@@ -2693,193 +2581,7 @@ function criarHtmlHistorico(
 
 
 // ==========================================
-// Mensagem vazia
-// ==========================================
-
-function criarHtmlVazio(
-  titulo,
-  texto,
-  mostrarBotao = false
-) {
-  return `
-    <div class="medicamentos-vazio">
-
-      <div
-        class="medicamentos-vazio-icone"
-        aria-hidden="true"
-      >
-        💊
-      </div>
-
-      <strong>
-        ${escaparHtml(titulo)}
-      </strong>
-
-      <p>
-        ${escaparHtml(texto)}
-      </p>
-
-      ${
-        mostrarBotao
-          ? `
-              <button
-                type="button"
-                data-acao-medicamento="novo"
-                class="medicamentos-vazio-botao"
-              >
-                Adicionar medicamento
-              </button>
-            `
-          : ""
-      }
-
-    </div>
-  `;
-}
-
-
-// ==========================================
-// Seção de medicamentos
-// ==========================================
-
-function criarHtmlSecao({
-  situacao,
-  titulo,
-  descricao,
-  lista
-}) {
-  const itens =
-    ordenarLembretes(
-      lista
-    );
-
-  return `
-    <section
-      class="
-        medicamentos-secao
-        secao-${escaparHtml(situacao)}
-      "
-    >
-
-      <div class="medicamentos-secao-topo">
-
-        <div>
-          <h3>
-            <span aria-hidden="true">
-              ${iconeSituacao(situacao)}
-            </span>
-
-            ${escaparHtml(titulo)}
-          </h3>
-
-          <p>
-            ${escaparHtml(descricao)}
-          </p>
-        </div>
-
-        <span class="medicamentos-secao-contador">
-          ${itens.length}
-        </span>
-
-      </div>
-
-
-      <div class="medicamentos-lista">
-
-        ${
-          itens.length
-            ? itens
-                .map(
-                  criarHtmlLembrete
-                )
-                .join("")
-            : criarHtmlVazio(
-                `Nenhum item em ${titulo}`,
-                "Os lembretes aparecerão aqui automaticamente conforme a data de compra."
-              )
-        }
-
-      </div>
-
-    </section>
-  `;
-}
-
-
-// ==========================================
-// Renderizar histórico
-// ==========================================
-
-function renderizarHistorico() {
-  const area =
-    el(
-      "medicamentosConteudo"
-    );
-
-  if (!area) {
-    return;
-  }
-
-  const itens =
-    ordenarHistorico(
-      historico
-    );
-
-  area.innerHTML = `
-    <section
-      class="
-        medicamentos-secao
-        secao-historico
-      "
-    >
-
-      <div class="medicamentos-secao-topo">
-
-        <div>
-          <h3>
-            <span aria-hidden="true">
-              🕘
-            </span>
-
-            Histórico
-          </h3>
-
-          <p>
-            Compras de medicamentos já registradas.
-          </p>
-        </div>
-
-        <span class="medicamentos-secao-contador">
-          ${itens.length}
-        </span>
-
-      </div>
-
-
-      <div class="medicamentos-historico-lista">
-
-        ${
-          itens.length
-            ? itens
-                .map(
-                  criarHtmlHistorico
-                )
-                .join("")
-            : criarHtmlVazio(
-                "Histórico vazio",
-                "Quando você marcar Já comprei, o registro aparecerá aqui."
-              )
-        }
-
-      </div>
-
-    </section>
-  `;
-}
-
-
-// ==========================================
-// Renderizar lembretes
+// Renderização
 // ==========================================
 
 function renderizarLembretes() {
@@ -2892,162 +2594,76 @@ function renderizarLembretes() {
     return;
   }
 
-  const ativos =
-    lembretes.filter(
-      (lembrete) =>
-        lembrete.ativo !== false
-    );
-
   if (
     filtroAtual ===
     "historico"
   ) {
-    renderizarHistorico();
+    const itens =
+      ordenarHistorico(
+        historico
+      );
+
+    area.innerHTML =
+      itens.length
+        ? `
+            <div class="medicamentos-lista-compacta">
+
+              ${
+                itens
+                  .map(
+                    criarHtmlHistorico
+                  )
+                  .join("")
+              }
+
+            </div>
+          `
+        : "";
 
     return;
   }
 
-  const comprarAgora =
-    ativos.filter(
+  const ativos =
+    lembretes.filter(
       (lembrete) =>
-        classificarLembrete(
-          lembrete
-        ) ===
-        "comprar-agora"
+        lembrete.ativo !==
+        false
     );
 
-  const emBreve =
-    ativos.filter(
-      (lembrete) =>
-        classificarLembrete(
-          lembrete
-        ) ===
-        "em-breve"
-    );
-
-  const proximos =
-    ativos.filter(
-      (lembrete) =>
-        classificarLembrete(
-          lembrete
-        ) ===
-        "proximos"
-    );
-
-  if (
+  const lista =
     filtroAtual ===
-    "todos"
-  ) {
-    if (!ativos.length) {
-      area.innerHTML =
-        criarHtmlVazio(
-          "Nenhum lembrete cadastrado",
-          "Cadastre o primeiro medicamento para acompanhar a próxima compra.",
-          true
-        );
+    "pendentes"
+      ? ativos.filter(
+          (lembrete) =>
+            obterSituacaoLembrete(
+              lembrete
+            ).pendente
+        )
+      : ativos;
 
-      return;
-    }
-
-    area.innerHTML = [
-      criarHtmlSecao({
-        situacao:
-          "comprar-agora",
-
-        titulo:
-          "Comprar agora",
-
-        descricao:
-          "Medicamentos na data de compra ou atrasados.",
-
-        lista:
-          comprarAgora
-      }),
-
-      criarHtmlSecao({
-        situacao:
-          "em-breve",
-
-        titulo:
-          "Em breve",
-
-        descricao:
-          "Medicamentos dentro do período de aviso.",
-
-        lista:
-          emBreve
-      }),
-
-      criarHtmlSecao({
-        situacao:
-          "proximos",
-
-        titulo:
-          "Próximos",
-
-        descricao:
-          "Medicamentos que ainda estão fora do período de aviso.",
-
-        lista:
-          proximos
-      })
-    ].join("");
-
-    return;
-  }
-
-  const configuracoes = {
-    "comprar-agora": {
-      titulo:
-        "Comprar agora",
-
-      descricao:
-        "Medicamentos na data de compra ou atrasados.",
-
-      lista:
-        comprarAgora
-    },
-
-    "em-breve": {
-      titulo:
-        "Em breve",
-
-      descricao:
-        "Medicamentos dentro do período de aviso.",
-
-      lista:
-        emBreve
-    },
-
-    proximos: {
-      titulo:
-        "Próximos",
-
-      descricao:
-        "Medicamentos que ainda estão fora do período de aviso.",
-
-      lista:
-        proximos
-    }
-  };
-
-  const configuracao =
-    configuracoes[filtroAtual] ||
-    configuracoes.proximos;
+  const itens =
+    ordenarLembretes(
+      lista
+    );
 
   area.innerHTML =
-    criarHtmlSecao({
-      situacao:
-        filtroAtual,
+    itens.length
+      ? `
+          <div class="medicamentos-lista-compacta">
 
-      ...configuracao
-    });
+            ${
+              itens
+                .map(
+                  criarHtmlLembrete
+                )
+                .join("")
+            }
+
+          </div>
+        `
+      : "";
 }
 
-
-// ==========================================
-// Atualizar botões dos filtros
-// ==========================================
 
 function atualizarFiltros() {
   document
@@ -3075,21 +2691,15 @@ function atualizarFiltros() {
 }
 
 
-function atualizarSubtitulo() {
-  // O cabeçalho foi simplificado e não exibe o nome da família.
-}
-
-
 function renderizarTudo() {
   atualizarIndicador();
   atualizarFiltros();
-  atualizarSubtitulo();
   renderizarLembretes();
 }
 
 
 // ==========================================
-// Listeners do Firestore
+// Carregamento dos dados
 // ==========================================
 
 function pararListeners() {
@@ -3161,13 +2771,13 @@ function iniciarListeners() {
 
       async (erro) => {
         console.error(
-          "Erro ao carregar lembretes de medicamentos:",
+          "Erro ao carregar medicamentos:",
           erro
         );
 
         await avisar(
-          "Erro ao carregar medicamentos",
-          "Não foi possível carregar os lembretes. Atualize a tela e tente novamente.",
+          "Não foi possível carregar",
+          "Atualize a tela e tente novamente.",
           "warning"
         );
       }
@@ -3193,13 +2803,13 @@ function iniciarListeners() {
 
       async (erro) => {
         console.error(
-          "Erro ao carregar histórico de medicamentos:",
+          "Erro ao carregar histórico:",
           erro
         );
 
         await avisar(
-          "Erro ao carregar histórico",
-          "Não foi possível carregar o histórico de compras.",
+          "Não foi possível carregar",
+          "O histórico não pôde ser exibido agora.",
           "warning"
         );
       }
@@ -3240,7 +2850,7 @@ async function obterFamiliaDiretamente() {
     );
   } catch (erro) {
     console.warn(
-      "Medicamentos: não foi possível obter a família diretamente.",
+      "Medicamentos: não foi possível obter a família.",
       erro
     );
 
@@ -3268,7 +2878,7 @@ async function sincronizarContexto(
     detalhe?.familiaId ||
     (
       typeof api?.obterFamiliaId ===
-      "function"
+        "function"
         ? api.obterFamiliaId()
         : ""
     );
@@ -3280,12 +2890,6 @@ async function sincronizarContexto(
     familiaId =
       await obterFamiliaDiretamente();
   }
-
-  const nomeFamilia =
-    typeof api?.obterNomeFamilia ===
-      "function"
-      ? api.obterNomeFamilia()
-      : "";
 
   criarIndicadorMedicamentos();
   criarTelaMedicamentos();
@@ -3304,9 +2908,6 @@ async function sincronizarContexto(
 
       familiaIdAtual =
         "";
-
-      familiaNomeAtual =
-        "";
     }
 
     return false;
@@ -3323,12 +2924,7 @@ async function sincronizarContexto(
   familiaIdAtual =
     familiaId;
 
-  familiaNomeAtual =
-    nomeFamilia ||
-    "Minha família";
-
   atualizarMembrosPelaApi();
-  atualizarSubtitulo();
 
   if (
     familiaMudou ||
@@ -3366,7 +2962,8 @@ function aguardarContexto() {
 
         if (
           pronto ||
-          tentativas >= 120
+          tentativas >=
+            120
         ) {
           window.clearInterval(
             intervalo
@@ -3382,18 +2979,18 @@ function aguardarContexto() {
 
 
 // ==========================================
-// Eventos dos cartões
+// Eventos
 // ==========================================
 
 function localizarLembreteNoElemento(
   elemento
 ) {
-  const cartao =
+  const item =
     elemento.closest(
       "[data-lembrete-id]"
     );
 
-  if (!cartao) {
+  if (!item) {
     return null;
   }
 
@@ -3401,7 +2998,7 @@ function localizarLembreteNoElemento(
     lembretes.find(
       (lembrete) =>
         lembrete.id ===
-        cartao.dataset
+        item.dataset
           .lembreteId
     ) ||
     null
@@ -3425,12 +3022,6 @@ async function tratarCliqueConteudo(
     botao.dataset
       .acaoMedicamento;
 
-  if (acao === "novo") {
-    abrirFormulario();
-
-    return;
-  }
-
   const lembrete =
     localizarLembreteNoElemento(
       botao
@@ -3440,7 +3031,10 @@ async function tratarCliqueConteudo(
     return;
   }
 
-  if (acao === "editar") {
+  if (
+    acao ===
+    "editar"
+  ) {
     abrirFormulario(
       lembrete
     );
@@ -3448,7 +3042,10 @@ async function tratarCliqueConteudo(
     return;
   }
 
-  if (acao === "excluir") {
+  if (
+    acao ===
+    "excluir"
+  ) {
     await excluirLembrete(
       lembrete
     );
@@ -3456,17 +3053,16 @@ async function tratarCliqueConteudo(
     return;
   }
 
-  if (acao === "comprou") {
+  if (
+    acao ===
+    "comprou"
+  ) {
     await registrarCompra(
       lembrete
     );
   }
 }
 
-
-// ==========================================
-// Configuração dos eventos
-// ==========================================
 
 function configurarEventos() {
   if (eventosConfigurados) {
@@ -3488,7 +3084,8 @@ function configurarEventos() {
   el("btnNovoMedicamento")
     ?.addEventListener(
       "click",
-      () => abrirFormulario()
+      () =>
+        abrirFormulario()
     );
 
   el("btnFecharFormularioMedicamento")
@@ -3527,8 +3124,7 @@ function configurarEventos() {
             .filtroMedicamento ||
           "todos";
 
-        atualizarFiltros();
-        renderizarLembretes();
+        renderizarTudo();
       }
     );
 
@@ -3579,12 +3175,14 @@ function configurarEventos() {
 
 
 // ==========================================
-// Estilos do módulo
+// Estilos
 // ==========================================
 
 function criarEstilos() {
   if (
-    el("medicamentosEstilos")
+    el(
+      "medicamentosEstilos"
+    )
   ) {
     return;
   }
@@ -3599,40 +3197,48 @@ function criarEstilos() {
 
   estilo.textContent = `
 
-    /* ======================================
-       Quatro indicadores em Tarefas
-       ====================================== */
+    /* Quatro indicadores na tela Tarefas */
 
     #tarefasResumo.medicamentos-instalado {
       grid-template-columns:
         repeat(
           4,
           minmax(0, 1fr)
-        ) !important;
+        )
+        !important;
     }
 
     #tarefasMedicamentosCard {
-      appearance: none;
-      -webkit-appearance: none;
-      width: 100%;
-      margin: 0;
-      font: inherit;
-      cursor: pointer;
+      appearance:
+        none;
 
-      transition:
-        transform 0.16s ease,
-        box-shadow 0.16s ease,
-        border-color 0.16s ease,
-        background 0.16s ease;
+      -webkit-appearance:
+        none;
 
-      -webkit-tap-highlight-color:
-        transparent;
+      width:
+        100%;
+
+      margin:
+        0;
+
+      font:
+        inherit;
+
+      cursor:
+        pointer;
 
       border-color:
         #bfdbfe !important;
 
       background:
         #eff6ff !important;
+
+      transition:
+        transform 0.16s ease,
+        box-shadow 0.16s ease;
+
+      -webkit-tap-highlight-color:
+        transparent;
     }
 
     #tarefasMedicamentosCard strong {
@@ -3648,416 +3254,506 @@ function criarEstilos() {
         #dbeafe !important;
     }
 
-    #tarefasMedicamentosCard.tem-atencao strong {
-      color:
-        #1d4ed8 !important;
-    }
-
     #tarefasMedicamentosCard:hover {
       transform:
         translateY(-1px);
 
-      border-color:
-        #93c5fd !important;
-
       box-shadow:
-        0 7px 18px
+        0 6px 14px
         rgba(37, 99, 235, 0.12);
     }
 
-    #tarefasMedicamentosCard:active {
-      transform:
-        translateY(0)
-        scale(0.99);
-    }
 
-    #tarefasMedicamentosCard:focus-visible {
-      outline:
-        3px solid
-        rgba(37, 99, 235, 0.28);
-
-      outline-offset:
-        2px;
-    }
-
-
-    /* ======================================
-       Tela principal
-       ====================================== */
+    /* Tela */
 
     .medicamentos-screen {
-      width: 100%;
-      max-width: 100%;
-      padding-bottom: 110px;
+      width:
+        100%;
+
+      max-width:
+        100%;
+
+      padding-bottom:
+        110px;
     }
 
     .medicamentos-container {
-      width: 100%;
-      max-width: 1120px;
-      margin: 0 auto;
-      box-sizing: border-box;
-      container-type: inline-size;
+      width:
+        100%;
+
+      max-width:
+        1120px;
+
+      margin:
+        0 auto;
+
+      box-sizing:
+        border-box;
+
+      container-type:
+        inline-size;
     }
 
 
-    /* ======================================
-       Cabeçalho
-       ====================================== */
+    /* Cabeçalho */
 
     .medicamentos-cabecalho {
-      margin-bottom: 10px;
-      padding: 12px;
-      border-radius: 16px;
+      margin-bottom:
+        9px;
+
+      padding:
+        11px;
+
+      border-radius:
+        15px;
+
+      color:
+        #ffffff;
 
       background:
         linear-gradient(
           135deg,
-          #2563eb 0%,
-          #3b82f6 55%,
-          #60a5fa 100%
+          #2563eb,
+          #3b82f6
         );
 
-      color: #ffffff;
-
       box-shadow:
-        0 8px 22px
-        rgba(37, 99, 235, 0.18);
+        0 7px 18px
+        rgba(37, 99, 235, 0.15);
     }
 
     .medicamentos-cabecalho-superior {
-      display: grid;
+      display:
+        grid;
 
       grid-template-columns:
         auto
         minmax(0, 1fr)
         auto;
 
-      align-items: center;
-      gap: 10px;
+      align-items:
+        center;
+
+      gap:
+        10px;
     }
 
-    .medicamentos-btn-voltar {
-      width: 40px;
-      height: 40px;
+    .medicamentos-cabecalho h2 {
+      min-width:
+        0;
 
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      margin:
+        0;
 
-      border:
-        1px solid
-        rgba(255, 255, 255, 0.42);
-
-      border-radius: 12px;
-
-      background:
-        rgba(255, 255, 255, 0.14);
-
-      color: #ffffff;
-      font: inherit;
-      font-size: 30px;
-      font-weight: 500;
-      line-height: 1;
-      cursor: pointer;
-
-      -webkit-tap-highlight-color:
-        transparent;
-    }
-
-    .medicamentos-btn-voltar:hover {
-      background:
-        rgba(255, 255, 255, 0.22);
-    }
-
-    .medicamentos-titulo-area {
-      min-width: 0;
-      display: block;
-    }
-
-    .medicamentos-titulo-area h2 {
-      margin: 0;
-      color: #ffffff;
+      color:
+        #ffffff;
 
       font-size:
         clamp(
-          1.05rem,
-          2.6vw,
-          1.42rem
+          1rem,
+          2.5vw,
+          1.35rem
         );
 
-      line-height: 1.2;
-      overflow-wrap: normal;
-      word-break: normal;
+      line-height:
+        1.2;
+    }
+
+    .medicamentos-btn-voltar {
+      width:
+        38px;
+
+      height:
+        38px;
+
+      display:
+        inline-flex;
+
+      align-items:
+        center;
+
+      justify-content:
+        center;
+
+      border:
+        1px solid
+        rgba(
+          255,
+          255,
+          255,
+          0.4
+        );
+
+      border-radius:
+        11px;
+
+      background:
+        rgba(
+          255,
+          255,
+          255,
+          0.13
+        );
+
+      color:
+        #ffffff;
+
+      font:
+        inherit;
+
+      font-size:
+        29px;
+
+      line-height:
+        1;
+
+      cursor:
+        pointer;
     }
 
     .medicamentos-btn-novo {
-      min-height: 40px;
-      padding: 8px 13px;
-      border: 0;
-      border-radius: 12px;
-      background: #ffffff;
-      color: #1d4ed8;
-      font: inherit;
-      font-size: 0.8rem;
-      font-weight: 800;
-      white-space: nowrap;
-      cursor: pointer;
+      min-height:
+        38px;
 
-      box-shadow:
-        0 8px 20px
-        rgba(30, 64, 175, 0.18);
+      padding:
+        7px 12px;
 
-      -webkit-tap-highlight-color:
-        transparent;
+      border:
+        0;
+
+      border-radius:
+        11px;
+
+      background:
+        #ffffff;
+
+      color:
+        #1d4ed8;
+
+      font:
+        inherit;
+
+      font-size:
+        0.78rem;
+
+      font-weight:
+        800;
+
+      white-space:
+        nowrap;
+
+      cursor:
+        pointer;
     }
 
-    .medicamentos-btn-novo:hover {
-      background: #eff6ff;
-    }
 
-
-    /* ======================================
-       Filtros
-       ====================================== */
+    /* Filtros */
 
     .medicamentos-filtros {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      display:
+        inline-flex;
 
-      margin-bottom: 14px;
-      padding: 5px;
-      overflow-x: auto;
+      align-items:
+        center;
+
+      gap:
+        4px;
+
+      margin-bottom:
+        10px;
+
+      padding:
+        3px;
 
       border:
         1px solid
         #e2e8f0;
 
-      border-radius: 16px;
-      background: #ffffff;
+      border-radius:
+        11px;
 
-      box-shadow:
-        0 5px 16px
-        rgba(15, 23, 42, 0.06);
-
-      scrollbar-width: none;
-    }
-
-    .medicamentos-filtros::-webkit-scrollbar {
-      display: none;
+      background:
+        #ffffff;
     }
 
     .medicamentos-filtro {
-      min-height: 38px;
-      flex: 0 0 auto;
+      min-height:
+        32px;
 
-      padding: 8px 13px;
-      border: 0;
-      border-radius: 11px;
+      padding:
+        6px 11px;
 
-      background: transparent;
-      color: #64748b;
+      border:
+        0;
 
-      font: inherit;
-      font-size: 0.85rem;
-      font-weight: 750;
-      white-space: nowrap;
-      cursor: pointer;
+      border-radius:
+        8px;
 
-      -webkit-tap-highlight-color:
+      background:
         transparent;
-    }
 
-    .medicamentos-filtro:hover {
-      background: #f1f5f9;
-      color: #334155;
+      color:
+        #64748b;
+
+      font:
+        inherit;
+
+      font-size:
+        0.75rem;
+
+      font-weight:
+        750;
+
+      cursor:
+        pointer;
     }
 
     .medicamentos-filtro.ativo {
-      background: #2563eb;
-      color: #ffffff;
+      background:
+        #2563eb;
 
-      box-shadow:
-        0 5px 14px
-        rgba(37, 99, 235, 0.24);
+      color:
+        #ffffff;
     }
 
 
-    /* ======================================
-       Foco dos botões
-       ====================================== */
-
-    .medicamentos-btn-voltar:focus-visible,
-    .medicamentos-btn-novo:focus-visible,
-    .medicamentos-filtro:focus-visible,
-    .medicamento-acao:focus-visible,
-    .medicamentos-btn-salvar:focus-visible,
-    .medicamentos-btn-secundario:focus-visible,
-    .medicamentos-btn-fechar:focus-visible,
-    .medicamentos-vazio-botao:focus-visible {
-      outline:
-        3px solid
-        rgba(37, 99, 235, 0.28);
-
-      outline-offset:
-        2px;
-    }
-
-
-    /* ======================================
-       Formulário
-       ====================================== */
+    /* Formulário */
 
     .medicamentos-formulario {
-      width: 100%;
-      margin-bottom: 16px;
-      padding: 15px;
+      width:
+        100%;
+
+      margin-bottom:
+        12px;
+
+      padding:
+        14px;
 
       border:
         1px solid
         #bfdbfe;
 
-      border-radius: 20px;
-      background: #eff6ff;
+      border-radius:
+        16px;
 
-      box-shadow:
-        0 10px 28px
-        rgba(37, 99, 235, 0.10);
+      background:
+        #eff6ff;
 
-      box-sizing: border-box;
+      box-sizing:
+        border-box;
     }
 
     .medicamentos-formulario[hidden] {
-      display: none !important;
+      display:
+        none !important;
     }
 
     .medicamentos-formulario-topo {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
+      display:
+        flex;
 
-    .medicamentos-formulario-topo > div {
-      display: flex;
-      align-items: center;
-      gap: 0;
+      align-items:
+        center;
 
-      color: #1e293b;
-      font-size: 1.08rem;
+      justify-content:
+        space-between;
+
+      gap:
+        12px;
+
+      margin-bottom:
+        11px;
+
+      color:
+        #1e293b;
+
+      font-size:
+        1rem;
     }
 
     .medicamentos-btn-fechar {
-      width: 36px;
-      height: 36px;
+      width:
+        34px;
 
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      height:
+        34px;
 
-      border: 0;
-      border-radius: 11px;
+      display:
+        inline-flex;
 
-      background: #dbeafe;
-      color: #1e40af;
+      align-items:
+        center;
 
-      font: inherit;
-      font-size: 24px;
-      line-height: 1;
-      cursor: pointer;
+      justify-content:
+        center;
+
+      border:
+        0;
+
+      border-radius:
+        10px;
+
+      background:
+        #dbeafe;
+
+      color:
+        #1e40af;
+
+      font:
+        inherit;
+
+      font-size:
+        22px;
+
+      cursor:
+        pointer;
+    }
+
+    .medicamentos-grid-duas-colunas,
+    .medicamentos-grid-tres-colunas {
+      display:
+        grid;
+
+      gap:
+        10px;
     }
 
     .medicamentos-grid-duas-colunas {
-      display: grid;
-
       grid-template-columns:
         repeat(
           2,
           minmax(0, 1fr)
         );
-
-      gap: 12px;
     }
 
     .medicamentos-grid-tres-colunas {
-      display: grid;
-
       grid-template-columns:
         repeat(
           3,
           minmax(0, 1fr)
         );
-
-      gap: 12px;
     }
 
     .medicamentos-campo {
-      min-width: 0;
-      margin-bottom: 13px;
+      min-width:
+        0;
+
+      margin-bottom:
+        11px;
     }
 
     .medicamentos-campo label {
-      display: block;
-      margin-bottom: 6px;
+      display:
+        block;
 
-      color: #334155;
-      font-size: 0.82rem;
-      font-weight: 750;
+      margin-bottom:
+        5px;
+
+      color:
+        #334155;
+
+      font-size:
+        0.78rem;
+
+      font-weight:
+        750;
     }
 
     .medicamentos-campo input,
     .medicamentos-campo select,
     .medicamentos-campo textarea {
-      width: 100%;
-      min-height: 43px;
-      padding: 10px 12px;
+      width:
+        100%;
+
+      min-height:
+        41px;
+
+      padding:
+        9px 11px;
 
       border:
         1px solid
         #cbd5e1;
 
-      border-radius: 12px;
-      background: #ffffff;
-      color: #1e293b;
+      border-radius:
+        10px;
 
-      font: inherit;
-      font-size: 0.92rem;
+      background:
+        #ffffff;
 
-      box-sizing: border-box;
-      outline: none;
+      color:
+        #1e293b;
+
+      font:
+        inherit;
+
+      font-size:
+        0.88rem;
+
+      box-sizing:
+        border-box;
+
+      outline:
+        none;
     }
 
     .medicamentos-campo textarea {
-      min-height: 92px;
-      resize: vertical;
+      min-height:
+        70px;
+
+      resize:
+        vertical;
     }
 
     .medicamentos-campo input:focus,
     .medicamentos-campo select:focus,
     .medicamentos-campo textarea:focus {
-      border-color: #60a5fa;
+      border-color:
+        #60a5fa;
 
       box-shadow:
         0 0 0 3px
-        rgba(59, 130, 246, 0.15);
+        rgba(
+          59,
+          130,
+          246,
+          0.14
+        );
     }
 
     .medicamentos-formulario-acoes {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 2px;
+      display:
+        flex;
+
+      justify-content:
+        flex-end;
+
+      gap:
+        8px;
     }
 
     .medicamentos-btn-secundario,
     .medicamentos-btn-salvar {
-      min-height: 43px;
-      padding: 10px 17px;
-      border-radius: 12px;
-      font: inherit;
-      font-weight: 800;
-      cursor: pointer;
+      min-height:
+        40px;
+
+      padding:
+        8px 14px;
+
+      border-radius:
+        10px;
+
+      font:
+        inherit;
+
+      font-size:
+        0.8rem;
+
+      font-weight:
+        800;
+
+      cursor:
+        pointer;
     }
 
     .medicamentos-btn-secundario {
@@ -4065,8 +3761,11 @@ function criarEstilos() {
         1px solid
         #cbd5e1;
 
-      background: #ffffff;
-      color: #475569;
+      background:
+        #ffffff;
+
+      color:
+        #475569;
     }
 
     .medicamentos-btn-salvar {
@@ -4074,618 +3773,391 @@ function criarEstilos() {
         1px solid
         #2563eb;
 
-      background: #2563eb;
-      color: #ffffff;
-    }
+      background:
+        #2563eb;
 
-    .medicamentos-btn-salvar:hover {
-      background: #1d4ed8;
-    }
-
-    .medicamentos-btn-salvar:disabled,
-    .medicamentos-btn-secundario:disabled {
-      opacity: 0.65;
-      cursor: wait;
+      color:
+        #ffffff;
     }
 
 
-    /* ======================================
-       Seções
-       ====================================== */
+    /* Lista compacta */
 
     .medicamentos-conteudo {
-      display: grid;
-      gap: 16px;
+      width:
+        100%;
     }
 
-    .medicamentos-secao {
-      overflow: hidden;
+    .medicamentos-lista-compacta {
+      overflow:
+        hidden;
 
       border:
         1px solid
         #e2e8f0;
 
-      border-radius: 20px;
-      background: #ffffff;
+      border-radius:
+        13px;
 
-      box-shadow:
-        0 8px 24px
-        rgba(15, 23, 42, 0.07);
+      background:
+        #ffffff;
     }
 
-    .medicamentos-secao-topo {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-
-      padding: 15px 17px;
+    .medicamento-item,
+    .medicamento-historico-item {
+      padding:
+        11px 12px;
 
       border-bottom:
         1px solid
         #e2e8f0;
 
-      background: #f8fafc;
+      background:
+        #ffffff;
     }
 
-    .medicamentos-secao-topo h3 {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-
-      margin: 0;
-      color: #1e293b;
-      font-size: 1rem;
+    .medicamento-item:last-child,
+    .medicamento-historico-item:last-child {
+      border-bottom:
+        0;
     }
 
-    .medicamentos-secao-topo p {
-      margin: 4px 0 0;
-      color: #64748b;
-      font-size: 0.8rem;
-      line-height: 1.35;
-    }
-
-    .medicamentos-secao-contador {
-      min-width: 30px;
-      height: 30px;
-
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-
-      border-radius: 10px;
-      background: #e2e8f0;
-      color: #334155;
-
-      font-size: 0.82rem;
-      font-weight: 850;
-    }
-
-
-    /* Comprar agora */
-
-    .secao-comprar-agora
-    .medicamentos-secao-topo {
-      background: #fff1f2;
-      border-bottom-color: #fecdd3;
-    }
-
-    .secao-comprar-agora
-    .medicamentos-secao-contador {
-      background: #fee2e2;
-      color: #b91c1c;
-    }
-
-
-    /* Em breve */
-
-    .secao-em-breve
-    .medicamentos-secao-topo {
-      background: #fffbeb;
-      border-bottom-color: #fde68a;
-    }
-
-    .secao-em-breve
-    .medicamentos-secao-contador {
-      background: #fef3c7;
-      color: #b45309;
-    }
-
-
-    /* Próximos */
-
-    .secao-proximos
-    .medicamentos-secao-topo {
-      background: #eff6ff;
-      border-bottom-color: #bfdbfe;
-    }
-
-    .secao-proximos
-    .medicamentos-secao-contador {
-      background: #dbeafe;
-      color: #1d4ed8;
-    }
-
-
-    /* Histórico */
-
-    .secao-historico
-    .medicamentos-secao-topo {
-      background: #f0fdf4;
-      border-bottom-color: #bbf7d0;
-    }
-
-    .secao-historico
-    .medicamentos-secao-contador {
-      background: #dcfce7;
-      color: #15803d;
-    }
-
-
-    /* ======================================
-       Lista e cartões
-       ====================================== */
-
-    .medicamentos-lista,
-    .medicamentos-historico-lista {
-      display: grid;
-      gap: 12px;
-      padding: 14px;
-    }
-
-    .medicamento-card {
-      position: relative;
-      overflow: hidden;
-      padding: 15px;
-
-      border:
-        1px solid
-        #e2e8f0;
-
-      border-left-width: 5px;
-      border-radius: 17px;
-      background: #ffffff;
-
+    .medicamento-item.tem-pendencia {
       box-shadow:
-        0 5px 16px
-        rgba(15, 23, 42, 0.06);
+        inset 3px 0 0
+        #f59e0b;
     }
 
-    .medicamento-card.status-comprar-agora {
-      border-left-color: #ef4444;
+    .medicamento-item.tem-pendencia
+    .status-hoje,
+    .medicamento-item.tem-pendencia
+    .status-atrasado {
+      background:
+        #fee2e2;
+
+      color:
+        #b91c1c;
     }
 
-    .medicamento-card.status-em-breve {
-      border-left-color: #f59e0b;
+    .medicamento-item.tem-pendencia
+    .status-pendente {
+      background:
+        #fef3c7;
+
+      color:
+        #a16207;
     }
 
-    .medicamento-card.status-proximos {
-      border-left-color: #3b82f6;
-    }
-
-    .medicamento-card-topo-harmonico {
-      display: grid;
+    .medicamento-item-principal {
+      display:
+        grid;
 
       grid-template-columns:
         minmax(0, 1fr)
         auto;
 
-      align-items: start;
-      gap: 10px;
+      align-items:
+        center;
+
+      gap:
+        12px;
     }
 
-    .medicamento-titulo {
-      min-width: 0;
+    .medicamento-item-textos {
+      min-width:
+        0;
     }
 
-    .medicamento-titulo-harmonico h3 {
-      margin: 0 0 7px;
-      overflow-wrap: anywhere;
-      color: #1e293b;
-      font-size: 1.04rem;
-      line-height: 1.25;
+    .medicamento-item-titulo {
+      display:
+        flex;
+
+      align-items:
+        center;
+
+      flex-wrap:
+        wrap;
+
+      gap:
+        6px;
+
+      min-width:
+        0;
     }
 
-    .medicamento-linha-pessoa {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px 8px;
+    .medicamento-item-titulo > strong {
+      min-width:
+        0;
 
-      color: #64748b;
-      font-size: 0.77rem;
-      line-height: 1.35;
+      overflow-wrap:
+        anywhere;
+
+      color:
+        #1e293b;
+
+      font-size:
+        0.92rem;
+
+      line-height:
+        1.25;
     }
 
-    .medicamento-linha-pessoa > span:first-child {
-      min-width: 0;
-      overflow-wrap: anywhere;
+    .medicamento-status {
+      display:
+        inline-flex;
+
+      align-items:
+        center;
+
+      min-height:
+        21px;
+
+      padding:
+        3px 7px;
+
+      border-radius:
+        999px;
+
+      font-size:
+        0.61rem;
+
+      font-weight:
+        850;
+
+      white-space:
+        nowrap;
     }
 
-    .medicamento-linha-pessoa > span:first-child strong {
-      color: #334155;
-      font-weight: 800;
+    .medicamento-item-meta,
+    .medicamento-historico-meta {
+      display:
+        flex;
+
+      align-items:
+        center;
+
+      flex-wrap:
+        wrap;
+
+      gap:
+        3px 10px;
+
+      margin-top:
+        5px;
+
+      color:
+        #64748b;
+
+      font-size:
+        0.69rem;
+
+      line-height:
+        1.35;
     }
 
-    .medicamento-situacao,
-    .medicamento-prioridade {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
+    .medicamento-item-meta b,
+    .medicamento-historico-meta b {
+      color:
+        #475569;
 
-      min-height: 25px;
-      padding: 4px 8px;
-      border-radius: 999px;
-
-      font-size: 0.68rem;
-      font-weight: 850;
-      line-height: 1;
+      font-weight:
+        750;
     }
 
-    .medicamento-situacao-principal {
-      flex: 0 0 auto;
-      justify-content: center;
-      white-space: nowrap;
+    .medicamento-prioridade-texto.prioridade-alta b {
+      color:
+        #be123c;
     }
 
-    .status-comprar-agora
-    .medicamento-situacao {
-      background: #fee2e2;
-      color: #b91c1c;
+    .medicamento-prioridade-texto.prioridade-media b {
+      color:
+        #a16207;
     }
 
-    .status-em-breve
-    .medicamento-situacao {
-      background: #fef3c7;
-      color: #b45309;
-    }
-
-    .status-proximos
-    .medicamento-situacao {
-      background: #dbeafe;
-      color: #1d4ed8;
-    }
-
-    .medicamento-prioridade.prioridade-alta {
-      background: #ffe4e6;
-      color: #be123c;
-    }
-
-    .medicamento-prioridade.prioridade-media {
-      background: #fef3c7;
-      color: #a16207;
-    }
-
-    .medicamento-prioridade.prioridade-baixa {
-      background: #dcfce7;
-      color: #15803d;
-    }
-
-
-    /* ======================================
-       Detalhes harmonizados
-       ====================================== */
-
-    .medicamento-detalhes-harmonicos {
-      display: grid;
-
-      grid-template-columns:
-        minmax(0, 1.35fr)
-        repeat(
-          2,
-          minmax(0, 1fr)
-        );
-
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .medicamento-detalhes-harmonicos
-    .medicamento-detalhe {
-      min-width: 0;
-      display: block;
-      min-height: 68px;
-      padding: 10px;
-      border-radius: 12px;
-      background: #f8fafc;
-    }
-
-    .medicamento-detalhes-harmonicos
-    .medicamento-detalhe small,
-    .medicamento-detalhes-harmonicos
-    .medicamento-detalhe strong {
-      display: block;
-      overflow-wrap: anywhere;
-    }
-
-    .medicamento-detalhes-harmonicos
-    .medicamento-detalhe small {
-      margin-bottom: 5px;
-      color: #64748b;
-      font-size: 0.65rem;
-      font-weight: 700;
-    }
-
-    .medicamento-detalhes-harmonicos
-    .medicamento-detalhe strong {
-      color: #334155;
-      font-size: 0.78rem;
-      line-height: 1.35;
-    }
-
-    .medicamento-detalhe-apoio {
-      display: inline-flex;
-      align-items: center;
-
-      margin-top: 5px;
-      padding: 3px 6px;
-      border-radius: 999px;
-
-      font-size: 0.62rem;
-      font-weight: 800;
-      line-height: 1.2;
-    }
-
-    .medicamento-detalhe-apoio.status-comprar-agora {
-      background: #fee2e2;
-      color: #b91c1c;
-    }
-
-    .medicamento-detalhe-apoio.status-em-breve {
-      background: #fef3c7;
-      color: #b45309;
-    }
-
-    .medicamento-detalhe-apoio.status-proximos {
-      background: #dbeafe;
-      color: #1d4ed8;
+    .medicamento-prioridade-texto.prioridade-baixa b {
+      color:
+        #15803d;
     }
 
     .medicamento-observacao {
-      display: block;
-      margin-top: 9px;
-      padding: 9px 10px;
+      margin-top:
+        5px;
 
-      border-radius: 12px;
-      background: #f8fafc;
-      color: #475569;
+      overflow:
+        hidden;
+
+      color:
+        #64748b;
+
+      font-size:
+        0.67rem;
+
+      line-height:
+        1.35;
+
+      text-overflow:
+        ellipsis;
+
+      white-space:
+        nowrap;
     }
 
-    .medicamento-observacao strong {
-      display: block;
-      margin-bottom: 3px;
-      color: #64748b;
-      font-size: 0.65rem;
-    }
 
-    .medicamento-observacao p {
-      margin: 0;
-      overflow-wrap: anywhere;
-      font-size: 0.79rem;
-      line-height: 1.4;
-    }
-
-
-    /* ======================================
-       Ações
-       ====================================== */
+    /* Ações */
 
     .medicamento-acoes {
-      display: grid;
+      display:
+        inline-flex;
 
-      grid-template-columns:
-        minmax(0, 1.3fr)
-        minmax(0, 0.85fr)
-        minmax(0, 0.85fr);
+      align-items:
+        center;
 
-      gap: 7px;
-      margin-top: 13px;
-      padding-top: 12px;
-
-      border-top:
-        1px solid
-        #e2e8f0;
+      gap:
+        5px;
     }
 
     .medicamento-acao {
-      width: 100%;
-      min-width: 0;
-      min-height: 36px;
-      padding: 8px 11px;
+      min-height:
+        31px;
+
+      padding:
+        6px 9px;
 
       border:
         1px solid
         transparent;
 
-      border-radius: 10px;
+      border-radius:
+        8px;
 
-      font: inherit;
-      font-size: 0.75rem;
-      font-weight: 800;
-      cursor: pointer;
-
-      -webkit-tap-highlight-color:
+      background:
         transparent;
+
+      font:
+        inherit;
+
+      font-size:
+        0.68rem;
+
+      font-weight:
+        800;
+
+      cursor:
+        pointer;
+
+      white-space:
+        nowrap;
     }
 
     .medicamento-acao.comprou {
-      margin-right: 0;
-      border-color: #86efac;
-      background: #dcfce7;
-      color: #15803d;
+      border-color:
+        #86efac;
+
+      background:
+        #dcfce7;
+
+      color:
+        #15803d;
     }
 
     .medicamento-acao.editar {
-      border-color: #bfdbfe;
-      background: #eff6ff;
-      color: #1d4ed8;
+      color:
+        #2563eb;
     }
 
     .medicamento-acao.excluir {
-      border-color: #fecaca;
-      background: #fff1f2;
-      color: #b91c1c;
+      color:
+        #b91c1c;
     }
 
-    .medicamento-acao:hover {
-      filter: brightness(0.98);
+    .medicamento-acao.editar:hover {
+      background:
+        #eff6ff;
+    }
+
+    .medicamento-acao.excluir:hover {
+      background:
+        #fff1f2;
     }
 
     .medicamento-acao:disabled {
-      opacity: 0.6;
-      cursor: wait;
+      opacity:
+        0.6;
+
+      cursor:
+        wait;
     }
 
 
-    /* ======================================
-       Histórico
-       ====================================== */
+    /* Histórico compacto */
 
-    .medicamento-historico-card {
-      display: flex;
-      align-items: flex-start;
-      gap: 11px;
+    .medicamento-historico-titulo {
+      display:
+        flex;
 
-      padding: 14px;
+      align-items:
+        center;
 
-      border:
-        1px solid
-        #bbf7d0;
+      justify-content:
+        space-between;
 
-      border-radius: 16px;
-      background: #f0fdf4;
+      gap:
+        10px;
     }
 
-    .medicamento-historico-icone {
-      width: 38px;
-      height: 38px;
-      flex: 0 0 auto;
+    .medicamento-historico-titulo strong {
+      min-width:
+        0;
 
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      overflow-wrap:
+        anywhere;
 
-      border-radius: 50%;
-      background: #22c55e;
-      color: #ffffff;
+      color:
+        #1e293b;
 
-      font-size: 20px;
-      font-weight: 900;
+      font-size:
+        0.88rem;
     }
 
-    .medicamento-historico-conteudo {
-      min-width: 0;
-      flex: 1;
-    }
+    .medicamento-historico-titulo > span {
+      flex:
+        0 0 auto;
 
-    .medicamento-historico-topo {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-    }
+      color:
+        #15803d;
 
-    .medicamento-historico-topo h3 {
-      margin: 0 0 3px;
-      overflow-wrap: anywhere;
-      color: #166534;
-      font-size: 0.97rem;
-    }
+      font-size:
+        0.65rem;
 
-    .medicamento-historico-topo div > span {
-      color: #4b7b5b;
-      font-size: 0.75rem;
-    }
-
-    .medicamento-historico-data {
-      flex: 0 0 auto;
-      padding: 5px 8px;
-      border-radius: 9px;
-      background: #dcfce7;
-      color: #166534;
-      font-size: 0.68rem;
-      font-weight: 800;
-    }
-
-    .medicamento-historico-informacoes {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 7px 12px;
-
-      margin-top: 9px;
-
-      color: #3f6f50;
-      font-size: 0.72rem;
-      line-height: 1.35;
+      font-weight:
+        800;
     }
 
 
-    /* ======================================
-       Estado vazio
-       ====================================== */
+    /* Foco */
 
-    .medicamentos-vazio {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+    .medicamentos-btn-voltar:focus-visible,
+    .medicamentos-btn-novo:focus-visible,
+    .medicamentos-filtro:focus-visible,
+    .medicamento-acao:focus-visible,
+    .medicamentos-btn-salvar:focus-visible,
+    .medicamentos-btn-secundario:focus-visible,
+    .medicamentos-btn-fechar:focus-visible {
+      outline:
+        3px solid
+        rgba(
+          37,
+          99,
+          235,
+          0.25
+        );
 
-      min-height: 150px;
-      padding: 24px;
-
-      text-align: center;
-      box-sizing: border-box;
-    }
-
-    .medicamentos-vazio-icone {
-      width: 52px;
-      height: 52px;
-
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-
-      margin-bottom: 10px;
-      border-radius: 16px;
-      background: #eff6ff;
-
-      font-size: 27px;
-    }
-
-    .medicamentos-vazio strong {
-      color: #334155;
-      font-size: 0.94rem;
-    }
-
-    .medicamentos-vazio p {
-      max-width: 440px;
-      margin: 7px 0 0;
-
-      color: #64748b;
-      font-size: 0.8rem;
-      line-height: 1.45;
-    }
-
-    .medicamentos-vazio-botao {
-      min-height: 39px;
-      margin-top: 13px;
-      padding: 8px 13px;
-
-      border: 0;
-      border-radius: 11px;
-      background: #2563eb;
-      color: #ffffff;
-
-      font: inherit;
-      font-size: 0.8rem;
-      font-weight: 800;
-      cursor: pointer;
+      outline-offset:
+        2px;
     }
 
 
-    /* ======================================
-       Tema escuro
-       ====================================== */
+    /* Tema escuro */
 
     body.tema-escuro
     #tarefasMedicamentosCard,
@@ -4709,25 +4181,35 @@ function criarEstilos() {
     body.tema-escuro
     .medicamentos-filtros,
     body.tema-escuro
-    .medicamentos-secao,
+    .medicamentos-lista-compacta,
     body.tema-escuro
-    .medicamento-card,
+    .medicamento-item,
+    body.tema-escuro
+    .medicamento-historico-item,
     html[data-theme="dark"]
     .medicamentos-filtros,
     html[data-theme="dark"]
-    .medicamentos-secao,
+    .medicamentos-lista-compacta,
     html[data-theme="dark"]
-    .medicamento-card {
-      border-color: #334155;
-      background: #111827;
+    .medicamento-item,
+    html[data-theme="dark"]
+    .medicamento-historico-item {
+      border-color:
+        #334155;
+
+      background:
+        #111827;
     }
 
     body.tema-escuro
     .medicamentos-formulario,
     html[data-theme="dark"]
     .medicamentos-formulario {
-      border-color: #1e40af;
-      background: #172554;
+      border-color:
+        #1e40af;
+
+      background:
+        #172554;
     }
 
     body.tema-escuro
@@ -4742,94 +4224,66 @@ function criarEstilos() {
     .medicamentos-campo select,
     html[data-theme="dark"]
     .medicamentos-campo textarea {
-      border-color: #475569;
-      background: #0f172a;
-      color: #f8fafc;
+      border-color:
+        #475569;
+
+      background:
+        #0f172a;
+
+      color:
+        #f8fafc;
     }
 
     body.tema-escuro
-    .medicamentos-formulario-topo > div,
+    .medicamentos-formulario-topo,
     body.tema-escuro
     .medicamentos-campo label,
     body.tema-escuro
-    .medicamentos-secao-topo h3,
+    .medicamento-item-titulo > strong,
     body.tema-escuro
-    .medicamento-titulo h3,
+    .medicamento-historico-titulo strong,
     html[data-theme="dark"]
-    .medicamentos-formulario-topo > div,
+    .medicamentos-formulario-topo,
     html[data-theme="dark"]
     .medicamentos-campo label,
     html[data-theme="dark"]
-    .medicamentos-secao-topo h3,
+    .medicamento-item-titulo > strong,
     html[data-theme="dark"]
-    .medicamento-titulo h3 {
-      color: #f1f5f9;
+    .medicamento-historico-titulo strong {
+      color:
+        #f1f5f9;
     }
 
     body.tema-escuro
-    .medicamento-detalhe,
+    .medicamento-item-meta,
     body.tema-escuro
-    .medicamento-observacao,
-    html[data-theme="dark"]
-    .medicamento-detalhe,
-    html[data-theme="dark"]
-    .medicamento-observacao {
-      background: #0f172a;
-    }
-
-    body.tema-escuro
-    .medicamento-detalhe strong,
+    .medicamento-historico-meta,
     body.tema-escuro
     .medicamento-observacao,
     html[data-theme="dark"]
-    .medicamento-detalhe strong,
+    .medicamento-item-meta,
+    html[data-theme="dark"]
+    .medicamento-historico-meta,
     html[data-theme="dark"]
     .medicamento-observacao {
-      color: #cbd5e1;
+      color:
+        #94a3b8;
     }
 
     body.tema-escuro
-    .medicamento-linha-pessoa,
-    html[data-theme="dark"]
-    .medicamento-linha-pessoa {
-      color: #94a3b8;
-    }
-
+    .medicamento-item-meta b,
     body.tema-escuro
-    .medicamento-linha-pessoa > span:first-child strong,
+    .medicamento-historico-meta b,
     html[data-theme="dark"]
-    .medicamento-linha-pessoa > span:first-child strong {
-      color: #e2e8f0;
-    }
-
-    body.tema-escuro
-    .medicamento-observacao strong,
+    .medicamento-item-meta b,
     html[data-theme="dark"]
-    .medicamento-observacao strong {
-      color: #94a3b8;
+    .medicamento-historico-meta b {
+      color:
+        #cbd5e1;
     }
 
 
-    /* ======================================
-       Tablet
-       ====================================== */
-
-    @media (max-width: 820px) {
-
-      .medicamentos-grid-tres-colunas {
-        grid-template-columns:
-          repeat(
-            2,
-            minmax(0, 1fr)
-          );
-      }
-
-    }
-
-
-    /* ======================================
-       Área estreita
-       ====================================== */
+    /* Área estreita */
 
     @container (max-width: 620px) {
 
@@ -4837,31 +4291,26 @@ function criarEstilos() {
         grid-template-columns:
           auto
           minmax(0, 1fr);
-
-        align-items: center;
-        gap: 10px;
       }
 
       .medicamentos-btn-novo {
         grid-column:
           1 / -1;
 
-        width: 100%;
-        justify-self: stretch;
-        margin-top: 2px;
+        width:
+          100%;
       }
 
     }
 
 
-    /* ======================================
-       Celular
-       ====================================== */
+    /* Celular */
 
     @media (max-width: 600px) {
 
       #tarefasResumo.medicamentos-instalado {
-        gap: 5px !important;
+        gap:
+          5px !important;
       }
 
       #tarefasResumo.medicamentos-instalado
@@ -4878,9 +4327,6 @@ function criarEstilos() {
 
       #tarefasResumo.medicamentos-instalado
       .mini-card strong {
-        margin-bottom:
-          1px !important;
-
         font-size:
           1rem !important;
       }
@@ -4889,41 +4335,45 @@ function criarEstilos() {
       .mini-card span {
         font-size:
           0.61rem !important;
-
-        letter-spacing:
-          -0.01em;
       }
 
       .medicamentos-screen {
-        padding-bottom: 100px;
-      }
-
-      .medicamentos-cabecalho {
-        padding: 11px;
-      }
-
-      .medicamentos-titulo-area h2 {
-        font-size: 1.04rem;
+        padding-bottom:
+          100px;
       }
 
       .medicamentos-filtros {
-        gap: 5px;
-        margin-bottom: 10px;
-        padding: 4px;
-        border-radius: 13px;
+        width:
+          100%;
+
+        display:
+          grid;
+
+        grid-template-columns:
+          repeat(
+            3,
+            minmax(0, 1fr)
+          );
+
+        box-sizing:
+          border-box;
       }
 
       .medicamentos-filtro {
-        min-height: 34px;
-        padding: 7px 10px;
-        border-radius: 9px;
-        font-size: 0.72rem;
-      }
+        width:
+          100%;
 
-      .medicamentos-formulario {
-        margin-bottom: 12px;
-        padding: 13px;
-        border-radius: 16px;
+        min-width:
+          0;
+
+        padding-right:
+          5px;
+
+        padding-left:
+          5px;
+
+        font-size:
+          0.7rem;
       }
 
       .medicamentos-grid-duas-colunas,
@@ -4931,174 +4381,73 @@ function criarEstilos() {
         grid-template-columns:
           1fr;
 
-        gap: 0;
+        gap:
+          0;
       }
 
       .medicamentos-formulario-acoes {
-        display: grid;
+        display:
+          grid;
 
         grid-template-columns:
           1fr
           1fr;
-
-        gap: 8px;
       }
 
       .medicamentos-btn-secundario,
       .medicamentos-btn-salvar {
-        width: 100%;
-        min-width: 0;
-        padding-right: 8px;
-        padding-left: 8px;
-        font-size: 0.78rem;
+        width:
+          100%;
+
+        min-width:
+          0;
+
+        padding-right:
+          7px;
+
+        padding-left:
+          7px;
       }
 
-      .medicamentos-conteudo {
-        gap: 12px;
-      }
-
-      .medicamentos-secao {
-        border-radius: 16px;
-      }
-
-      .medicamentos-secao-topo {
-        padding: 12px;
-      }
-
-      .medicamentos-secao-topo h3 {
-        font-size: 0.9rem;
-      }
-
-      .medicamentos-secao-topo p {
-        font-size: 0.7rem;
-      }
-
-      .medicamentos-lista,
-      .medicamentos-historico-lista {
-        gap: 9px;
-        padding: 10px;
-      }
-
-      .medicamento-card {
-        padding: 12px;
-        border-radius: 14px;
-      }
-
-      .medicamento-card-topo-harmonico {
+      .medicamento-item-principal {
         grid-template-columns:
-          minmax(0, 1fr)
-          auto;
+          1fr;
 
-        gap: 7px;
-      }
-
-      .medicamento-situacao-principal {
-        min-height: 22px;
-        padding: 4px 7px;
-        font-size: 0.59rem;
-      }
-
-      .medicamento-linha-pessoa {
-        display: grid;
-        justify-items: start;
-        gap: 5px;
-        font-size: 0.7rem;
-      }
-
-      .medicamento-detalhes-harmonicos {
-        grid-template-columns:
-          repeat(
-            2,
-            minmax(0, 1fr)
-          );
-
-        gap: 6px;
-      }
-
-      .medicamento-detalhe-principal {
-        grid-column:
-          1 / -1;
-      }
-
-      .medicamento-detalhes-harmonicos
-      .medicamento-detalhe {
-        min-height: 0;
-        padding: 8px;
-      }
-
-      .medicamento-observacao {
-        margin-top: 8px;
-        padding: 8px;
-      }
-
-      .medicamento-observacao p {
-        font-size: 0.7rem;
+        gap:
+          8px;
       }
 
       .medicamento-acoes {
-        grid-template-columns:
-          minmax(0, 1.25fr)
-          minmax(0, 0.8fr)
-          minmax(0, 0.8fr);
-
-        gap: 5px;
-        margin-top: 10px;
-        padding-top: 9px;
+        justify-content:
+          flex-start;
       }
 
-      .medicamento-acao {
-        min-height: 34px;
-        padding: 6px 4px;
-        font-size: 0.63rem;
+      .medicamento-acao.comprou {
+        flex:
+          1 1 auto;
       }
 
-      .medicamento-historico-card {
-        gap: 8px;
-        padding: 11px;
-        border-radius: 13px;
+      .medicamento-historico-titulo {
+        display:
+          block;
       }
 
-      .medicamento-historico-icone {
-        width: 32px;
-        height: 32px;
-        font-size: 17px;
-      }
+      .medicamento-historico-titulo > span {
+        display:
+          block;
 
-      .medicamento-historico-topo {
-        display: block;
-      }
-
-      .medicamento-historico-topo h3 {
-        font-size: 0.85rem;
-      }
-
-      .medicamento-historico-data {
-        display: inline-flex;
-        margin-top: 7px;
-      }
-
-      .medicamento-historico-informacoes {
-        display: grid;
-        gap: 5px;
-        font-size: 0.65rem;
-      }
-
-      .medicamentos-vazio {
-        min-height: 130px;
-        padding: 20px 13px;
+        margin-top:
+          4px;
       }
 
     }
 
 
-    /* ======================================
-       Celulares menores
-       ====================================== */
-
     @media (max-width: 380px) {
 
       #tarefasResumo.medicamentos-instalado {
-        gap: 3px !important;
+        gap:
+          3px !important;
       }
 
       #tarefasResumo.medicamentos-instalado
@@ -5122,13 +4471,10 @@ function criarEstilos() {
           0.56rem !important;
       }
 
-      .medicamento-card-topo-harmonico {
-        grid-template-columns:
-          minmax(0, 1fr)
-          auto;
-      }
-
       .medicamento-acoes {
+        display:
+          grid;
+
         grid-template-columns:
           1fr
           1fr;
@@ -5145,11 +4491,8 @@ function criarEstilos() {
     @media (prefers-reduced-motion: reduce) {
 
       #tarefasMedicamentosCard {
-        transition: none;
-      }
-
-      #tarefasMedicamentosCard:hover {
-        transform: none;
+        transition:
+          none;
       }
 
     }
@@ -5162,7 +4505,7 @@ function criarEstilos() {
 
 
 // ==========================================
-// Instalação da estrutura
+// Instalação
 // ==========================================
 
 function instalarEstrutura() {
@@ -5211,7 +4554,8 @@ function garantirEstrutura() {
 
         if (
           instalada ||
-          tentativas >= 150
+          tentativas >=
+            150
         ) {
           window.clearInterval(
             intervalo
@@ -5260,19 +4604,12 @@ window.ListaLarMedicamentos = {
 
   obterQuantidadeAtencao() {
     return lembretes.filter(
-      (lembrete) => {
-        const situacao =
-          classificarLembrete(
-            lembrete
-          );
-
-        return (
-          situacao ===
-            "comprar-agora" ||
-          situacao ===
-            "em-breve"
-        );
-      }
+      (lembrete) =>
+        lembrete.ativo !==
+          false &&
+        obterSituacaoLembrete(
+          lembrete
+        ).pendente
     ).length;
   },
 
@@ -5314,9 +4651,6 @@ function iniciar() {
         familiaIdAtual =
           "";
 
-        familiaNomeAtual =
-          "";
-
         membros =
           [];
 
@@ -5350,7 +4684,8 @@ if (
     "DOMContentLoaded",
     iniciar,
     {
-      once: true
+      once:
+        true
     }
   );
 } else {
