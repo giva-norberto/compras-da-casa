@@ -1,7 +1,7 @@
 // ============================================================
 // LISTALAR — MÓDULO GASTOS
 // Arquivo: gastos.js
-// Versão: 1.1.0
+// Versão: 1.2.0
 //
 // Responsabilidades:
 // - Criar o acesso "Gastos"
@@ -15,7 +15,25 @@
 (() => {
     "use strict";
 
-    const VERSAO = "1.1.0";
+    const VERSAO = "1.2.0";
+
+    const FIREBASE_CONFIG = {
+        apiKey: "AIzaSyC2U7q5HupxKyI3QiAyan-2Sio55NSir0Y",
+        authDomain: "compras-da-casa.firebaseapp.com",
+        projectId: "compras-da-casa",
+        storageBucket: "compras-da-casa.firebasestorage.app",
+        messagingSenderId: "63765433273",
+        appId: "1:63765433273:web:c478a3dd33ef3cd55a0468"
+    };
+
+    /*
+     * Mesma regra usada no módulo Tarefas:
+     * - acesso geral quando gastosLiberados === true;
+     * - acesso permanente para familiaPilotoId;
+     * - administrador como piloto apenas enquanto o documento
+     *   configuracoes/modulos ainda não existir.
+     */
+    const ADMIN_COMO_PILOTO_SEM_CONFIG = true;
 
     const IDS = {
         estilo: "listalar-gastos-estilo",
@@ -34,6 +52,11 @@
     let ultimaNotaImportada = null;
     let modoImportacaoAtual = null;
     let resolverModoImportacao = null;
+
+    let familiaIdAtual = "";
+    let moduloLiberado = false;
+    let interfaceInicializada = false;
+    let promessaFirebaseGastos = null;
 
     // ========================================================
     // UTILITÁRIOS
@@ -109,7 +132,203 @@
         }
     }
 
-       // ========================================================
+    // ========================================================
+    // CONTROLE DE ACESSO DO MÓDULO
+    // ========================================================
+
+    function carregarFirebaseGastos() {
+        if (promessaFirebaseGastos) {
+            return promessaFirebaseGastos;
+        }
+
+        promessaFirebaseGastos = Promise.all([
+            import(
+                "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"
+            ),
+            import(
+                "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
+            ),
+            import(
+                "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+            )
+        ]).then(([
+            moduloApp,
+            moduloAuth,
+            moduloFirestore
+        ]) => {
+            const app = moduloApp.getApps().length
+                ? moduloApp.getApp()
+                : moduloApp.initializeApp(FIREBASE_CONFIG);
+
+            return {
+                auth: moduloAuth.getAuth(app),
+                db: moduloFirestore.getFirestore(app),
+                onAuthStateChanged:
+                    moduloAuth.onAuthStateChanged,
+                doc: moduloFirestore.doc,
+                getDoc: moduloFirestore.getDoc
+            };
+        });
+
+        return promessaFirebaseGastos;
+    }
+
+    function definirVisibilidadeGastos(liberado) {
+        moduloLiberado = liberado === true;
+
+        if (moduloLiberado) {
+            if (!interfaceInicializada) {
+                criarTela();
+                criarBotaoMenu();
+                configurarEventos();
+                interfaceInicializada = true;
+            } else {
+                const botao = document.getElementById(
+                    IDS.botaoMenu
+                );
+
+                if (botao) {
+                    botao.hidden = false;
+                }
+            }
+
+            return;
+        }
+
+        const botao = document.getElementById(
+            IDS.botaoMenu
+        );
+
+        if (botao) {
+            botao.hidden = true;
+        }
+
+        fecharModalDuplicidade();
+        fecharTela();
+    }
+
+    async function carregarContextoGastos(
+        usuario,
+        firebase
+    ) {
+        const usuarioSnapshot = await firebase.getDoc(
+            firebase.doc(
+                firebase.db,
+                "usuarios",
+                usuario.uid
+            )
+        );
+
+        if (!usuarioSnapshot.exists()) {
+            familiaIdAtual = "";
+            definirVisibilidadeGastos(false);
+            return;
+        }
+
+        const dadosUsuario = usuarioSnapshot.data();
+
+        const familiaId = String(
+            dadosUsuario.familiaId || ""
+        ).trim();
+
+        if (!familiaId) {
+            familiaIdAtual = "";
+            definirVisibilidadeGastos(false);
+            return;
+        }
+
+        const modulosSnapshot = await firebase.getDoc(
+            firebase.doc(
+                firebase.db,
+                "configuracoes",
+                "modulos"
+            )
+        );
+
+        const modulos = modulosSnapshot.exists()
+            ? modulosSnapshot.data()
+            : {};
+
+        familiaIdAtual = familiaId;
+
+        const liberado =
+            modulos.gastosLiberados === true ||
+            modulos.familiaPilotoId === familiaId ||
+            (
+                ADMIN_COMO_PILOTO_SEM_CONFIG &&
+                !modulosSnapshot.exists() &&
+                dadosUsuario.adminSistema === true
+            );
+
+        definirVisibilidadeGastos(liberado);
+
+        console.log(
+            "Diagnóstico módulo Gastos:",
+            {
+                familiaId: familiaIdAtual,
+                familiaPilotoId:
+                    modulos.familiaPilotoId || "",
+                gastosLiberados:
+                    modulos.gastosLiberados === true,
+                liberado: moduloLiberado
+            }
+        );
+
+        window.dispatchEvent(
+            new CustomEvent(
+                "listalar:gastos-pronto",
+                {
+                    detail: {
+                        familiaId: familiaIdAtual,
+                        liberado: moduloLiberado
+                    }
+                }
+            )
+        );
+    }
+
+    async function iniciarControleAcessoGastos() {
+        try {
+            const firebase =
+                await carregarFirebaseGastos();
+
+            firebase.onAuthStateChanged(
+                firebase.auth,
+                async (usuario) => {
+                    if (!usuario) {
+                        familiaIdAtual = "";
+                        definirVisibilidadeGastos(false);
+                        return;
+                    }
+
+                    try {
+                        await carregarContextoGastos(
+                            usuario,
+                            firebase
+                        );
+                    } catch (erro) {
+                        console.error(
+                            "❌ Erro ao verificar a liberação do módulo Gastos:",
+                            erro
+                        );
+
+                        familiaIdAtual = "";
+                        definirVisibilidadeGastos(false);
+                    }
+                }
+            );
+        } catch (erro) {
+            console.error(
+                "❌ Erro ao iniciar o controle de acesso do módulo Gastos:",
+                erro
+            );
+
+            familiaIdAtual = "";
+            definirVisibilidadeGastos(false);
+        }
+    }
+
+    // ========================================================
     // ESTILOS
     // ========================================================
 
@@ -803,6 +1022,7 @@
 
         document.head.appendChild(style);
     }
+
     // ========================================================
     // TELA
     // ========================================================
@@ -853,6 +1073,7 @@
                 <section class="listalar-gastos-grade-resumo">
                     <article class="listalar-gastos-card-resumo">
                         <span>Total importado</span>
+
                         <strong id="listalar-gastos-total-importado">
                             R$ 0,00
                         </strong>
@@ -860,6 +1081,7 @@
 
                     <article class="listalar-gastos-card-resumo">
                         <span>Produtos</span>
+
                         <strong id="listalar-gastos-total-produtos">
                             0
                         </strong>
@@ -867,6 +1089,7 @@
 
                     <article class="listalar-gastos-card-resumo">
                         <span>Notas</span>
+
                         <strong id="listalar-gastos-total-notas">
                             0
                         </strong>
@@ -914,7 +1137,10 @@
                     </div>
 
                     <div class="listalar-gastos-vazio">
-                        <span class="listalar-gastos-vazio-icone">🧾</span>
+                        <span class="listalar-gastos-vazio-icone">
+                            🧾
+                        </span>
+
                         Nenhuma nota salva ainda.
                     </div>
                 </section>
@@ -1065,6 +1291,14 @@
     // ========================================================
 
     function abrirTela() {
+        if (!moduloLiberado) {
+            console.warn(
+                "⚠️ Módulo Gastos não liberado para esta família."
+            );
+
+            return;
+        }
+
         const tela = document.getElementById(IDS.tela);
 
         if (!tela) {
@@ -1079,7 +1313,10 @@
 
         telaAtual.classList.add("aberta");
         telaAtual.setAttribute("aria-hidden", "false");
-        document.body.classList.add("listalar-gastos-aberto");
+
+        document.body.classList.add(
+            "listalar-gastos-aberto"
+        );
 
         telaAtual.scrollTo({
             top: 0,
@@ -1096,7 +1333,10 @@
 
         tela.classList.remove("aberta");
         tela.setAttribute("aria-hidden", "true");
-        document.body.classList.remove("listalar-gastos-aberto");
+
+        document.body.classList.remove(
+            "listalar-gastos-aberto"
+        );
     }
 
     // ========================================================
@@ -1176,6 +1416,14 @@
     }
 
     async function solicitarImportacaoNota() {
+        if (!moduloLiberado) {
+            console.warn(
+                "⚠️ Importação bloqueada: módulo Gastos não liberado."
+            );
+
+            return;
+        }
+
         modoImportacaoAtual = null;
 
         if (!controlePrecosEstaAtivo()) {
@@ -1418,7 +1666,10 @@
         return 0;
     }
 
-    function atualizarResumoSuperior(total, totalProdutos) {
+    function atualizarResumoSuperior(
+        total,
+        totalProdutos
+    ) {
         const elementoTotal = document.getElementById(
             "listalar-gastos-total-importado"
         );
@@ -1432,7 +1683,8 @@
         );
 
         if (elementoTotal) {
-            elementoTotal.textContent = formatarMoeda(total);
+            elementoTotal.textContent =
+                formatarMoeda(total);
         }
 
         if (elementoProdutos) {
@@ -1456,20 +1708,36 @@
 
         const produtos = obterProdutosDaNota(nota);
         const total = obterValorTotal(nota, produtos);
-        const estabelecimento = obterNomeEstabelecimento(nota);
+
+        const estabelecimento =
+            obterNomeEstabelecimento(nota);
+
         const dataNota = obterDataNota(nota);
 
-        atualizarResumoSuperior(total, produtos.length);
+        atualizarResumoSuperior(
+            total,
+            produtos.length
+        );
 
         const limiteExibicao = 50;
 
         const produtosHTML = produtos
             .slice(0, limiteExibicao)
             .map((produto, indice) => {
-                const nome = obterNomeProduto(produto, indice);
-                const quantidade = obterQuantidadeProduto(produto);
-                const unidade = obterUnidadeProduto(produto);
-                const totalProduto = obterTotalProduto(produto);
+                const nome =
+                    obterNomeProduto(
+                        produto,
+                        indice
+                    );
+
+                const quantidade =
+                    obterQuantidadeProduto(produto);
+
+                const unidade =
+                    obterUnidadeProduto(produto);
+
+                const totalProduto =
+                    obterTotalProduto(produto);
 
                 return `
                     <div class="listalar-gastos-produto">
@@ -1505,10 +1773,15 @@
         let mensagemPreparacao =
             "Confira os dados antes da futura gravação no histórico.";
 
-        if (modoImportacaoAtual === "substituir_compra_manual") {
+        if (
+            modoImportacaoAtual ===
+            "substituir_compra_manual"
+        ) {
             mensagemPreparacao =
                 "Esta nota será preparada para substituir a compra manual correspondente.";
-        } else if (modoImportacaoAtual === "nova_compra") {
+        } else if (
+            modoImportacaoAtual === "nova_compra"
+        ) {
             mensagemPreparacao =
                 "Esta nota será tratada como uma nova compra independente.";
         }
@@ -1533,7 +1806,9 @@
                     <p>
                         ${escaparHTML(dataNota)}
                         · ${produtos.length}
-                        ${produtos.length === 1 ? "produto" : "produtos"}
+                        ${produtos.length === 1
+                            ? "produto"
+                            : "produtos"}
                     </p>
                 </div>
 
@@ -1565,6 +1840,14 @@
     }
 
     function receberNotaImportada(evento) {
+        if (!moduloLiberado) {
+            console.warn(
+                "⚠️ Nota ignorada: módulo Gastos não liberado."
+            );
+
+            return;
+        }
+
         /*
          * O importador pode enviar os dados diretamente em detail
          * ou dentro de detail.nota / detail.dados.
@@ -1601,7 +1884,8 @@
                 {
                     detail: {
                         nota,
-                        modoImportacao: modoImportacaoAtual
+                        modoImportacao:
+                            modoImportacaoAtual
                     }
                 }
             )
@@ -1699,7 +1983,10 @@
             modalDuplicidade.addEventListener(
                 "click",
                 (evento) => {
-                    if (evento.target === modalDuplicidade) {
+                    if (
+                        evento.target ===
+                        modalDuplicidade
+                    ) {
                         escolherCancelar();
                     }
                 }
@@ -1707,31 +1994,41 @@
         }
 
         if (tela) {
-            tela.addEventListener("click", (evento) => {
-                /*
-                 * Não fecha ao clicar dentro da tela.
-                 * O fechamento ocorre somente no botão ×.
-                 */
-                evento.stopPropagation();
-            });
+            tela.addEventListener(
+                "click",
+                (evento) => {
+                    /*
+                     * Não fecha ao clicar dentro da tela.
+                     * O fechamento ocorre somente no botão ×.
+                     */
+                    evento.stopPropagation();
+                }
+            );
         }
 
-        document.addEventListener("keydown", (evento) => {
-            if (evento.key !== "Escape") {
-                return;
+        document.addEventListener(
+            "keydown",
+            (evento) => {
+                if (evento.key !== "Escape") {
+                    return;
+                }
+
+                const modalAberto = document
+                    .getElementById(
+                        IDS.modalDuplicidade
+                    )
+                    ?.classList.contains(
+                        "aberto"
+                    );
+
+                if (modalAberto) {
+                    escolherCancelar();
+                    return;
+                }
+
+                fecharTela();
             }
-
-            const modalAberto = document
-                .getElementById(IDS.modalDuplicidade)
-                ?.classList.contains("aberto");
-
-            if (modalAberto) {
-                escolherCancelar();
-                return;
-            }
-
-            fecharTela();
-        });
+        );
 
         window.addEventListener(
             "listalar:nota-pdf-importada",
@@ -1751,13 +2048,23 @@
         return modoImportacaoAtual;
     }
 
+    function obterFamiliaId() {
+        return familiaIdAtual;
+    }
+
+    function estaLiberado() {
+        return moduloLiberado;
+    }
+
     window.ListaLarGastos = {
         versao: VERSAO,
         abrir: abrirTela,
         fechar: fecharTela,
         importarNF: solicitarImportacaoNota,
         obterUltimaNota,
-        obterModoImportacao
+        obterModoImportacao,
+        obterFamiliaId,
+        estaLiberado
     };
 
     // ========================================================
@@ -1766,9 +2073,7 @@
 
     function iniciar() {
         criarEstilos();
-        criarTela();
-        criarBotaoMenu();
-        configurarEventos();
+        iniciarControleAcessoGastos();
 
         console.log(
             `✅ Módulo Gastos carregado — versão ${VERSAO}`
@@ -1779,7 +2084,9 @@
         document.addEventListener(
             "DOMContentLoaded",
             iniciar,
-            { once: true }
+            {
+                once: true
+            }
         );
     } else {
         iniciar();
