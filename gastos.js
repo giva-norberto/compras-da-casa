@@ -109,7 +109,7 @@
         }
     }
 
-    // ========================================================
+       // ========================================================
     // ESTILOS
     // ========================================================
 
@@ -162,6 +162,113 @@
                 font-size: 12px;
                 font-weight: 700;
                 line-height: 1;
+                white-space: nowrap;
+            }
+
+            /*
+             * Quando o botão Gastos existir, o rodapé permanece
+             * em uma única linha para os usuários comuns.
+             *
+             * Os itens dividem a largura igualmente, sem largura
+             * mínima que force a quebra do menu.
+             */
+            #bottom-nav:has(#listalar-menu-gastos),
+            #bottomNav:has(#listalar-menu-gastos),
+            #menu-inferior:has(#listalar-menu-gastos),
+            #menuInferior:has(#listalar-menu-gastos),
+            .bottom-nav:has(#listalar-menu-gastos),
+            .bottom-navigation:has(#listalar-menu-gastos),
+            .menu-inferior:has(#listalar-menu-gastos),
+            .menu-bottom:has(#listalar-menu-gastos),
+            .nav-bottom:has(#listalar-menu-gastos),
+            .mobile-nav:has(#listalar-menu-gastos),
+            [data-menu-principal]:has(#listalar-menu-gastos) {
+                width: 100% !important;
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                align-items: stretch !important;
+                justify-content: stretch !important;
+                gap: 4px !important;
+                box-sizing: border-box !important;
+            }
+
+            #bottom-nav:has(#listalar-menu-gastos) > *,
+            #bottomNav:has(#listalar-menu-gastos) > *,
+            #menu-inferior:has(#listalar-menu-gastos) > *,
+            #menuInferior:has(#listalar-menu-gastos) > *,
+            .bottom-nav:has(#listalar-menu-gastos) > *,
+            .bottom-navigation:has(#listalar-menu-gastos) > *,
+            .menu-inferior:has(#listalar-menu-gastos) > *,
+            .menu-bottom:has(#listalar-menu-gastos) > *,
+            .nav-bottom:has(#listalar-menu-gastos) > *,
+            .mobile-nav:has(#listalar-menu-gastos) > *,
+            [data-menu-principal]:has(#listalar-menu-gastos) > * {
+                flex: 1 1 0 !important;
+                width: auto !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            #bottom-nav:has(#listalar-menu-gastos)
+            .listalar-menu-gastos,
+            #bottomNav:has(#listalar-menu-gastos)
+            .listalar-menu-gastos,
+            #menu-inferior:has(#listalar-menu-gastos)
+            .listalar-menu-gastos,
+            #menuInferior:has(#listalar-menu-gastos)
+            .listalar-menu-gastos,
+            .bottom-nav:has(#listalar-menu-gastos)
+            .listalar-menu-gastos,
+            .bottom-navigation:has(#listalar-menu-gastos)
+            .listalar-menu-gastos,
+            .menu-inferior:has(#listalar-menu-gastos)
+            .listalar-menu-gastos,
+            .menu-bottom:has(#listalar-menu-gastos)
+            .listalar-menu-gastos,
+            .nav-bottom:has(#listalar-menu-gastos)
+            .listalar-menu-gastos,
+            .mobile-nav:has(#listalar-menu-gastos)
+            .listalar-menu-gastos,
+            [data-menu-principal]:has(#listalar-menu-gastos)
+            .listalar-menu-gastos {
+                width: auto !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                min-height: 56px;
+                padding: 6px 2px;
+                flex-direction: column;
+                gap: 2px;
+            }
+
+            #bottom-nav:has(#listalar-menu-gastos)
+            .listalar-menu-gastos-texto,
+            #bottomNav:has(#listalar-menu-gastos)
+            .listalar-menu-gastos-texto,
+            #menu-inferior:has(#listalar-menu-gastos)
+            .listalar-menu-gastos-texto,
+            #menuInferior:has(#listalar-menu-gastos)
+            .listalar-menu-gastos-texto,
+            .bottom-nav:has(#listalar-menu-gastos)
+            .listalar-menu-gastos-texto,
+            .bottom-navigation:has(#listalar-menu-gastos)
+            .listalar-menu-gastos-texto,
+            .menu-inferior:has(#listalar-menu-gastos)
+            .listalar-menu-gastos-texto,
+            .menu-bottom:has(#listalar-menu-gastos)
+            .listalar-menu-gastos-texto,
+            .nav-bottom:has(#listalar-menu-gastos)
+            .listalar-menu-gastos-texto,
+            .mobile-nav:has(#listalar-menu-gastos)
+            .listalar-menu-gastos-texto,
+            [data-menu-principal]:has(#listalar-menu-gastos)
+            .listalar-menu-gastos-texto {
+                max-width: 100%;
+                overflow: hidden;
+                font-size: 11px;
+                text-overflow: ellipsis;
                 white-space: nowrap;
             }
 
@@ -675,13 +782,13 @@
 
             @media (max-width: 390px) {
                 .listalar-menu-gastos {
-                    min-width: 52px;
-                    padding-left: 5px;
-                    padding-right: 5px;
+                    min-width: 0;
+                    padding-left: 2px;
+                    padding-right: 2px;
                 }
 
                 .listalar-menu-gastos-texto {
-                    font-size: 11px;
+                    font-size: 10px;
                 }
 
                 .listalar-gastos-grade-resumo {
@@ -696,7 +803,6 @@
 
         document.head.appendChild(style);
     }
-
     // ========================================================
     // TELA
     // ========================================================
