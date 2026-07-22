@@ -1,7 +1,7 @@
 // ============================================================
 // LISTALAR — MÓDULO GASTOS
 // Arquivo: gastos.js
-// Versão: 1.0.0
+// Versão: 1.1.0
 //
 // Responsabilidades:
 // - Criar o acesso "Gastos"
@@ -15,7 +15,7 @@
 (() => {
     "use strict";
 
-    const VERSAO = "1.0.0";
+    const VERSAO = "1.1.0";
 
     const IDS = {
         estilo: "listalar-gastos-estilo",
@@ -24,10 +24,16 @@
         botaoFechar: "listalar-gastos-fechar",
         botaoImportar: "listalar-gastos-importar-nf",
         resumoImportacao: "listalar-gastos-resumo-importacao",
-        aviso: "listalar-gastos-aviso"
+        aviso: "listalar-gastos-aviso",
+        modalDuplicidade: "listalar-gastos-modal-duplicidade",
+        modalCancelar: "listalar-gastos-modal-cancelar",
+        modalSubstituir: "listalar-gastos-modal-substituir",
+        modalNovaCompra: "listalar-gastos-modal-nova-compra"
     };
 
     let ultimaNotaImportada = null;
+    let modoImportacaoAtual = null;
+    let resolverModoImportacao = null;
 
     // ========================================================
     // UTILITÁRIOS
@@ -84,6 +90,23 @@
         mostrarAviso.timeout = window.setTimeout(() => {
             aviso.hidden = true;
         }, 4500);
+    }
+
+    function controlePrecosEstaAtivo() {
+        try {
+            return Boolean(
+                window.ListaLarPrecos &&
+                typeof window.ListaLarPrecos.estaAtivo === "function" &&
+                window.ListaLarPrecos.estaAtivo() === true
+            );
+        } catch (erro) {
+            console.warn(
+                "⚠️ Não foi possível verificar o Controle de Preços:",
+                erro
+            );
+
+            return false;
+        }
     }
 
     // ========================================================
@@ -457,6 +480,136 @@
                 background: #334155;
             }
 
+            .listalar-gastos-modal {
+                position: fixed;
+                inset: 0;
+                z-index: 12000;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                padding:
+                    max(18px, env(safe-area-inset-top))
+                    16px
+                    max(18px, env(safe-area-inset-bottom));
+                background: rgba(15, 23, 42, 0.62);
+                backdrop-filter: blur(3px);
+            }
+
+            .listalar-gastos-modal.aberto {
+                display: flex;
+            }
+
+            .listalar-gastos-modal-conteudo {
+                width: min(100%, 500px);
+                max-height: calc(100vh - 36px);
+                overflow-y: auto;
+                padding: 22px;
+                border-radius: 20px;
+                background: #ffffff;
+                box-shadow: 0 24px 60px rgba(15, 23, 42, 0.34);
+                animation: listalar-gastos-modal-entrada 0.2s ease-out;
+            }
+
+            @keyframes listalar-gastos-modal-entrada {
+                from {
+                    opacity: 0;
+                    transform: translateY(12px) scale(0.98);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+            }
+
+            .listalar-gastos-modal-icone {
+                display: grid;
+                place-items: center;
+                width: 52px;
+                height: 52px;
+                margin: 0 auto 13px;
+                border-radius: 16px;
+                background: #dbeafe;
+                font-size: 27px;
+            }
+
+            .listalar-gastos-modal h2 {
+                margin: 0;
+                color: #172033;
+                font-size: 21px;
+                text-align: center;
+            }
+
+            .listalar-gastos-modal-descricao {
+                margin: 9px 0 18px;
+                color: #64748b;
+                font-size: 14px;
+                line-height: 1.5;
+                text-align: center;
+            }
+
+            .listalar-gastos-modal-opcoes {
+                display: grid;
+                gap: 10px;
+            }
+
+            .listalar-gastos-modal-opcao {
+                width: 100%;
+                min-height: 58px;
+                padding: 12px 14px;
+                border: 1px solid #dbe4f0;
+                border-radius: 14px;
+                color: #172033;
+                background: #f8fafc;
+                font: inherit;
+                font-size: 14px;
+                font-weight: 800;
+                line-height: 1.35;
+                text-align: left;
+                cursor: pointer;
+                transition:
+                    border-color 0.2s ease,
+                    background-color 0.2s ease,
+                    transform 0.2s ease;
+            }
+
+            .listalar-gastos-modal-opcao:hover {
+                border-color: #2563eb;
+                background: #eff6ff;
+            }
+
+            .listalar-gastos-modal-opcao:active {
+                transform: scale(0.985);
+            }
+
+            .listalar-gastos-modal-opcao.destaque {
+                border-color: #2563eb;
+                color: #ffffff;
+                background: #2563eb;
+            }
+
+            .listalar-gastos-modal-opcao.destaque:hover {
+                background: #1d4ed8;
+            }
+
+            .listalar-gastos-modal-cancelar {
+                width: 100%;
+                min-height: 45px;
+                margin-top: 10px;
+                border: 0;
+                border-radius: 13px;
+                color: #64748b;
+                background: transparent;
+                font: inherit;
+                font-size: 14px;
+                font-weight: 800;
+                cursor: pointer;
+            }
+
+            .listalar-gastos-modal-cancelar:hover {
+                background: #f1f5f9;
+            }
+
             @media (max-width: 680px) {
                 .listalar-gastos-cabecalho {
                     min-height: 62px;
@@ -504,6 +657,19 @@
 
                 .listalar-gastos-nota-total {
                     font-size: 18px;
+                }
+
+                .listalar-gastos-modal-conteudo {
+                    padding: 19px 16px 16px;
+                    border-radius: 18px;
+                }
+
+                .listalar-gastos-modal h2 {
+                    font-size: 19px;
+                }
+
+                .listalar-gastos-modal-opcao {
+                    min-height: 55px;
                 }
             }
 
@@ -654,6 +820,59 @@
                 role="status"
                 hidden
             ></div>
+
+            <div
+                id="${IDS.modalDuplicidade}"
+                class="listalar-gastos-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-hidden="true"
+                aria-labelledby="listalar-gastos-modal-titulo"
+            >
+                <div class="listalar-gastos-modal-conteudo">
+                    <div
+                        class="listalar-gastos-modal-icone"
+                        aria-hidden="true"
+                    >
+                        🧾
+                    </div>
+
+                    <h2 id="listalar-gastos-modal-titulo">
+                        Como deseja importar?
+                    </h2>
+
+                    <p class="listalar-gastos-modal-descricao">
+                        O Controle de Preços está ativo. Escolha como esta
+                        nota fiscal deve ser tratada.
+                    </p>
+
+                    <div class="listalar-gastos-modal-opcoes">
+                        <button
+                            id="${IDS.modalSubstituir}"
+                            class="listalar-gastos-modal-opcao destaque"
+                            type="button"
+                        >
+                            Importar e substituir compra manual
+                        </button>
+
+                        <button
+                            id="${IDS.modalNovaCompra}"
+                            class="listalar-gastos-modal-opcao"
+                            type="button"
+                        >
+                            Importar como nova compra
+                        </button>
+                    </div>
+
+                    <button
+                        id="${IDS.modalCancelar}"
+                        class="listalar-gastos-modal-cancelar"
+                        type="button"
+                    >
+                        Cancelar
+                    </button>
+                </div>
+            </div>
         `;
 
         document.body.appendChild(tela);
@@ -777,6 +996,97 @@
     // ========================================================
     // IMPORTADOR DE NOTA FISCAL
     // ========================================================
+
+    function fecharModalDuplicidade() {
+        const modal = document.getElementById(
+            IDS.modalDuplicidade
+        );
+
+        if (!modal) {
+            return;
+        }
+
+        modal.classList.remove("aberto");
+        modal.setAttribute("aria-hidden", "true");
+    }
+
+    function finalizarEscolhaModoImportacao(modo) {
+        fecharModalDuplicidade();
+
+        if (typeof resolverModoImportacao === "function") {
+            const resolver = resolverModoImportacao;
+
+            resolverModoImportacao = null;
+            resolver(modo);
+        }
+    }
+
+    function escolherSubstituir() {
+        finalizarEscolhaModoImportacao(
+            "substituir_compra_manual"
+        );
+    }
+
+    function escolherNovaCompra() {
+        finalizarEscolhaModoImportacao(
+            "nova_compra"
+        );
+    }
+
+    function escolherCancelar() {
+        finalizarEscolhaModoImportacao(null);
+    }
+
+    function escolherModoImportacao() {
+        const modal = document.getElementById(
+            IDS.modalDuplicidade
+        );
+
+        if (!modal) {
+            console.error(
+                "❌ Modal de escolha da importação não foi encontrado."
+            );
+
+            return Promise.resolve(null);
+        }
+
+        if (typeof resolverModoImportacao === "function") {
+            resolverModoImportacao(null);
+            resolverModoImportacao = null;
+        }
+
+        modal.classList.add("aberto");
+        modal.setAttribute("aria-hidden", "false");
+
+        window.setTimeout(() => {
+            document
+                .getElementById(IDS.modalSubstituir)
+                ?.focus();
+        }, 0);
+
+        return new Promise((resolve) => {
+            resolverModoImportacao = resolve;
+        });
+    }
+
+    async function solicitarImportacaoNota() {
+        modoImportacaoAtual = null;
+
+        if (!controlePrecosEstaAtivo()) {
+            modoImportacaoAtual = "nota_fiscal";
+            abrirImportadorNota();
+            return;
+        }
+
+        const escolha = await escolherModoImportacao();
+
+        if (!escolha) {
+            return;
+        }
+
+        modoImportacaoAtual = escolha;
+        abrirImportadorNota();
+    }
 
     function abrirImportadorNota() {
         const importador = window.ImportadorNotaPDF;
@@ -1086,14 +1396,24 @@
                 `
                 : "";
 
+        let mensagemPreparacao =
+            "Confira os dados antes da futura gravação no histórico.";
+
+        if (modoImportacaoAtual === "substituir_compra_manual") {
+            mensagemPreparacao =
+                "Esta nota será preparada para substituir a compra manual correspondente.";
+        } else if (modoImportacaoAtual === "nova_compra") {
+            mensagemPreparacao =
+                "Esta nota será tratada como uma nova compra independente.";
+        }
+
         resumo.innerHTML = `
             <div class="listalar-gastos-card-topo">
                 <div>
                     <h2>Nota importada</h2>
 
                     <p>
-                        Confira os dados antes da futura gravação
-                        no histórico.
+                        ${escaparHTML(mensagemPreparacao)}
                     </p>
                 </div>
             </div>
@@ -1169,9 +1489,24 @@
         abrirTela();
         exibirNotaImportada(nota);
 
+        window.dispatchEvent(
+            new CustomEvent(
+                "listalar:gastos-nota-preparada",
+                {
+                    detail: {
+                        nota,
+                        modoImportacao: modoImportacaoAtual
+                    }
+                }
+            )
+        );
+
         console.log(
-            "✅ Nota recebida pelo módulo Gastos:",
-            nota
+            "✅ Nota recebida e preparada pelo módulo Gastos:",
+            {
+                nota,
+                modoImportacao: modoImportacaoAtual
+            }
         );
     }
 
@@ -1196,6 +1531,22 @@
             IDS.tela
         );
 
+        const modalDuplicidade = document.getElementById(
+            IDS.modalDuplicidade
+        );
+
+        const modalCancelar = document.getElementById(
+            IDS.modalCancelar
+        );
+
+        const modalSubstituir = document.getElementById(
+            IDS.modalSubstituir
+        );
+
+        const modalNovaCompra = document.getElementById(
+            IDS.modalNovaCompra
+        );
+
         if (botaoMenu) {
             botaoMenu.addEventListener(
                 "click",
@@ -1213,7 +1564,39 @@
         if (botaoImportar) {
             botaoImportar.addEventListener(
                 "click",
-                abrirImportadorNota
+                solicitarImportacaoNota
+            );
+        }
+
+        if (modalSubstituir) {
+            modalSubstituir.addEventListener(
+                "click",
+                escolherSubstituir
+            );
+        }
+
+        if (modalNovaCompra) {
+            modalNovaCompra.addEventListener(
+                "click",
+                escolherNovaCompra
+            );
+        }
+
+        if (modalCancelar) {
+            modalCancelar.addEventListener(
+                "click",
+                escolherCancelar
+            );
+        }
+
+        if (modalDuplicidade) {
+            modalDuplicidade.addEventListener(
+                "click",
+                (evento) => {
+                    if (evento.target === modalDuplicidade) {
+                        escolherCancelar();
+                    }
+                }
             );
         }
 
@@ -1228,9 +1611,20 @@
         }
 
         document.addEventListener("keydown", (evento) => {
-            if (evento.key === "Escape") {
-                fecharTela();
+            if (evento.key !== "Escape") {
+                return;
             }
+
+            const modalAberto = document
+                .getElementById(IDS.modalDuplicidade)
+                ?.classList.contains("aberto");
+
+            if (modalAberto) {
+                escolherCancelar();
+                return;
+            }
+
+            fecharTela();
         });
 
         window.addEventListener(
@@ -1247,12 +1641,17 @@
         return ultimaNotaImportada;
     }
 
+    function obterModoImportacao() {
+        return modoImportacaoAtual;
+    }
+
     window.ListaLarGastos = {
         versao: VERSAO,
         abrir: abrirTela,
         fechar: fecharTela,
-        importarNF: abrirImportadorNota,
-        obterUltimaNota
+        importarNF: solicitarImportacaoNota,
+        obterUltimaNota,
+        obterModoImportacao
     };
 
     // ========================================================
