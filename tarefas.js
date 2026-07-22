@@ -1056,6 +1056,74 @@ async function carregarContexto(
     familia = {};
   }
 
+ async function carregarContexto(
+  user
+) {
+  const usuarioSnap =
+    await getDoc(
+      doc(
+        db,
+        "usuarios",
+        user.uid
+      )
+    );
+
+  if (!usuarioSnap.exists()) {
+    console.warn(
+      "Documento do usuário não encontrado:",
+      user.uid
+    );
+
+    definirVisibilidade(false);
+    return;
+  }
+
+  const dadosUsuario =
+    usuarioSnap.data();
+
+  const familiaId =
+    dadosUsuario.familiaId || "";
+
+  if (!familiaId) {
+    console.warn(
+      "Usuário sem familiaId:",
+      user.uid
+    );
+
+    definirVisibilidade(false);
+    return;
+  }
+
+  let familia = {};
+  let modulos = {};
+
+  // ==========================================
+  // Buscar família
+  // ==========================================
+
+  try {
+    const familiaSnap =
+      await getDoc(
+        doc(
+          db,
+          "familias",
+          familiaId
+        )
+      );
+
+    familia =
+      familiaSnap.exists()
+        ? familiaSnap.data()
+        : {};
+  } catch (erro) {
+    console.error(
+      "Erro ao buscar família:",
+      erro
+    );
+
+    familia = {};
+  }
+
   // ==========================================
   // Buscar configuração dos módulos
   // ==========================================
@@ -1096,26 +1164,39 @@ async function carregarContexto(
     dadosUsuario.adminSistema === true ||
     dadosUsuario.adminSistema === "true";
 
-  const liberado =
-    modulos.tarefasLiberadas === true ||
-    modulos.tarefasLiberadas === "true" ||
+  const ehFamiliaPiloto =
     modulos.familiaPilotoId === familiaId ||
     (
       ADMIN_COMO_PILOTO_SEM_CONFIG &&
       ehAdministrador
     );
 
+  const liberado =
+    ehFamiliaPiloto ||
+    modulos.tarefasLiberadas === true ||
+    modulos.tarefasLiberadas === "true";
+
   console.log(
     "Diagnóstico módulo Tarefas:",
     {
-      uid: user.uid,
+      uid:
+        user.uid,
+
       familiaId,
+
       adminSistema:
         dadosUsuario.adminSistema,
+
+      ehAdministrador,
+
       familiaPilotoId:
         modulos.familiaPilotoId,
+
+      ehFamiliaPiloto,
+
       tarefasLiberadas:
         modulos.tarefasLiberadas,
+
       liberado
     }
   );
@@ -1145,7 +1226,6 @@ async function carregarContexto(
 
   iniciarListeners();
 }
-
 // ==========================================
 // Membros da família
 // ==========================================
