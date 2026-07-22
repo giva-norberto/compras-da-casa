@@ -865,7 +865,7 @@ function criarTelaMedicamentos() {
             type="button"
             class="medicamentos-btn-novo"
           >
-            + Novo lembrete
+            Adicionar Medicamento
           </button>
 
         </div>
@@ -2727,7 +2727,7 @@ function criarHtmlVazio(
                 data-acao-medicamento="novo"
                 class="medicamentos-vazio-botao"
               >
-                + Novo lembrete
+                Adicionar medicamento
               </button>
             `
           : ""
