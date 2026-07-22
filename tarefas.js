@@ -986,6 +986,7 @@ function criarEstruturaNova() {
 // ==========================================
 // Contexto do usuário
 // ==========================================
+
 async function carregarContexto(
   user
 ) {
@@ -1026,6 +1027,143 @@ async function carregarContexto(
 
   let familia = {};
   let modulos = {};
+
+  // ==========================================
+  // Buscar família
+  // ==========================================
+
+  try {
+    const familiaSnap =
+      await getDoc(
+        doc(
+          db,
+          "familias",
+          familiaId
+        )
+      );
+
+    familia =
+      familiaSnap.exists()
+        ? familiaSnap.data()
+        : {};
+  } catch (erro) {
+    console.error(
+      "Erro ao buscar família:",
+      erro
+    );
+
+    // Não bloqueia o menu apenas porque
+    // o nome da família não carregou.
+    familia = {};
+  }
+
+  // ==========================================
+  // Buscar configuração dos módulos
+  // ==========================================
+
+  try {
+    const modulosSnap =
+      await getDoc(
+        doc(
+          db,
+          "configuracoes",
+          "modulos"
+        )
+      );
+
+    modulos =
+      modulosSnap.exists()
+        ? modulosSnap.data()
+        : {};
+  } catch (erro) {
+    console.error(
+      "Erro ao buscar configurações dos módulos:",
+      erro
+    );
+
+    // Se a configuração não puder ser lida,
+    // o administrador continua sendo liberado.
+    modulos = {};
+  }
+
+  familiaIdAtual =
+    familiaId;
+
+  familiaNomeAtual =
+    familia.nome ||
+    "Minha família";
+
+  const ehAdministrador =
+    dadosUsuario.adminSistema === true ||
+    dadosUsuario.adminSistema === "true";
+
+  const ehFamiliaPiloto =
+    modulos.familiaPilotoId === familiaId ||
+    (
+      ADMIN_COMO_PILOTO_SEM_CONFIG &&
+      ehAdministrador
+    );
+
+  const liberado =
+    ehFamiliaPiloto ||
+    modulos.tarefasLiberadas === true ||
+    modulos.tarefasLiberadas === "true";
+
+  console.log(
+    "Diagnóstico módulo Tarefas:",
+    {
+      uid:
+        user.uid,
+
+      familiaId,
+
+      adminSistema:
+        dadosUsuario.adminSistema,
+
+      ehAdministrador,
+
+      familiaPilotoId:
+        modulos.familiaPilotoId,
+
+      ehFamiliaPiloto,
+
+      tarefasLiberadas:
+        modulos.tarefasLiberadas,
+
+      liberado
+    }
+  );
+
+  definirVisibilidade(
+    liberado
+  );
+
+  if (!liberado) {
+    pararListeners();
+    return;
+  }
+
+  criarEstruturaNova();
+
+  try {
+    await carregarMembros();
+  } catch (erro) {
+    console.error(
+      "Erro ao carregar membros:",
+      erro
+    );
+
+    membros = [];
+    preencherResponsaveis();
+  }
+
+  iniciarListeners();
+}
+
+
+// ==========================================
+// Membros da família
+// ==========================================
 
   // ==========================================
   // Buscar família
