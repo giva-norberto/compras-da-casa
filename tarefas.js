@@ -493,6 +493,7 @@ function definirVisibilidade(
   }
 }
 
+
 // ==========================================
 // Estrutura visual dinâmica
 // ==========================================
@@ -982,6 +983,7 @@ function criarEstruturaNova() {
 
   return true;
 }
+
 
 // ==========================================
 // Contexto do usuário
