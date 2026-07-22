@@ -1,0 +1,1282 @@
+// ============================================================
+// LISTALAR — MÓDULO GASTOS
+// Arquivo: gastos.js
+// Versão: 1.0.0
+//
+// Responsabilidades:
+// - Criar o acesso "Gastos"
+// - Criar a tela "Meus Gastos"
+// - Abrir o importador de nota fiscal PDF
+// - Receber os dados extraídos da nota
+//
+// Este arquivo não altera os módulos existentes.
+// ============================================================
+
+(() => {
+    "use strict";
+
+    const VERSAO = "1.0.0";
+
+    const IDS = {
+        estilo: "listalar-gastos-estilo",
+        botaoMenu: "listalar-menu-gastos",
+        tela: "listalar-tela-gastos",
+        botaoFechar: "listalar-gastos-fechar",
+        botaoImportar: "listalar-gastos-importar-nf",
+        resumoImportacao: "listalar-gastos-resumo-importacao",
+        aviso: "listalar-gastos-aviso"
+    };
+
+    let ultimaNotaImportada = null;
+
+    // ========================================================
+    // UTILITÁRIOS
+    // ========================================================
+
+    function escaparHTML(valor) {
+        return String(valor ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function formatarMoeda(valor) {
+        const numero = Number(valor);
+
+        if (!Number.isFinite(numero)) {
+            return "R$ 0,00";
+        }
+
+        return numero.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+        });
+    }
+
+    function formatarQuantidade(valor) {
+        const numero = Number(valor);
+
+        if (!Number.isFinite(numero)) {
+            return "0";
+        }
+
+        return numero.toLocaleString("pt-BR", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3
+        });
+    }
+
+    function mostrarAviso(mensagem, tipo = "info") {
+        const aviso = document.getElementById(IDS.aviso);
+
+        if (!aviso) {
+            return;
+        }
+
+        aviso.textContent = mensagem;
+        aviso.className = `listalar-gastos-aviso ${tipo}`;
+        aviso.hidden = false;
+
+        window.clearTimeout(mostrarAviso.timeout);
+
+        mostrarAviso.timeout = window.setTimeout(() => {
+            aviso.hidden = true;
+        }, 4500);
+    }
+
+    // ========================================================
+    // ESTILOS
+    // ========================================================
+
+    function criarEstilos() {
+        if (document.getElementById(IDS.estilo)) {
+            return;
+        }
+
+        const style = document.createElement("style");
+        style.id = IDS.estilo;
+
+        style.textContent = `
+            body.listalar-gastos-aberto {
+                overflow: hidden !important;
+            }
+
+            .listalar-menu-gastos {
+                border: 0;
+                background: transparent;
+                color: inherit;
+                font: inherit;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                min-width: 62px;
+                min-height: 48px;
+                padding: 7px 9px;
+                border-radius: 12px;
+                transition:
+                    background-color 0.2s ease,
+                    transform 0.2s ease;
+            }
+
+            .listalar-menu-gastos:hover {
+                background: rgba(37, 99, 235, 0.09);
+            }
+
+            .listalar-menu-gastos:active {
+                transform: scale(0.96);
+            }
+
+            .listalar-menu-gastos-icone {
+                font-size: 21px;
+                line-height: 1;
+            }
+
+            .listalar-menu-gastos-texto {
+                font-size: 12px;
+                font-weight: 700;
+                line-height: 1;
+                white-space: nowrap;
+            }
+
+            .listalar-menu-gastos-fixo {
+                position: fixed;
+                right: 16px;
+                bottom: 18px;
+                z-index: 9990;
+                color: #ffffff;
+                background: #2563eb;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+                padding: 10px 14px;
+            }
+
+            .listalar-gastos-tela {
+                position: fixed;
+                inset: 0;
+                z-index: 10000;
+                display: none;
+                background: #f4f7fb;
+                color: #172033;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+            }
+
+            .listalar-gastos-tela.aberta {
+                display: block;
+            }
+
+            .listalar-gastos-cabecalho {
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 14px;
+                min-height: 68px;
+                padding:
+                    max(14px, env(safe-area-inset-top))
+                    18px
+                    14px;
+                color: #ffffff;
+                background: linear-gradient(135deg, #1d4ed8, #2563eb);
+                box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+            }
+
+            .listalar-gastos-cabecalho-titulo {
+                display: flex;
+                align-items: center;
+                gap: 11px;
+                min-width: 0;
+            }
+
+            .listalar-gastos-cabecalho-icone {
+                flex: 0 0 auto;
+                display: grid;
+                place-items: center;
+                width: 42px;
+                height: 42px;
+                border-radius: 13px;
+                font-size: 23px;
+                background: rgba(255, 255, 255, 0.16);
+            }
+
+            .listalar-gastos-cabecalho h1 {
+                margin: 0;
+                font-size: 21px;
+                line-height: 1.15;
+            }
+
+            .listalar-gastos-cabecalho p {
+                margin: 3px 0 0;
+                font-size: 12px;
+                opacity: 0.88;
+            }
+
+            .listalar-gastos-fechar {
+                flex: 0 0 auto;
+                display: grid;
+                place-items: center;
+                width: 42px;
+                height: 42px;
+                border: 0;
+                border-radius: 50%;
+                color: #ffffff;
+                background: rgba(255, 255, 255, 0.17);
+                font-size: 25px;
+                cursor: pointer;
+            }
+
+            .listalar-gastos-fechar:active {
+                transform: scale(0.94);
+            }
+
+            .listalar-gastos-conteudo {
+                width: min(100%, 920px);
+                margin: 0 auto;
+                padding: 18px 16px 110px;
+            }
+
+            .listalar-gastos-boas-vindas {
+                margin-bottom: 16px;
+                padding: 18px;
+                border-radius: 18px;
+                color: #ffffff;
+                background: linear-gradient(135deg, #0f766e, #14b8a6);
+                box-shadow: 0 10px 24px rgba(15, 118, 110, 0.18);
+            }
+
+            .listalar-gastos-boas-vindas h2 {
+                margin: 0 0 7px;
+                font-size: 19px;
+            }
+
+            .listalar-gastos-boas-vindas p {
+                margin: 0;
+                font-size: 14px;
+                line-height: 1.45;
+                opacity: 0.94;
+            }
+
+            .listalar-gastos-grade-resumo {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 12px;
+                margin-bottom: 16px;
+            }
+
+            .listalar-gastos-card-resumo {
+                min-height: 105px;
+                padding: 15px;
+                border: 1px solid #e3e9f2;
+                border-radius: 17px;
+                background: #ffffff;
+                box-shadow: 0 5px 15px rgba(15, 23, 42, 0.06);
+            }
+
+            .listalar-gastos-card-resumo span {
+                display: block;
+                margin-bottom: 9px;
+                color: #64748b;
+                font-size: 12px;
+                font-weight: 700;
+            }
+
+            .listalar-gastos-card-resumo strong {
+                display: block;
+                color: #172033;
+                font-size: 20px;
+                line-height: 1.2;
+                overflow-wrap: anywhere;
+            }
+
+            .listalar-gastos-card {
+                margin-bottom: 16px;
+                padding: 18px;
+                border: 1px solid #e3e9f2;
+                border-radius: 18px;
+                background: #ffffff;
+                box-shadow: 0 5px 16px rgba(15, 23, 42, 0.06);
+            }
+
+            .listalar-gastos-card-topo {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 16px;
+                margin-bottom: 15px;
+            }
+
+            .listalar-gastos-card-topo h2 {
+                margin: 0 0 4px;
+                font-size: 18px;
+            }
+
+            .listalar-gastos-card-topo p {
+                margin: 0;
+                color: #64748b;
+                font-size: 13px;
+                line-height: 1.4;
+            }
+
+            .listalar-gastos-botao-principal {
+                width: 100%;
+                min-height: 50px;
+                border: 0;
+                border-radius: 14px;
+                color: #ffffff;
+                background: #2563eb;
+                font-size: 15px;
+                font-weight: 800;
+                cursor: pointer;
+                box-shadow: 0 7px 16px rgba(37, 99, 235, 0.22);
+            }
+
+            .listalar-gastos-botao-principal:hover {
+                background: #1d4ed8;
+            }
+
+            .listalar-gastos-botao-principal:active {
+                transform: scale(0.985);
+            }
+
+            .listalar-gastos-resumo-importacao {
+                display: none;
+            }
+
+            .listalar-gastos-resumo-importacao.visivel {
+                display: block;
+            }
+
+            .listalar-gastos-nota-cabecalho {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 12px;
+                align-items: start;
+                padding-bottom: 14px;
+                border-bottom: 1px solid #e8edf5;
+            }
+
+            .listalar-gastos-nota-cabecalho h3 {
+                margin: 0 0 5px;
+                font-size: 17px;
+            }
+
+            .listalar-gastos-nota-cabecalho p {
+                margin: 0;
+                color: #64748b;
+                font-size: 13px;
+                line-height: 1.45;
+            }
+
+            .listalar-gastos-nota-total {
+                color: #0f766e;
+                font-size: 19px;
+                font-weight: 900;
+                white-space: nowrap;
+            }
+
+            .listalar-gastos-produtos {
+                margin-top: 13px;
+            }
+
+            .listalar-gastos-produto {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 12px;
+                padding: 11px 0;
+                border-bottom: 1px solid #edf1f6;
+            }
+
+            .listalar-gastos-produto:last-child {
+                border-bottom: 0;
+            }
+
+            .listalar-gastos-produto strong {
+                display: block;
+                margin-bottom: 4px;
+                font-size: 14px;
+                line-height: 1.3;
+            }
+
+            .listalar-gastos-produto small {
+                color: #64748b;
+                font-size: 12px;
+            }
+
+            .listalar-gastos-produto-valor {
+                font-size: 14px;
+                font-weight: 800;
+                white-space: nowrap;
+            }
+
+            .listalar-gastos-vazio {
+                padding: 22px 14px;
+                border: 1px dashed #cbd5e1;
+                border-radius: 14px;
+                text-align: center;
+                color: #64748b;
+                background: #f8fafc;
+            }
+
+            .listalar-gastos-vazio-icone {
+                display: block;
+                margin-bottom: 7px;
+                font-size: 28px;
+            }
+
+            .listalar-gastos-aviso {
+                position: fixed;
+                left: 50%;
+                bottom: max(22px, env(safe-area-inset-bottom));
+                z-index: 11000;
+                width: min(calc(100% - 32px), 480px);
+                transform: translateX(-50%);
+                padding: 13px 16px;
+                border-radius: 13px;
+                color: #ffffff;
+                background: #334155;
+                font-size: 14px;
+                font-weight: 700;
+                text-align: center;
+                box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+            }
+
+            .listalar-gastos-aviso.sucesso {
+                background: #15803d;
+            }
+
+            .listalar-gastos-aviso.erro {
+                background: #b91c1c;
+            }
+
+            .listalar-gastos-aviso.info {
+                background: #334155;
+            }
+
+            @media (max-width: 680px) {
+                .listalar-gastos-cabecalho {
+                    min-height: 62px;
+                    padding-left: 14px;
+                    padding-right: 14px;
+                }
+
+                .listalar-gastos-cabecalho h1 {
+                    font-size: 19px;
+                }
+
+                .listalar-gastos-cabecalho p {
+                    display: none;
+                }
+
+                .listalar-gastos-conteudo {
+                    padding: 14px 12px 100px;
+                }
+
+                .listalar-gastos-grade-resumo {
+                    grid-template-columns: 1fr 1fr;
+                    gap: 10px;
+                }
+
+                .listalar-gastos-card-resumo {
+                    min-height: 92px;
+                    padding: 13px;
+                }
+
+                .listalar-gastos-card-resumo:first-child {
+                    grid-column: 1 / -1;
+                }
+
+                .listalar-gastos-card-resumo strong {
+                    font-size: 18px;
+                }
+
+                .listalar-gastos-card {
+                    padding: 15px;
+                }
+
+                .listalar-gastos-nota-cabecalho {
+                    grid-template-columns: 1fr;
+                }
+
+                .listalar-gastos-nota-total {
+                    font-size: 18px;
+                }
+            }
+
+            @media (max-width: 390px) {
+                .listalar-menu-gastos {
+                    min-width: 52px;
+                    padding-left: 5px;
+                    padding-right: 5px;
+                }
+
+                .listalar-menu-gastos-texto {
+                    font-size: 11px;
+                }
+
+                .listalar-gastos-grade-resumo {
+                    grid-template-columns: 1fr;
+                }
+
+                .listalar-gastos-card-resumo:first-child {
+                    grid-column: auto;
+                }
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    // ========================================================
+    // TELA
+    // ========================================================
+
+    function criarTela() {
+        if (document.getElementById(IDS.tela)) {
+            return;
+        }
+
+        const tela = document.createElement("section");
+
+        tela.id = IDS.tela;
+        tela.className = "listalar-gastos-tela";
+        tela.setAttribute("aria-hidden", "true");
+
+        tela.innerHTML = `
+            <header class="listalar-gastos-cabecalho">
+                <div class="listalar-gastos-cabecalho-titulo">
+                    <div class="listalar-gastos-cabecalho-icone">💰</div>
+
+                    <div>
+                        <h1>Meus Gastos</h1>
+                        <p>Acompanhe as compras da família</p>
+                    </div>
+                </div>
+
+                <button
+                    id="${IDS.botaoFechar}"
+                    class="listalar-gastos-fechar"
+                    type="button"
+                    aria-label="Fechar tela de gastos"
+                    title="Fechar"
+                >
+                    ×
+                </button>
+            </header>
+
+            <main class="listalar-gastos-conteudo">
+                <section class="listalar-gastos-boas-vindas">
+                    <h2>Controle suas compras</h2>
+
+                    <p>
+                        Importe suas notas fiscais para acompanhar valores,
+                        produtos e supermercados.
+                    </p>
+                </section>
+
+                <section class="listalar-gastos-grade-resumo">
+                    <article class="listalar-gastos-card-resumo">
+                        <span>Total importado</span>
+                        <strong id="listalar-gastos-total-importado">
+                            R$ 0,00
+                        </strong>
+                    </article>
+
+                    <article class="listalar-gastos-card-resumo">
+                        <span>Produtos</span>
+                        <strong id="listalar-gastos-total-produtos">
+                            0
+                        </strong>
+                    </article>
+
+                    <article class="listalar-gastos-card-resumo">
+                        <span>Notas</span>
+                        <strong id="listalar-gastos-total-notas">
+                            0
+                        </strong>
+                    </article>
+                </section>
+
+                <section class="listalar-gastos-card">
+                    <div class="listalar-gastos-card-topo">
+                        <div>
+                            <h2>Nota fiscal</h2>
+
+                            <p>
+                                Selecione uma nota em PDF para conferir os
+                                produtos e os valores.
+                            </p>
+                        </div>
+                    </div>
+
+                    <button
+                        id="${IDS.botaoImportar}"
+                        class="listalar-gastos-botao-principal"
+                        type="button"
+                    >
+                        📄 Importar NF
+                    </button>
+                </section>
+
+                <section
+                    id="${IDS.resumoImportacao}"
+                    class="listalar-gastos-card listalar-gastos-resumo-importacao"
+                ></section>
+
+                <section
+                    id="listalar-gastos-historico"
+                    class="listalar-gastos-card"
+                >
+                    <div class="listalar-gastos-card-topo">
+                        <div>
+                            <h2>Histórico</h2>
+
+                            <p>
+                                As notas salvas aparecerão aqui.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="listalar-gastos-vazio">
+                        <span class="listalar-gastos-vazio-icone">🧾</span>
+                        Nenhuma nota salva ainda.
+                    </div>
+                </section>
+            </main>
+
+            <div
+                id="${IDS.aviso}"
+                class="listalar-gastos-aviso info"
+                role="status"
+                hidden
+            ></div>
+        `;
+
+        document.body.appendChild(tela);
+    }
+
+    // ========================================================
+    // MENU
+    // ========================================================
+
+    function localizarContainerMenu() {
+        const seletores = [
+            "#bottom-nav",
+            "#bottomNav",
+            "#menu-inferior",
+            "#menuInferior",
+            ".bottom-nav",
+            ".bottom-navigation",
+            ".menu-inferior",
+            ".menu-bottom",
+            ".nav-bottom",
+            ".mobile-nav",
+            "[data-menu-principal]"
+        ];
+
+        for (const seletor of seletores) {
+            const elemento = document.querySelector(seletor);
+
+            if (elemento) {
+                return elemento;
+            }
+        }
+
+        return null;
+    }
+
+    function criarBotaoMenu() {
+        if (document.getElementById(IDS.botaoMenu)) {
+            return;
+        }
+
+        const botao = document.createElement("button");
+
+        botao.id = IDS.botaoMenu;
+        botao.type = "button";
+        botao.className = "listalar-menu-gastos";
+        botao.setAttribute("aria-label", "Abrir Gastos");
+        botao.title = "Gastos";
+
+        botao.innerHTML = `
+            <span
+                class="listalar-menu-gastos-icone"
+                aria-hidden="true"
+            >
+                💰
+            </span>
+
+            <span class="listalar-menu-gastos-texto">
+                Gastos
+            </span>
+        `;
+
+        const menu = localizarContainerMenu();
+
+        if (menu) {
+            menu.appendChild(botao);
+        } else {
+            /*
+             * Caso o menu principal ainda não tenha sido encontrado,
+             * o módulo cria um acesso provisório fixo na tela.
+             * Assim a função continua disponível sem alterar o index.
+             */
+            botao.classList.add("listalar-menu-gastos-fixo");
+            document.body.appendChild(botao);
+
+            console.warn(
+                "⚠️ Módulo Gastos: menu principal não localizado. " +
+                "Foi criado um botão provisório."
+            );
+        }
+    }
+
+    // ========================================================
+    // ABERTURA E FECHAMENTO
+    // ========================================================
+
+    function abrirTela() {
+        const tela = document.getElementById(IDS.tela);
+
+        if (!tela) {
+            criarTela();
+        }
+
+        const telaAtual = document.getElementById(IDS.tela);
+
+        if (!telaAtual) {
+            return;
+        }
+
+        telaAtual.classList.add("aberta");
+        telaAtual.setAttribute("aria-hidden", "false");
+        document.body.classList.add("listalar-gastos-aberto");
+
+        telaAtual.scrollTo({
+            top: 0,
+            behavior: "instant"
+        });
+    }
+
+    function fecharTela() {
+        const tela = document.getElementById(IDS.tela);
+
+        if (!tela) {
+            return;
+        }
+
+        tela.classList.remove("aberta");
+        tela.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("listalar-gastos-aberto");
+    }
+
+    // ========================================================
+    // IMPORTADOR DE NOTA FISCAL
+    // ========================================================
+
+    function abrirImportadorNota() {
+        const importador = window.ImportadorNotaPDF;
+
+        if (
+            !importador ||
+            typeof importador.abrir !== "function"
+        ) {
+            mostrarAviso(
+                "O importador de nota fiscal ainda não está disponível.",
+                "erro"
+            );
+
+            console.error(
+                "❌ ImportadorNotaPDF.abrir() não foi encontrado."
+            );
+
+            return;
+        }
+
+        try {
+            importador.abrir();
+        } catch (erro) {
+            console.error(
+                "❌ Erro ao abrir o importador de nota fiscal:",
+                erro
+            );
+
+            mostrarAviso(
+                "Não foi possível abrir o importador da nota.",
+                "erro"
+            );
+        }
+    }
+
+    function obterProdutosDaNota(nota) {
+        if (!nota || typeof nota !== "object") {
+            return [];
+        }
+
+        const possibilidades = [
+            nota.produtos,
+            nota.itens,
+            nota.items,
+            nota.dados?.produtos,
+            nota.dados?.itens,
+            nota.nota?.produtos,
+            nota.nota?.itens
+        ];
+
+        for (const lista of possibilidades) {
+            if (Array.isArray(lista)) {
+                return lista;
+            }
+        }
+
+        return [];
+    }
+
+    function obterValorTotal(nota, produtos) {
+        const possibilidades = [
+            nota?.total,
+            nota?.valorTotal,
+            nota?.totalNota,
+            nota?.valor_total,
+            nota?.dados?.total,
+            nota?.dados?.valorTotal,
+            nota?.nota?.total,
+            nota?.nota?.valorTotal
+        ];
+
+        for (const valor of possibilidades) {
+            const numero = Number(valor);
+
+            if (Number.isFinite(numero)) {
+                return numero;
+            }
+        }
+
+        return produtos.reduce((soma, produto) => {
+            const possibilidadesProduto = [
+                produto?.total,
+                produto?.valorTotal,
+                produto?.subtotal,
+                produto?.valor_total
+            ];
+
+            for (const valor of possibilidadesProduto) {
+                const numero = Number(valor);
+
+                if (Number.isFinite(numero)) {
+                    return soma + numero;
+                }
+            }
+
+            const quantidade = Number(
+                produto?.quantidade ??
+                produto?.qtd ??
+                produto?.qtde ??
+                1
+            );
+
+            const valorUnitario = Number(
+                produto?.valorUnitario ??
+                produto?.precoUnitario ??
+                produto?.preco ??
+                produto?.valor ??
+                0
+            );
+
+            if (
+                Number.isFinite(quantidade) &&
+                Number.isFinite(valorUnitario)
+            ) {
+                return soma + quantidade * valorUnitario;
+            }
+
+            return soma;
+        }, 0);
+    }
+
+    function obterNomeEstabelecimento(nota) {
+        return (
+            nota?.estabelecimento ||
+            nota?.supermercado ||
+            nota?.emitente ||
+            nota?.razaoSocial ||
+            nota?.nomeEmpresa ||
+            nota?.dados?.estabelecimento ||
+            nota?.dados?.emitente ||
+            nota?.nota?.estabelecimento ||
+            nota?.nota?.emitente ||
+            "Estabelecimento não identificado"
+        );
+    }
+
+    function obterDataNota(nota) {
+        const valor =
+            nota?.data ||
+            nota?.dataEmissao ||
+            nota?.emissao ||
+            nota?.dados?.data ||
+            nota?.dados?.dataEmissao ||
+            nota?.nota?.data ||
+            nota?.nota?.dataEmissao;
+
+        if (!valor) {
+            return "Data não identificada";
+        }
+
+        const data = new Date(valor);
+
+        if (!Number.isNaN(data.getTime())) {
+            return data.toLocaleDateString("pt-BR");
+        }
+
+        return String(valor);
+    }
+
+    function obterNomeProduto(produto, indice) {
+        return (
+            produto?.nome ||
+            produto?.descricao ||
+            produto?.produto ||
+            produto?.item ||
+            `Produto ${indice + 1}`
+        );
+    }
+
+    function obterQuantidadeProduto(produto) {
+        return (
+            produto?.quantidade ??
+            produto?.qtd ??
+            produto?.qtde ??
+            1
+        );
+    }
+
+    function obterUnidadeProduto(produto) {
+        return (
+            produto?.unidade ||
+            produto?.un ||
+            produto?.tipoUnidade ||
+            ""
+        );
+    }
+
+    function obterTotalProduto(produto) {
+        const valoresTotais = [
+            produto?.total,
+            produto?.valorTotal,
+            produto?.subtotal,
+            produto?.valor_total
+        ];
+
+        for (const valor of valoresTotais) {
+            const numero = Number(valor);
+
+            if (Number.isFinite(numero)) {
+                return numero;
+            }
+        }
+
+        const quantidade = Number(
+            obterQuantidadeProduto(produto)
+        );
+
+        const unitario = Number(
+            produto?.valorUnitario ??
+            produto?.precoUnitario ??
+            produto?.preco ??
+            produto?.valor ??
+            0
+        );
+
+        if (
+            Number.isFinite(quantidade) &&
+            Number.isFinite(unitario)
+        ) {
+            return quantidade * unitario;
+        }
+
+        return 0;
+    }
+
+    function atualizarResumoSuperior(total, totalProdutos) {
+        const elementoTotal = document.getElementById(
+            "listalar-gastos-total-importado"
+        );
+
+        const elementoProdutos = document.getElementById(
+            "listalar-gastos-total-produtos"
+        );
+
+        const elementoNotas = document.getElementById(
+            "listalar-gastos-total-notas"
+        );
+
+        if (elementoTotal) {
+            elementoTotal.textContent = formatarMoeda(total);
+        }
+
+        if (elementoProdutos) {
+            elementoProdutos.textContent =
+                String(totalProdutos);
+        }
+
+        if (elementoNotas) {
+            elementoNotas.textContent = "1";
+        }
+    }
+
+    function exibirNotaImportada(nota) {
+        const resumo = document.getElementById(
+            IDS.resumoImportacao
+        );
+
+        if (!resumo) {
+            return;
+        }
+
+        const produtos = obterProdutosDaNota(nota);
+        const total = obterValorTotal(nota, produtos);
+        const estabelecimento = obterNomeEstabelecimento(nota);
+        const dataNota = obterDataNota(nota);
+
+        atualizarResumoSuperior(total, produtos.length);
+
+        const limiteExibicao = 50;
+
+        const produtosHTML = produtos
+            .slice(0, limiteExibicao)
+            .map((produto, indice) => {
+                const nome = obterNomeProduto(produto, indice);
+                const quantidade = obterQuantidadeProduto(produto);
+                const unidade = obterUnidadeProduto(produto);
+                const totalProduto = obterTotalProduto(produto);
+
+                return `
+                    <div class="listalar-gastos-produto">
+                        <div>
+                            <strong>
+                                ${escaparHTML(nome)}
+                            </strong>
+
+                            <small>
+                                ${formatarQuantidade(quantidade)}
+                                ${escaparHTML(unidade)}
+                            </small>
+                        </div>
+
+                        <div class="listalar-gastos-produto-valor">
+                            ${formatarMoeda(totalProduto)}
+                        </div>
+                    </div>
+                `;
+            })
+            .join("");
+
+        const mensagemLimite =
+            produtos.length > limiteExibicao
+                ? `
+                    <div class="listalar-gastos-vazio">
+                        Mais ${produtos.length - limiteExibicao}
+                        produtos foram identificados na nota.
+                    </div>
+                `
+                : "";
+
+        resumo.innerHTML = `
+            <div class="listalar-gastos-card-topo">
+                <div>
+                    <h2>Nota importada</h2>
+
+                    <p>
+                        Confira os dados antes da futura gravação
+                        no histórico.
+                    </p>
+                </div>
+            </div>
+
+            <div class="listalar-gastos-nota-cabecalho">
+                <div>
+                    <h3>
+                        ${escaparHTML(estabelecimento)}
+                    </h3>
+
+                    <p>
+                        ${escaparHTML(dataNota)}
+                        · ${produtos.length}
+                        ${produtos.length === 1 ? "produto" : "produtos"}
+                    </p>
+                </div>
+
+                <div class="listalar-gastos-nota-total">
+                    ${formatarMoeda(total)}
+                </div>
+            </div>
+
+            <div class="listalar-gastos-produtos">
+                ${
+                    produtosHTML ||
+                    `
+                        <div class="listalar-gastos-vazio">
+                            Nenhum produto foi identificado na nota.
+                        </div>
+                    `
+                }
+
+                ${mensagemLimite}
+            </div>
+        `;
+
+        resumo.classList.add("visivel");
+
+        mostrarAviso(
+            "Nota fiscal importada com sucesso.",
+            "sucesso"
+        );
+    }
+
+    function receberNotaImportada(evento) {
+        /*
+         * O importador pode enviar os dados diretamente em detail
+         * ou dentro de detail.nota / detail.dados.
+         */
+        const detalhe = evento?.detail;
+
+        const nota =
+            detalhe?.nota ||
+            detalhe?.dados ||
+            detalhe;
+
+        if (!nota || typeof nota !== "object") {
+            console.warn(
+                "⚠️ O evento da nota não trouxe dados válidos:",
+                evento
+            );
+
+            mostrarAviso(
+                "A nota foi lida, mas os dados não foram encontrados.",
+                "erro"
+            );
+
+            return;
+        }
+
+        ultimaNotaImportada = nota;
+
+        abrirTela();
+        exibirNotaImportada(nota);
+
+        console.log(
+            "✅ Nota recebida pelo módulo Gastos:",
+            nota
+        );
+    }
+
+    // ========================================================
+    // EVENTOS
+    // ========================================================
+
+    function configurarEventos() {
+        const botaoMenu = document.getElementById(
+            IDS.botaoMenu
+        );
+
+        const botaoFechar = document.getElementById(
+            IDS.botaoFechar
+        );
+
+        const botaoImportar = document.getElementById(
+            IDS.botaoImportar
+        );
+
+        const tela = document.getElementById(
+            IDS.tela
+        );
+
+        if (botaoMenu) {
+            botaoMenu.addEventListener(
+                "click",
+                abrirTela
+            );
+        }
+
+        if (botaoFechar) {
+            botaoFechar.addEventListener(
+                "click",
+                fecharTela
+            );
+        }
+
+        if (botaoImportar) {
+            botaoImportar.addEventListener(
+                "click",
+                abrirImportadorNota
+            );
+        }
+
+        if (tela) {
+            tela.addEventListener("click", (evento) => {
+                /*
+                 * Não fecha ao clicar dentro da tela.
+                 * O fechamento ocorre somente no botão ×.
+                 */
+                evento.stopPropagation();
+            });
+        }
+
+        document.addEventListener("keydown", (evento) => {
+            if (evento.key === "Escape") {
+                fecharTela();
+            }
+        });
+
+        window.addEventListener(
+            "listalar:nota-pdf-importada",
+            receberNotaImportada
+        );
+    }
+
+    // ========================================================
+    // API PÚBLICA
+    // ========================================================
+
+    function obterUltimaNota() {
+        return ultimaNotaImportada;
+    }
+
+    window.ListaLarGastos = {
+        versao: VERSAO,
+        abrir: abrirTela,
+        fechar: fecharTela,
+        importarNF: abrirImportadorNota,
+        obterUltimaNota
+    };
+
+    // ========================================================
+    // INICIALIZAÇÃO
+    // ========================================================
+
+    function iniciar() {
+        criarEstilos();
+        criarTela();
+        criarBotaoMenu();
+        configurarEventos();
+
+        console.log(
+            `✅ Módulo Gastos carregado — versão ${VERSAO}`
+        );
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener(
+            "DOMContentLoaded",
+            iniciar,
+            { once: true }
+        );
+    } else {
+        iniciar();
+    }
+})();
