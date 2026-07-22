@@ -1,7 +1,7 @@
 // ==========================================
 // ListaLar - Módulo Tarefas
 // Arquivo: tarefas.js
-// Versão: 3.0.0
+// Versão: 3.0.2
 // ==========================================
 
 import {
@@ -403,7 +403,7 @@ async function confirmar(
 
 
 // ==========================================
-// Menu inferior
+// Menu inferior e estrutura base
 // ==========================================
 
 function ajustarMenu() {
@@ -419,14 +419,343 @@ function ajustarMenu() {
   const quantidade = [
     ...menu.querySelectorAll(".tab")
   ].filter(
-    (botao) => !botao.hidden
+    (botao) =>
+      !botao.hidden &&
+      botao.style.display !== "none"
   ).length;
 
   menu.style.gridTemplateColumns =
     `repeat(${Math.max(
       quantidade,
       1
-    )}, 1fr)`;
+    )}, minmax(0, 1fr))`;
+}
+
+
+function criarTelaTarefas() {
+  if (el("tarefas")) {
+    return true;
+  }
+
+  const areaPrincipal =
+    document.querySelector(
+      "main.app"
+    );
+
+  if (!areaPrincipal) {
+    return false;
+  }
+
+  const secao =
+    document.createElement("section");
+
+  secao.id = "tarefas";
+  secao.className = "screen";
+
+  secao.innerHTML = `
+    <div class="card tarefas-card-principal">
+      <div class="title-row tarefas-cabecalho">
+        <div>
+          <h2 class="title">
+            Tarefas
+          </h2>
+
+          <p
+            id="tarefasSubtitulo"
+            class="subtitle"
+          >
+            Organize as atividades da família.
+          </p>
+        </div>
+
+        <button
+          id="btnNovaTarefa"
+          type="button"
+          class="btn btn-primary tarefas-btn-nova"
+        >
+          + Nova
+        </button>
+      </div>
+
+      <div
+        id="tarefasResumo"
+        class="summary"
+      >
+        <div class="mini-card">
+          <strong id="tarefasTotal">
+            0
+          </strong>
+
+          <span>
+            Total
+          </span>
+        </div>
+
+        <div class="mini-card">
+          <strong id="tarefasPendentes">
+            0
+          </strong>
+
+          <span>
+            Pendentes
+          </span>
+        </div>
+
+        <div class="mini-card">
+          <strong id="tarefasConcluidas">
+            0
+          </strong>
+
+          <span>
+            Concluídas
+          </span>
+        </div>
+      </div>
+
+      <form
+        id="formularioTarefa"
+        class="tarefas-formulario"
+        autocomplete="off"
+        novalidate
+        hidden
+      >
+        <div class="tarefas-formulario-titulo">
+          <strong id="tituloFormularioTarefa">
+            Nova tarefa
+          </strong>
+        </div>
+
+        <div class="tarefas-campo">
+          <label for="tarefaTitulo">
+            Tarefa
+          </label>
+
+          <input
+            id="tarefaTitulo"
+            name="tarefaTitulo"
+            type="text"
+            maxlength="120"
+            placeholder="Ex.: Organizar o quarto"
+            required
+          >
+        </div>
+
+        <div class="tarefas-grid-duas-colunas">
+          <div class="tarefas-campo">
+            <label for="tarefaResponsavel">
+              Responsável
+            </label>
+
+            <select
+              id="tarefaResponsavel"
+              name="tarefaResponsavel"
+            >
+              <option value="">
+                Sem responsável
+              </option>
+            </select>
+          </div>
+
+          <div class="tarefas-campo">
+            <label for="tarefaPrazo">
+              Prazo
+            </label>
+
+            <input
+              id="tarefaPrazo"
+              name="tarefaPrazo"
+              type="date"
+            >
+          </div>
+        </div>
+
+        <div class="tarefas-campo">
+          <label for="tarefaPrioridade">
+            Prioridade
+          </label>
+
+          <select
+            id="tarefaPrioridade"
+            name="tarefaPrioridade"
+          >
+            <option value="baixa">
+              Baixa
+            </option>
+
+            <option
+              value="media"
+              selected
+            >
+              Média
+            </option>
+
+            <option value="alta">
+              Alta
+            </option>
+          </select>
+        </div>
+
+        <div class="tarefas-campo">
+          <label for="tarefaObservacao">
+            Observação
+          </label>
+
+          <textarea
+            id="tarefaObservacao"
+            name="tarefaObservacao"
+            rows="3"
+            maxlength="500"
+            placeholder="Informações adicionais"
+          ></textarea>
+        </div>
+
+        <div class="tarefas-formulario-acoes">
+          <button
+            id="btnCancelarTarefa"
+            type="button"
+            class="btn btn-yellow"
+          >
+            Cancelar
+          </button>
+
+          <button
+            id="btnSalvarTarefa"
+            type="button"
+            class="btn btn-primary"
+          >
+            Salvar tarefa
+          </button>
+        </div>
+      </form>
+
+      <div
+        id="listaTarefas"
+        class="tarefas-lista"
+      >
+        <div class="empty">
+          Carregando tarefas...
+        </div>
+      </div>
+    </div>
+  `;
+
+  const rodape =
+    areaPrincipal.querySelector(
+      ".footer"
+    );
+
+  if (rodape) {
+    areaPrincipal.insertBefore(
+      secao,
+      rodape
+    );
+  } else {
+    areaPrincipal.appendChild(
+      secao
+    );
+  }
+
+  return true;
+}
+
+
+function criarBotaoTarefas() {
+  if (el("tab-tarefas")) {
+    return true;
+  }
+
+  const menuInferior =
+    document.querySelector(
+      ".bottom-nav"
+    );
+
+  if (!menuInferior) {
+    return false;
+  }
+
+  const botao =
+    document.createElement("button");
+
+  botao.id = "tab-tarefas";
+  botao.className = "tab";
+  botao.type = "button";
+  botao.hidden = true;
+  botao.style.display = "none";
+
+  botao.setAttribute(
+    "aria-label",
+    "Abrir tarefas"
+  );
+
+  botao.innerHTML = `
+    <span class="ico">
+      ✅
+    </span>
+
+    <span>
+      Tarefas
+    </span>
+  `;
+
+  const botaoAdmin =
+    el("tab-admin");
+
+  if (
+    botaoAdmin &&
+    botaoAdmin.parentElement ===
+      menuInferior
+  ) {
+    menuInferior.insertBefore(
+      botao,
+      botaoAdmin
+    );
+  } else {
+    menuInferior.appendChild(
+      botao
+    );
+  }
+
+  ajustarMenu();
+
+  return true;
+}
+
+
+function abrirTelaTarefas() {
+  if (!moduloLiberado) {
+    return;
+  }
+
+  if (
+    typeof window.abrirTela ===
+    "function"
+  ) {
+    window.abrirTela("tarefas");
+    return;
+  }
+
+  document
+    .querySelectorAll(".screen")
+    .forEach((tela) => {
+      tela.classList.remove("active");
+    });
+
+  document
+    .querySelectorAll(".tab")
+    .forEach((aba) => {
+      aba.classList.remove("active");
+    });
+
+  el("tarefas")
+    ?.classList.add("active");
+
+  el("tab-tarefas")
+    ?.classList.add("active");
+
+  window.scrollTo({
+    top: 0,
+    behavior: "auto"
+  });
 }
 
 
@@ -436,14 +765,12 @@ function definirVisibilidade(
   moduloLiberado =
     liberado === true;
 
-  function aplicarVisibilidadeMenu() {
-    const botao =
-      el("tab-tarefas");
+  criarBotaoTarefas();
 
-    if (!botao) {
-      return false;
-    }
+  const botao =
+    el("tab-tarefas");
 
+  if (botao) {
     botao.hidden =
       !moduloLiberado;
 
@@ -451,45 +778,34 @@ function definirVisibilidade(
       moduloLiberado
         ? ""
         : "none";
-
-    ajustarMenu();
-
-    return true;
   }
 
-  // Tenta imediatamente.
-  if (!aplicarVisibilidadeMenu()) {
-
-    // O menu pode ser criado depois pelo index ou por outro arquivo.
-    let tentativas = 0;
-
-    const intervalo =
-      window.setInterval(() => {
-        tentativas += 1;
-
-        const encontrou =
-          aplicarVisibilidadeMenu();
-
-        if (
-          encontrou ||
-          tentativas >= 40
-        ) {
-          window.clearInterval(
-            intervalo
-          );
-        }
-      }, 250);
-  }
+  ajustarMenu();
 
   if (
     !moduloLiberado &&
     el("tarefas")?.classList.contains(
       "active"
-    ) &&
-    typeof window.abrirTela ===
-      "function"
+    )
   ) {
-    window.abrirTela("lista");
+    if (
+      typeof window.abrirTela ===
+      "function"
+    ) {
+      window.abrirTela("lista");
+    } else {
+      el("tarefas")
+        ?.classList.remove("active");
+
+      el("tab-tarefas")
+        ?.classList.remove("active");
+
+      el("lista")
+        ?.classList.add("active");
+
+      el("tab-lista")
+        ?.classList.add("active");
+    }
   }
 }
 
@@ -950,36 +1266,47 @@ function criarCamposCompromisso() {
 
 
 function criarEstruturaNova() {
-  if (estruturaNovaCriada) {
-    return true;
-  }
+  const telaCriada =
+    criarTelaTarefas();
 
-  const telaTarefas =
-    el("tarefas");
+  const botaoCriado =
+    criarBotaoTarefas();
 
-  const listaTarefas =
-    el("listaTarefas");
-
-  // A tela ainda não foi inserida no HTML.
-  // Não marca como criada para permitir nova tentativa.
   if (
-    !telaTarefas ||
-    !listaTarefas
+    !telaCriada ||
+    !botaoCriado
   ) {
     return false;
   }
 
-  criarBarraPrincipal();
-  criarAreaLista();
-  criarAreaCalendario();
-  criarCampoVisibilidade();
-  criarCamposCompromisso();
+  if (!estruturaNovaCriada) {
+    criarBarraPrincipal();
+    criarAreaLista();
+    criarAreaCalendario();
+    criarCampoVisibilidade();
+    criarCamposCompromisso();
 
-  estruturaNovaCriada = true;
+    estruturaNovaCriada = true;
 
-  configurarEventosNovos();
+    configurarEventosNovos();
+  }
+
+  configurarEventos();
   atualizarModoPrincipal();
   atualizarBotoesAtivos();
+  definirVisibilidade(
+    moduloLiberado
+  );
+
+  const subtitulo =
+    el("tarefasSubtitulo");
+
+  if (subtitulo) {
+    subtitulo.textContent =
+      familiaNomeAtual
+        ? `Organize as atividades da ${familiaNomeAtual}.`
+        : "Organize as atividades da família.";
+  }
 
   return true;
 }
@@ -3218,34 +3545,74 @@ function configurarEventosNovos() {
 
 function configurarEventos() {
   if (eventosConfigurados) {
-    return;
+    return true;
   }
+
+  const botaoTarefas =
+    el("tab-tarefas");
+
+  const botaoNova =
+    el("btnNovaTarefa");
+
+  const botaoCancelar =
+    el("btnCancelarTarefa");
+
+  const botaoSalvar =
+    el("btnSalvarTarefa");
+
+  const formulario =
+    el("formularioTarefa");
+
+  const lista =
+    el("listaTarefas");
+
+  if (
+    !botaoTarefas ||
+    !botaoNova ||
+    !botaoCancelar ||
+    !botaoSalvar ||
+    !formulario ||
+    !lista
+  ) {
+    return false;
+  }
+
+  botaoTarefas.addEventListener(
+    "click",
+    abrirTelaTarefas
+  );
+
+  botaoNova.addEventListener(
+    "click",
+    () => abrirFormulario()
+  );
+
+  botaoCancelar.addEventListener(
+    "click",
+    fecharFormulario
+  );
+
+  botaoSalvar.addEventListener(
+    "click",
+    salvarTarefa
+  );
+
+  formulario.addEventListener(
+    "submit",
+    (evento) => {
+      evento.preventDefault();
+      salvarTarefa();
+    }
+  );
+
+  lista.addEventListener(
+    "click",
+    tratarCliqueLista
+  );
 
   eventosConfigurados = true;
 
-  el("btnNovaTarefa")
-    ?.addEventListener(
-      "click",
-      () => abrirFormulario()
-    );
-
-  el("btnCancelarTarefa")
-    ?.addEventListener(
-      "click",
-      fecharFormulario
-    );
-
-  el("btnSalvarTarefa")
-    ?.addEventListener(
-      "click",
-      salvarTarefa
-    );
-
-  el("listaTarefas")
-    ?.addEventListener(
-      "click",
-      tratarCliqueLista
-    );
+  return true;
 }
 
 
@@ -3343,8 +3710,6 @@ window.ListaLarTarefas = {
 // ==========================================
 
 function iniciar() {
-  configurarEventos();
-
   function garantirEstruturaTarefas() {
     if (criarEstruturaNova()) {
       return;
@@ -3361,11 +3726,17 @@ function iniciar() {
 
         if (
           criada ||
-          tentativas >= 40
+          tentativas >= 120
         ) {
           window.clearInterval(
             intervalo
           );
+
+          if (!criada) {
+            console.error(
+              "Módulo Tarefas: não foi possível localizar main.app ou .bottom-nav."
+            );
+          }
         }
       }, 250);
   }
@@ -3397,6 +3768,8 @@ function iniciar() {
         await carregarContexto(
           user
         );
+
+        criarEstruturaNova();
 
         definirVisibilidade(
           moduloLiberado
