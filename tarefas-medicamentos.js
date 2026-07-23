@@ -3179,63 +3179,52 @@ function configurarEventos() {
 // ==========================================
 
 function criarEstilos() {
-  if (
-    el(
-      "medicamentosEstilos"
-    )
-  ) {
+  if (el("medicamentosEstilos")) {
     return;
   }
 
   const estilo =
-    document.createElement(
-      "style"
-    );
+    document.createElement("style");
 
   estilo.id =
     "medicamentosEstilos";
 
   estilo.textContent = `
 
-    /* Quatro indicadores na tela Tarefas */
+    /* ======================================
+       Indicador Remédios na tela Tarefas
+       ====================================== */
 
     #tarefasResumo.medicamentos-instalado {
       grid-template-columns:
-        repeat(
-          4,
-          minmax(0, 1fr)
-        )
+        repeat(4, minmax(0, 1fr))
         !important;
     }
 
     #tarefasMedicamentosCard {
-      appearance:
-        none;
+      appearance: none;
+      -webkit-appearance: none;
 
-      -webkit-appearance:
-        none;
-
-      width:
-        100%;
-
-      margin:
-        0;
-
-      font:
-        inherit;
-
-      cursor:
-        pointer;
+      width: 100%;
+      margin: 0;
 
       border-color:
-        #bfdbfe !important;
+        #93c5fd !important;
 
       background:
-        #eff6ff !important;
+        linear-gradient(
+          145deg,
+          #eff6ff,
+          #dbeafe
+        ) !important;
+
+      font: inherit;
+      cursor: pointer;
 
       transition:
         transform 0.16s ease,
-        box-shadow 0.16s ease;
+        box-shadow 0.16s ease,
+        border-color 0.16s ease;
 
       -webkit-tap-highlight-color:
         transparent;
@@ -3248,10 +3237,18 @@ function criarEstilos() {
 
     #tarefasMedicamentosCard.tem-atencao {
       border-color:
-        #60a5fa !important;
+        #3b82f6 !important;
 
       background:
-        #dbeafe !important;
+        linear-gradient(
+          145deg,
+          #dbeafe,
+          #bfdbfe
+        ) !important;
+
+      box-shadow:
+        0 4px 12px
+        rgba(37, 99, 235, 0.12);
     }
 
     #tarefasMedicamentosCard:hover {
@@ -3259,30 +3256,24 @@ function criarEstilos() {
         translateY(-1px);
 
       box-shadow:
-        0 6px 14px
-        rgba(37, 99, 235, 0.12);
+        0 7px 16px
+        rgba(37, 99, 235, 0.15);
     }
 
 
-    /* Tela */
+    /* ======================================
+       Tela
+       ====================================== */
 
     .medicamentos-screen {
-      width:
-        100%;
-
-      max-width:
-        100%;
-
-      padding-bottom:
-        110px;
+      width: 100%;
+      max-width: 100%;
+      padding-bottom: 110px;
     }
 
     .medicamentos-container {
-      width:
-        100%;
-
-      max-width:
-        1120px;
+      width: 100%;
+      max-width: 1120px;
 
       margin:
         0 auto;
@@ -3295,17 +3286,15 @@ function criarEstilos() {
     }
 
 
-    /* Cabeçalho */
+    /* ======================================
+       Cabeçalho
+       ====================================== */
 
     .medicamentos-cabecalho {
-      margin-bottom:
-        9px;
+      margin-bottom: 9px;
+      padding: 11px;
 
-      padding:
-        11px;
-
-      border-radius:
-        15px;
+      border-radius: 15px;
 
       color:
         #ffffff;
@@ -3313,37 +3302,31 @@ function criarEstilos() {
       background:
         linear-gradient(
           135deg,
-          #2563eb,
-          #3b82f6
+          #2563eb 0%,
+          #3b82f6 55%,
+          #06b6d4 100%
         );
 
       box-shadow:
-        0 7px 18px
-        rgba(37, 99, 235, 0.15);
+        0 8px 20px
+        rgba(37, 99, 235, 0.18);
     }
 
     .medicamentos-cabecalho-superior {
-      display:
-        grid;
+      display: grid;
 
       grid-template-columns:
         auto
         minmax(0, 1fr)
         auto;
 
-      align-items:
-        center;
-
-      gap:
-        10px;
+      align-items: center;
+      gap: 10px;
     }
 
     .medicamentos-cabecalho h2 {
-      min-width:
-        0;
-
-      margin:
-        0;
+      min-width: 0;
+      margin: 0;
 
       color:
         #ffffff;
@@ -3355,139 +3338,127 @@ function criarEstilos() {
           1.35rem
         );
 
-      line-height:
-        1.2;
+      line-height: 1.2;
     }
 
     .medicamentos-btn-voltar {
-      width:
-        38px;
+      width: 38px;
+      height: 38px;
 
-      height:
-        38px;
-
-      display:
-        inline-flex;
-
-      align-items:
-        center;
-
-      justify-content:
-        center;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
 
       border:
         1px solid
-        rgba(
-          255,
-          255,
-          255,
-          0.4
-        );
+        rgba(255, 255, 255, 0.45);
 
-      border-radius:
-        11px;
+      border-radius: 11px;
 
       background:
-        rgba(
-          255,
-          255,
-          255,
-          0.13
-        );
+        rgba(255, 255, 255, 0.15);
 
       color:
         #ffffff;
 
-      font:
-        inherit;
+      font: inherit;
+      font-size: 29px;
+      line-height: 1;
 
-      font-size:
-        29px;
+      cursor: pointer;
 
-      line-height:
-        1;
+      transition:
+        background 0.16s ease,
+        transform 0.16s ease;
+    }
 
-      cursor:
-        pointer;
+    .medicamentos-btn-voltar:hover {
+      background:
+        rgba(255, 255, 255, 0.24);
+
+      transform:
+        translateX(-1px);
     }
 
     .medicamentos-btn-novo {
-      min-height:
-        38px;
+      min-height: 38px;
 
       padding:
         7px 12px;
 
-      border:
-        0;
-
-      border-radius:
-        11px;
+      border: 0;
+      border-radius: 11px;
 
       background:
-        #ffffff;
+        linear-gradient(
+          135deg,
+          #ffffff,
+          #eff6ff
+        );
 
       color:
         #1d4ed8;
 
-      font:
-        inherit;
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 800;
 
-      font-size:
-        0.78rem;
+      white-space: nowrap;
+      cursor: pointer;
 
-      font-weight:
-        800;
+      box-shadow:
+        0 4px 12px
+        rgba(30, 64, 175, 0.14);
 
-      white-space:
-        nowrap;
+      transition:
+        transform 0.16s ease,
+        box-shadow 0.16s ease;
+    }
 
-      cursor:
-        pointer;
+    .medicamentos-btn-novo:hover {
+      transform:
+        translateY(-1px);
+
+      box-shadow:
+        0 6px 15px
+        rgba(30, 64, 175, 0.18);
     }
 
 
-    /* Filtros */
+    /* ======================================
+       Filtros
+       ====================================== */
 
     .medicamentos-filtros {
-      display:
-        inline-flex;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
 
-      align-items:
-        center;
-
-      gap:
-        4px;
-
-      margin-bottom:
-        10px;
-
-      padding:
-        3px;
+      margin-bottom: 10px;
+      padding: 3px;
 
       border:
         1px solid
-        #e2e8f0;
+        #dbe4f0;
 
-      border-radius:
-        11px;
+      border-radius: 11px;
 
       background:
         #ffffff;
+
+      box-shadow:
+        0 3px 10px
+        rgba(15, 23, 42, 0.05);
     }
 
     .medicamentos-filtro {
-      min-height:
-        32px;
+      min-height: 32px;
 
       padding:
         6px 11px;
 
-      border:
-        0;
-
-      border-radius:
-        8px;
+      border: 0;
+      border-radius: 8px;
 
       background:
         transparent;
@@ -3495,49 +3466,69 @@ function criarEstilos() {
       color:
         #64748b;
 
-      font:
-        inherit;
+      font: inherit;
+      font-size: 0.75rem;
+      font-weight: 750;
 
-      font-size:
-        0.75rem;
+      cursor: pointer;
 
-      font-weight:
-        750;
+      transition:
+        background 0.16s ease,
+        color 0.16s ease,
+        box-shadow 0.16s ease;
+    }
 
-      cursor:
-        pointer;
+    .medicamentos-filtro:hover {
+      background:
+        #eff6ff;
+
+      color:
+        #2563eb;
     }
 
     .medicamentos-filtro.ativo {
       background:
-        #2563eb;
+        linear-gradient(
+          135deg,
+          #2563eb,
+          #3b82f6
+        );
 
       color:
         #ffffff;
+
+      box-shadow:
+        0 4px 10px
+        rgba(37, 99, 235, 0.22);
     }
 
 
-    /* Formulário */
+    /* ======================================
+       Formulário
+       ====================================== */
 
     .medicamentos-formulario {
-      width:
-        100%;
+      width: 100%;
 
-      margin-bottom:
-        12px;
-
-      padding:
-        14px;
+      margin-bottom: 12px;
+      padding: 14px;
 
       border:
         1px solid
         #bfdbfe;
 
-      border-radius:
-        16px;
+      border-radius: 16px;
 
       background:
-        #eff6ff;
+        linear-gradient(
+          145deg,
+          #eff6ff,
+          #f8fbff
+        );
+
+      box-shadow:
+        0 7px 18px
+        rgba(37, 99, 235, 0.09);
 
       box-sizing:
         border-box;
@@ -3549,49 +3540,34 @@ function criarEstilos() {
     }
 
     .medicamentos-formulario-topo {
-      display:
-        flex;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
 
-      align-items:
-        center;
-
-      justify-content:
-        space-between;
-
-      gap:
-        12px;
-
-      margin-bottom:
-        11px;
+      margin-bottom: 11px;
 
       color:
         #1e293b;
 
-      font-size:
-        1rem;
+      font-size: 1rem;
+    }
+
+    .medicamentos-formulario-topo strong {
+      color:
+        #1e40af;
     }
 
     .medicamentos-btn-fechar {
-      width:
-        34px;
+      width: 34px;
+      height: 34px;
 
-      height:
-        34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
 
-      display:
-        inline-flex;
-
-      align-items:
-        center;
-
-      justify-content:
-        center;
-
-      border:
-        0;
-
-      border-radius:
-        10px;
+      border: 0;
+      border-radius: 10px;
 
       background:
         #dbeafe;
@@ -3599,74 +3575,54 @@ function criarEstilos() {
       color:
         #1e40af;
 
-      font:
-        inherit;
+      font: inherit;
+      font-size: 22px;
 
-      font-size:
-        22px;
+      cursor: pointer;
+    }
 
-      cursor:
-        pointer;
+    .medicamentos-btn-fechar:hover {
+      background:
+        #bfdbfe;
     }
 
     .medicamentos-grid-duas-colunas,
     .medicamentos-grid-tres-colunas {
-      display:
-        grid;
-
-      gap:
-        10px;
+      display: grid;
+      gap: 10px;
     }
 
     .medicamentos-grid-duas-colunas {
       grid-template-columns:
-        repeat(
-          2,
-          minmax(0, 1fr)
-        );
+        repeat(2, minmax(0, 1fr));
     }
 
     .medicamentos-grid-tres-colunas {
       grid-template-columns:
-        repeat(
-          3,
-          minmax(0, 1fr)
-        );
+        repeat(3, minmax(0, 1fr));
     }
 
     .medicamentos-campo {
-      min-width:
-        0;
-
-      margin-bottom:
-        11px;
+      min-width: 0;
+      margin-bottom: 11px;
     }
 
     .medicamentos-campo label {
-      display:
-        block;
-
-      margin-bottom:
-        5px;
+      display: block;
+      margin-bottom: 5px;
 
       color:
         #334155;
 
-      font-size:
-        0.78rem;
-
-      font-weight:
-        750;
+      font-size: 0.78rem;
+      font-weight: 750;
     }
 
     .medicamentos-campo input,
     .medicamentos-campo select,
     .medicamentos-campo textarea {
-      width:
-        100%;
-
-      min-height:
-        41px;
+      width: 100%;
+      min-height: 41px;
 
       padding:
         9px 11px;
@@ -3675,8 +3631,7 @@ function criarEstilos() {
         1px solid
         #cbd5e1;
 
-      border-radius:
-        10px;
+      border-radius: 10px;
 
       background:
         #ffffff;
@@ -3684,76 +3639,55 @@ function criarEstilos() {
       color:
         #1e293b;
 
-      font:
-        inherit;
-
-      font-size:
-        0.88rem;
+      font: inherit;
+      font-size: 0.88rem;
 
       box-sizing:
         border-box;
 
-      outline:
-        none;
+      outline: none;
+
+      transition:
+        border-color 0.16s ease,
+        box-shadow 0.16s ease;
     }
 
     .medicamentos-campo textarea {
-      min-height:
-        70px;
-
-      resize:
-        vertical;
+      min-height: 70px;
+      resize: vertical;
     }
 
     .medicamentos-campo input:focus,
     .medicamentos-campo select:focus,
     .medicamentos-campo textarea:focus {
       border-color:
-        #60a5fa;
+        #3b82f6;
 
       box-shadow:
         0 0 0 3px
-        rgba(
-          59,
-          130,
-          246,
-          0.14
-        );
+        rgba(59, 130, 246, 0.14);
     }
 
     .medicamentos-formulario-acoes {
-      display:
-        flex;
-
-      justify-content:
-        flex-end;
-
-      gap:
-        8px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
     }
 
     .medicamentos-btn-secundario,
     .medicamentos-btn-salvar {
-      min-height:
-        40px;
+      min-height: 40px;
 
       padding:
         8px 14px;
 
-      border-radius:
-        10px;
+      border-radius: 10px;
 
-      font:
-        inherit;
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 800;
 
-      font-size:
-        0.8rem;
-
-      font-weight:
-        800;
-
-      cursor:
-        pointer;
+      cursor: pointer;
     }
 
     .medicamentos-btn-secundario {
@@ -3774,37 +3708,59 @@ function criarEstilos() {
         #2563eb;
 
       background:
-        #2563eb;
+        linear-gradient(
+          135deg,
+          #2563eb,
+          #3b82f6
+        );
 
       color:
         #ffffff;
+
+      box-shadow:
+        0 4px 10px
+        rgba(37, 99, 235, 0.18);
+    }
+
+    .medicamentos-btn-salvar:hover {
+      background:
+        linear-gradient(
+          135deg,
+          #1d4ed8,
+          #2563eb
+        );
     }
 
 
-    /* Lista compacta */
+    /* ======================================
+       Lista compacta
+       ====================================== */
 
     .medicamentos-conteudo {
-      width:
-        100%;
+      width: 100%;
     }
 
     .medicamentos-lista-compacta {
-      overflow:
-        hidden;
+      overflow: hidden;
 
       border:
         1px solid
-        #e2e8f0;
+        #dbe4f0;
 
-      border-radius:
-        13px;
+      border-radius: 14px;
 
       background:
         #ffffff;
+
+      box-shadow:
+        0 8px 22px
+        rgba(37, 99, 235, 0.08);
     }
 
     .medicamento-item,
     .medicamento-historico-item {
+      position: relative;
+
       padding:
         11px 12px;
 
@@ -3816,209 +3772,261 @@ function criarEstilos() {
         #ffffff;
     }
 
-    .medicamento-item:last-child,
-    .medicamento-historico-item:last-child {
-      border-bottom:
-        0;
+    .medicamento-item {
+      border-left:
+        4px solid
+        #3b82f6;
+
+      transition:
+        background 0.16s ease,
+        border-color 0.16s ease,
+        box-shadow 0.16s ease,
+        transform 0.16s ease;
     }
 
-    .medicamento-item.tem-pendencia {
+    .medicamento-item:hover {
+      background:
+        #f8fbff;
+
       box-shadow:
-        inset 3px 0 0
-        #f59e0b;
+        inset 0 0 0 1px
+        rgba(59, 130, 246, 0.08);
+
+      transform:
+        translateY(-1px);
     }
+
+    .medicamento-item:last-child,
+    .medicamento-historico-item:last-child {
+      border-bottom: 0;
+    }
+
+
+    /* Medicamento normal */
+
+    .medicamento-item:not(.tem-pendencia) {
+      background:
+        linear-gradient(
+          90deg,
+          #f8fbff 0%,
+          #ffffff 28%
+        );
+    }
+
+
+    /* Pendente */
+
+    .medicamento-item.tem-pendencia {
+      border-left-color:
+        #f59e0b;
+
+      background:
+        linear-gradient(
+          90deg,
+          #fffbeb 0%,
+          #ffffff 32%
+        );
+    }
+
+
+    /* Comprar hoje ou atrasado */
+
+    .medicamento-item.tem-pendencia:has(.status-hoje),
+    .medicamento-item.tem-pendencia:has(.status-atrasado) {
+      border-left-color:
+        #ef4444;
+
+      background:
+        linear-gradient(
+          90deg,
+          #fff1f2 0%,
+          #ffffff 32%
+        );
+    }
+
+
+    /* Etiquetas de situação */
 
     .medicamento-item.tem-pendencia
     .status-hoje,
     .medicamento-item.tem-pendencia
     .status-atrasado {
+      border:
+        1px solid
+        #fecaca;
+
       background:
         #fee2e2;
 
       color:
         #b91c1c;
+
+      box-shadow:
+        0 2px 6px
+        rgba(239, 68, 68, 0.12);
     }
 
     .medicamento-item.tem-pendencia
     .status-pendente {
+      border:
+        1px solid
+        #fde68a;
+
       background:
         #fef3c7;
 
       color:
         #a16207;
+
+      box-shadow:
+        0 2px 6px
+        rgba(245, 158, 11, 0.12);
     }
 
     .medicamento-item-principal {
-      display:
-        grid;
+      display: grid;
 
       grid-template-columns:
         minmax(0, 1fr)
         auto;
 
-      align-items:
-        center;
-
-      gap:
-        12px;
+      align-items: center;
+      gap: 12px;
     }
 
     .medicamento-item-textos {
-      min-width:
-        0;
+      min-width: 0;
     }
 
     .medicamento-item-titulo {
-      display:
-        flex;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
 
-      align-items:
-        center;
-
-      flex-wrap:
-        wrap;
-
-      gap:
-        6px;
-
-      min-width:
-        0;
+      min-width: 0;
     }
 
     .medicamento-item-titulo > strong {
-      min-width:
-        0;
+      min-width: 0;
 
       overflow-wrap:
         anywhere;
 
       color:
-        #1e293b;
+        #0f172a;
 
-      font-size:
-        0.92rem;
-
-      line-height:
-        1.25;
+      font-size: 0.96rem;
+      font-weight: 850;
+      line-height: 1.25;
     }
 
     .medicamento-status {
-      display:
-        inline-flex;
+      display: inline-flex;
+      align-items: center;
 
-      align-items:
-        center;
-
-      min-height:
-        21px;
+      min-height: 21px;
 
       padding:
         3px 7px;
 
-      border-radius:
-        999px;
+      border-radius: 999px;
 
-      font-size:
-        0.61rem;
+      font-size: 0.61rem;
+      font-weight: 850;
 
-      font-weight:
-        850;
-
-      white-space:
-        nowrap;
+      white-space: nowrap;
     }
+
+
+    /* ======================================
+       Informações do medicamento
+       ====================================== */
 
     .medicamento-item-meta,
     .medicamento-historico-meta {
-      display:
-        flex;
-
-      align-items:
-        center;
-
-      flex-wrap:
-        wrap;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
 
       gap:
         3px 10px;
 
-      margin-top:
-        5px;
+      margin-top: 5px;
 
       color:
         #64748b;
 
-      font-size:
-        0.69rem;
-
-      line-height:
-        1.35;
+      font-size: 0.69rem;
+      line-height: 1.35;
     }
 
     .medicamento-item-meta b,
     .medicamento-historico-meta b {
       color:
-        #475569;
+        #334155;
 
-      font-weight:
-        750;
+      font-weight: 800;
+    }
+
+    .medicamento-item-meta span:nth-child(1) b {
+      color:
+        #2563eb;
+    }
+
+    .medicamento-item-meta span:nth-child(2) b {
+      color:
+        #0f766e;
+    }
+
+    .medicamento-item-meta span:nth-child(3) b {
+      color:
+        #7c3aed;
     }
 
     .medicamento-prioridade-texto.prioridade-alta b {
       color:
-        #be123c;
+        #dc2626;
     }
 
     .medicamento-prioridade-texto.prioridade-media b {
       color:
-        #a16207;
+        #d97706;
     }
 
     .medicamento-prioridade-texto.prioridade-baixa b {
       color:
-        #15803d;
+        #16a34a;
     }
 
     .medicamento-observacao {
-      margin-top:
-        5px;
+      margin-top: 5px;
 
-      overflow:
-        hidden;
+      overflow: hidden;
 
       color:
         #64748b;
 
-      font-size:
-        0.67rem;
+      font-size: 0.67rem;
+      line-height: 1.35;
 
-      line-height:
-        1.35;
-
-      text-overflow:
-        ellipsis;
-
-      white-space:
-        nowrap;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
 
-    /* Ações */
+    /* ======================================
+       Botões de ação
+       ====================================== */
 
     .medicamento-acoes {
-      display:
-        inline-flex;
-
-      align-items:
-        center;
-
-      gap:
-        5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
     }
 
     .medicamento-acao {
-      min-height:
-        31px;
+      min-height: 31px;
 
       padding:
         6px 9px;
@@ -4027,114 +4035,171 @@ function criarEstilos() {
         1px solid
         transparent;
 
-      border-radius:
-        8px;
+      border-radius: 8px;
 
       background:
         transparent;
 
-      font:
-        inherit;
+      font: inherit;
+      font-size: 0.68rem;
+      font-weight: 800;
 
-      font-size:
-        0.68rem;
+      cursor: pointer;
+      white-space: nowrap;
 
-      font-weight:
-        800;
+      transition:
+        background 0.16s ease,
+        border-color 0.16s ease,
+        color 0.16s ease,
+        box-shadow 0.16s ease,
+        transform 0.16s ease;
+    }
 
-      cursor:
-        pointer;
-
-      white-space:
-        nowrap;
+    .medicamento-acao:hover {
+      transform:
+        translateY(-1px);
     }
 
     .medicamento-acao.comprou {
       border-color:
-        #86efac;
+        #4ade80;
 
       background:
-        #dcfce7;
+        linear-gradient(
+          135deg,
+          #dcfce7,
+          #bbf7d0
+        );
 
       color:
         #15803d;
+
+      box-shadow:
+        0 3px 9px
+        rgba(34, 197, 94, 0.16);
+    }
+
+    .medicamento-acao.comprou:hover {
+      border-color:
+        #22c55e;
+
+      background:
+        linear-gradient(
+          135deg,
+          #bbf7d0,
+          #86efac
+        );
+
+      box-shadow:
+        0 5px 12px
+        rgba(34, 197, 94, 0.2);
     }
 
     .medicamento-acao.editar {
+      border-color:
+        #bfdbfe;
+
+      background:
+        #eff6ff;
+
       color:
         #2563eb;
     }
 
+    .medicamento-acao.editar:hover {
+      border-color:
+        #93c5fd;
+
+      background:
+        #dbeafe;
+    }
+
     .medicamento-acao.excluir {
+      border-color:
+        #fecaca;
+
+      background:
+        #fff1f2;
+
       color:
         #b91c1c;
     }
 
-    .medicamento-acao.editar:hover {
-      background:
-        #eff6ff;
-    }
-
     .medicamento-acao.excluir:hover {
+      border-color:
+        #fca5a5;
+
       background:
-        #fff1f2;
+        #ffe4e6;
     }
 
     .medicamento-acao:disabled {
-      opacity:
-        0.6;
-
-      cursor:
-        wait;
+      opacity: 0.6;
+      cursor: wait;
+      transform: none;
     }
 
 
-    /* Histórico compacto */
+    /* ======================================
+       Histórico compacto
+       ====================================== */
+
+    .medicamento-historico-item {
+      border-left:
+        4px solid
+        #22c55e;
+
+      background:
+        linear-gradient(
+          90deg,
+          #f0fdf4 0%,
+          #ffffff 28%
+        );
+    }
 
     .medicamento-historico-titulo {
-      display:
-        flex;
-
-      align-items:
-        center;
-
-      justify-content:
-        space-between;
-
-      gap:
-        10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
     }
 
     .medicamento-historico-titulo strong {
-      min-width:
-        0;
+      min-width: 0;
 
       overflow-wrap:
         anywhere;
 
       color:
-        #1e293b;
+        #14532d;
 
-      font-size:
-        0.88rem;
+      font-size: 0.88rem;
     }
 
     .medicamento-historico-titulo > span {
       flex:
         0 0 auto;
 
+      padding:
+        3px 7px;
+
+      border-radius:
+        999px;
+
+      background:
+        #dcfce7;
+
       color:
         #15803d;
 
-      font-size:
-        0.65rem;
-
-      font-weight:
-        800;
+      font-size: 0.65rem;
+      font-weight: 800;
     }
 
 
-    /* Foco */
+    /* ======================================
+       Foco
+       ====================================== */
 
     .medicamentos-btn-voltar:focus-visible,
     .medicamentos-btn-novo:focus-visible,
@@ -4145,19 +4210,15 @@ function criarEstilos() {
     .medicamentos-btn-fechar:focus-visible {
       outline:
         3px solid
-        rgba(
-          37,
-          99,
-          235,
-          0.25
-        );
+        rgba(37, 99, 235, 0.25);
 
-      outline-offset:
-        2px;
+      outline-offset: 2px;
     }
 
 
-    /* Tema escuro */
+    /* ======================================
+       Tema escuro
+       ====================================== */
 
     body.tema-escuro
     #tarefasMedicamentosCard,
@@ -4167,7 +4228,11 @@ function criarEstilos() {
         #1e40af !important;
 
       background:
-        #172554 !important;
+        linear-gradient(
+          145deg,
+          #172554,
+          #1e3a8a
+        ) !important;
     }
 
     body.tema-escuro
@@ -4175,7 +4240,7 @@ function criarEstilos() {
     html[data-theme="dark"]
     #tarefasMedicamentosCard strong {
       color:
-        #93c5fd !important;
+        #bfdbfe !important;
     }
 
     body.tema-escuro
@@ -4202,6 +4267,70 @@ function criarEstilos() {
     }
 
     body.tema-escuro
+    .medicamento-item,
+    html[data-theme="dark"]
+    .medicamento-item {
+      border-left-color:
+        #60a5fa;
+
+      background:
+        linear-gradient(
+          90deg,
+          #172033,
+          #111827
+        );
+    }
+
+    body.tema-escuro
+    .medicamento-item.tem-pendencia,
+    html[data-theme="dark"]
+    .medicamento-item.tem-pendencia {
+      border-left-color:
+        #f59e0b;
+
+      background:
+        linear-gradient(
+          90deg,
+          #29200d,
+          #111827
+        );
+    }
+
+    body.tema-escuro
+    .medicamento-item.tem-pendencia:has(.status-hoje),
+    body.tema-escuro
+    .medicamento-item.tem-pendencia:has(.status-atrasado),
+    html[data-theme="dark"]
+    .medicamento-item.tem-pendencia:has(.status-hoje),
+    html[data-theme="dark"]
+    .medicamento-item.tem-pendencia:has(.status-atrasado) {
+      border-left-color:
+        #ef4444;
+
+      background:
+        linear-gradient(
+          90deg,
+          #2c1517,
+          #111827
+        );
+    }
+
+    body.tema-escuro
+    .medicamento-historico-item,
+    html[data-theme="dark"]
+    .medicamento-historico-item {
+      border-left-color:
+        #22c55e;
+
+      background:
+        linear-gradient(
+          90deg,
+          #10241a,
+          #111827
+        );
+    }
+
+    body.tema-escuro
     .medicamentos-formulario,
     html[data-theme="dark"]
     .medicamentos-formulario {
@@ -4209,7 +4338,11 @@ function criarEstilos() {
         #1e40af;
 
       background:
-        #172554;
+        linear-gradient(
+          145deg,
+          #172554,
+          #111827
+        );
     }
 
     body.tema-escuro
@@ -4283,7 +4416,9 @@ function criarEstilos() {
     }
 
 
-    /* Área estreita */
+    /* ======================================
+       Área estreita
+       ====================================== */
 
     @container (max-width: 620px) {
 
@@ -4297,14 +4432,15 @@ function criarEstilos() {
         grid-column:
           1 / -1;
 
-        width:
-          100%;
+        width: 100%;
       }
 
     }
 
 
-    /* Celular */
+    /* ======================================
+       Celular
+       ====================================== */
 
     @media (max-width: 600px) {
 
@@ -4338,42 +4474,29 @@ function criarEstilos() {
       }
 
       .medicamentos-screen {
-        padding-bottom:
-          100px;
+        padding-bottom: 100px;
       }
 
       .medicamentos-filtros {
-        width:
-          100%;
+        width: 100%;
 
-        display:
-          grid;
+        display: grid;
 
         grid-template-columns:
-          repeat(
-            3,
-            minmax(0, 1fr)
-          );
+          repeat(3, minmax(0, 1fr));
 
         box-sizing:
           border-box;
       }
 
       .medicamentos-filtro {
-        width:
-          100%;
+        width: 100%;
+        min-width: 0;
 
-        min-width:
-          0;
+        padding-right: 5px;
+        padding-left: 5px;
 
-        padding-right:
-          5px;
-
-        padding-left:
-          5px;
-
-        font-size:
-          0.7rem;
+        font-size: 0.7rem;
       }
 
       .medicamentos-grid-duas-colunas,
@@ -4381,13 +4504,11 @@ function criarEstilos() {
         grid-template-columns:
           1fr;
 
-        gap:
-          0;
+        gap: 0;
       }
 
       .medicamentos-formulario-acoes {
-        display:
-          grid;
+        display: grid;
 
         grid-template-columns:
           1fr
@@ -4396,25 +4517,18 @@ function criarEstilos() {
 
       .medicamentos-btn-secundario,
       .medicamentos-btn-salvar {
-        width:
-          100%;
+        width: 100%;
+        min-width: 0;
 
-        min-width:
-          0;
-
-        padding-right:
-          7px;
-
-        padding-left:
-          7px;
+        padding-right: 7px;
+        padding-left: 7px;
       }
 
       .medicamento-item-principal {
         grid-template-columns:
           1fr;
 
-        gap:
-          8px;
+        gap: 8px;
       }
 
       .medicamento-acoes {
@@ -4428,20 +4542,20 @@ function criarEstilos() {
       }
 
       .medicamento-historico-titulo {
-        display:
-          block;
+        display: block;
       }
 
       .medicamento-historico-titulo > span {
-        display:
-          block;
-
-        margin-top:
-          4px;
+        display: inline-flex;
+        margin-top: 4px;
       }
 
     }
 
+
+    /* ======================================
+       Celulares menores
+       ====================================== */
 
     @media (max-width: 380px) {
 
@@ -4472,8 +4586,7 @@ function criarEstilos() {
       }
 
       .medicamento-acoes {
-        display:
-          grid;
+        display: grid;
 
         grid-template-columns:
           1fr
@@ -4488,11 +4601,26 @@ function criarEstilos() {
     }
 
 
+    /* ======================================
+       Redução de movimentos
+       ====================================== */
+
     @media (prefers-reduced-motion: reduce) {
 
-      #tarefasMedicamentosCard {
-        transition:
-          none;
+      #tarefasMedicamentosCard,
+      .medicamento-item,
+      .medicamento-acao,
+      .medicamentos-btn-novo,
+      .medicamentos-btn-voltar {
+        transition: none;
+      }
+
+      #tarefasMedicamentosCard:hover,
+      .medicamento-item:hover,
+      .medicamento-acao:hover,
+      .medicamentos-btn-novo:hover,
+      .medicamentos-btn-voltar:hover {
+        transform: none;
       }
 
     }
@@ -4502,7 +4630,6 @@ function criarEstilos() {
     estilo
   );
 }
-
 
 // ==========================================
 // Instalação
